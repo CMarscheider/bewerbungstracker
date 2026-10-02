@@ -7,14 +7,17 @@ info:
     der aktuelle Status ergibt sich aus dem zuletzt erfassten Ereignis.
     Fehler werden als application/problem+json (RFC 9457) geliefert.
 tags:
-  - name: Firmen
-  - name: Bewerbungen
-  - name: Übersicht
+  - name: Companies
+    description: Firmen
+  - name: Applications
+    description: Bewerbungen und Ereignisse
+  - name: Dashboard
+    description: "Übersicht: Fristen, Termine, Statistik"
 paths:
   /api/v1/companies:
     get:
       operationId: listCompanies
-      tags: [Firmen]
+      tags: [Companies]
       summary: Alle Firmen mit Anzahl Bewerbungen
       responses:
         "200":
@@ -27,7 +30,7 @@ paths:
         default: { $ref: "#/components/responses/Problem" }
     post:
       operationId: createCompany
-      tags: [Firmen]
+      tags: [Companies]
       summary: Firma anlegen
       requestBody:
         required: true
@@ -46,7 +49,7 @@ paths:
       - $ref: "#/components/parameters/Id"
     get:
       operationId: getCompany
-      tags: [Firmen]
+      tags: [Companies]
       responses:
         "200":
           description: Firma
@@ -56,7 +59,7 @@ paths:
         default: { $ref: "#/components/responses/Problem" }
     patch:
       operationId: updateCompany
-      tags: [Firmen]
+      tags: [Companies]
       summary: Firma ändern (nur gesetzte Felder; "" löscht optionale Felder)
       requestBody:
         required: true
@@ -72,7 +75,7 @@ paths:
         default: { $ref: "#/components/responses/Problem" }
     delete:
       operationId: deleteCompany
-      tags: [Firmen]
+      tags: [Companies]
       summary: Firma löschen (nur ohne Bewerbungen, sonst 409)
       responses:
         "204":
@@ -81,7 +84,7 @@ paths:
   /api/v1/applications:
     get:
       operationId: listApplications
-      tags: [Bewerbungen]
+      tags: [Applications]
       parameters:
         - name: phase
           in: query
@@ -104,7 +107,7 @@ paths:
         default: { $ref: "#/components/responses/Problem" }
     post:
       operationId: createApplication
-      tags: [Bewerbungen]
+      tags: [Applications]
       summary: Bewerbung inklusive erstem Ereignis (Vorgemerkt oder Beworben) anlegen
       requestBody:
         required: true
@@ -123,7 +126,7 @@ paths:
       - $ref: "#/components/parameters/Id"
     get:
       operationId: getApplication
-      tags: [Bewerbungen]
+      tags: [Applications]
       responses:
         "200":
           description: Bewerbung mit Ereignis-Timeline
@@ -133,7 +136,7 @@ paths:
         default: { $ref: "#/components/responses/Problem" }
     patch:
       operationId: updateApplication
-      tags: [Bewerbungen]
+      tags: [Applications]
       summary: Stammdaten ändern (nicht den Status)
       requestBody:
         required: true
@@ -149,7 +152,7 @@ paths:
         default: { $ref: "#/components/responses/Problem" }
     delete:
       operationId: deleteApplication
-      tags: [Bewerbungen]
+      tags: [Applications]
       responses:
         "204":
           description: Gelöscht
@@ -159,7 +162,7 @@ paths:
       - $ref: "#/components/parameters/Id"
     post:
       operationId: addEvent
-      tags: [Bewerbungen]
+      tags: [Applications]
       summary: Statuswechsel als Ereignis erfassen (422 bei unerlaubtem Übergang)
       requestBody:
         required: true
@@ -178,7 +181,7 @@ paths:
       - $ref: "#/components/parameters/Id"
     delete:
       operationId: undoLastEvent
-      tags: [Bewerbungen]
+      tags: [Applications]
       summary: Letztes Ereignis rückgängig machen
       responses:
         "200":
@@ -192,7 +195,7 @@ paths:
       - $ref: "#/components/parameters/Id"
     get:
       operationId: listAllowedEvents
-      tags: [Bewerbungen]
+      tags: [Applications]
       responses:
         "200":
           description: Als Nächstes erlaubte Ereignistypen
@@ -205,7 +208,7 @@ paths:
   /api/v1/deadlines:
     get:
       operationId: listDeadlines
-      tags: [Übersicht]
+      tags: [Dashboard]
       parameters:
         - name: within_days
           in: query
@@ -223,7 +226,7 @@ paths:
   /api/v1/appointments:
     get:
       operationId: listAppointments
-      tags: [Übersicht]
+      tags: [Dashboard]
       parameters:
         - name: within_days
           in: query
@@ -241,7 +244,7 @@ paths:
   /api/v1/stats/funnel:
     get:
       operationId: getFunnel
-      tags: [Übersicht]
+      tags: [Dashboard]
       responses:
         "200":
           description: Funnel-Stufen
@@ -254,7 +257,7 @@ paths:
   /api/v1/stats/summary:
     get:
       operationId: getSummary
-      tags: [Übersicht]
+      tags: [Dashboard]
       responses:
         "200":
           description: Kennzahlen
@@ -304,6 +307,7 @@ components:
         notes: { type: string, maxLength: 5000 }
     CompanyPatch:
       type: object
+      description: Nur gesetzte Felder werden geändert; ein leerer String löscht ein optionales Feld.
       properties:
         name: { type: string, minLength: 1, maxLength: 200 }
         website: { type: string, maxLength: 500 }
@@ -353,6 +357,7 @@ components:
         first_event: { $ref: "#/components/schemas/NewEvent" }
     ApplicationPatch:
       type: object
+      description: Nur gesetzte Felder werden geändert; ein leerer String löscht ein optionales Feld.
       properties:
         company_id: { type: string, format: uuid }
         position_title: { type: string, minLength: 1, maxLength: 300 }
@@ -453,7 +458,10 @@ components:
       required: [type, title, status]
       additionalProperties: true
       properties:
-        type: { type: string }
+        type: { type: string, format: uri-reference }
         title: { type: string }
         status: { type: integer }
         detail: { type: string }
+        field: { type: string }
+        from: { $ref: "#/components/schemas/EventType" }
+        attempted: { $ref: "#/components/schemas/EventType" }

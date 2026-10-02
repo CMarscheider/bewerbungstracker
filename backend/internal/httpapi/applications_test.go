@@ -114,3 +114,12 @@ func TestListAllowedEventsAfterAbsageIsEmptyArray(t *testing.T) {
 		t.Errorf("Body = %q, erwartet []", got)
 	}
 }
+
+func TestMalformedCompanyIDInBodyIsBadRequest(t *testing.T) {
+	srv := newTestServer(t)
+	r := call(t, srv, http.MethodPost, "/api/v1/applications", map[string]any{
+		"company_id": "abc", "position_title": "Go-Entwickler",
+		"first_event": map[string]any{"type": "Beworben", "occurred_on": today()},
+	})
+	expectProblem(t, r, http.StatusBadRequest, "")
+}

@@ -65,5 +65,39 @@ func NewRouter(svc *service.Service, logger *slog.Logger) (http.Handler, error) 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		_, _ = io.WriteString(w, docsPage)
 	})
-	return logRequests(logger, mux), nil
+	mux.HandleFunc("/api/", func(w http.ResponseWriter, _ *http.Request) {
+		writeProblem(w, problem{Type: problemBase + "not-found", Title: "Nicht gefunden",
+			Status: http.StatusNotFound, Detail: "Unbekannter Endpunkt"})
+	})
+	return logRequests(logger, recoverPanics(logger, limitBody(mux))), nil
+}
+
+// maxBodyBytes begrenzt die Größe von Request-Bodys.
+const maxBodyBytes = 1 << 20
+
+func limitBody(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Body != nil {
+			r.Body = http.MaxBytesReader(w, r.Body, maxBodyBytes)
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+// recoverPanics fängt Panics ab, loggt sie und antwortet mit 500 als Problem-JSON.
+func recoverPanics(logger *slog.Logger, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			v := recover()
+			if v == nil {
+				return
+			}
+			if v == http.ErrAbortHandler {
+				panic(v)
+			}
+			logger.Error("panic", "method", r.Method, "path", r.URL.Path, "panic", v)
+			writeProblem(w, problem{Type: problemBase + "internal", Title: "Interner Fehler", Status: http.StatusInternalServerError})
+		}()
+		next.ServeHTTP(w, r)
+	})
 }
