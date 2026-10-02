@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"os"
+	"runtime"
 	"testing"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -15,8 +17,21 @@ import (
 	"bewerbungsmanager/internal/db"
 )
 
+// windowsDockerHost ist die Named Pipe, die Docker Desktop unter Windows bereitstellt.
+const windowsDockerHost = "npipe:////./pipe/docker_engine"
+
 // Start startet einen Postgres-Container, migriert ihn und liefert Pool, URL und Aufräumfunktion.
 func Start(ctx context.Context) (*pgxpool.Pool, string, func(), error) {
+	// testcontainers erkennt Docker unter Windows per os.Stat auf die Named Pipe. Nutzen mehrere
+	// Testpakete parallel Docker, scheitert das mit "All pipe instances are busy" und endet in der
+	// irreführenden Meldung "rootless Docker is not supported on Windows". Mit gesetztem DOCKER_HOST
+	// entfällt diese Prüfung; der Docker-Client wartet bei belegter Pipe, statt abzubrechen.
+	if runtime.GOOS == "windows" && os.Getenv("DOCKER_HOST") == "" {
+		if err := os.Setenv("DOCKER_HOST", windowsDockerHost); err != nil {
+			return nil, "", nil, fmt.Errorf("DOCKER_HOST setzen: %w", err)
+		}
+	}
+
 	ctr, err := postgres.Run(ctx, "postgres:17-alpine",
 		postgres.WithDatabase("test"),
 		postgres.WithUsername("test"),
