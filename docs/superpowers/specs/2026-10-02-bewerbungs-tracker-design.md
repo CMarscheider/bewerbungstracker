@@ -63,7 +63,7 @@ Der aktuelle Status einer Bewerbung ist der Typ ihres zuletzt **erfassten** Erei
 
 Zusätzliche Validierung (Fehler → `422`):
 
-- `occurred_on` darf nicht vor dem `occurred_on` des bisher letzten Ereignisses liegen. Ausnahme: Liegt das letzte Ereignis in der Zukunft (geplanter Termin), muss `occurred_on` nur ≥ dem Erfassungsdatum (`created_at::date`) dieses Ereignisses sein – so ist z. B. eine Absage vor einem geplanten Interview möglich.
+- `occurred_on` darf nicht vor dem früheren der beiden Daten des bisher letzten Ereignisses liegen: dessen `occurred_on` oder dessen Erfassungsdatum (`created_at` als Datum). Im Normalfall ist das `occurred_on`; bei einem im Voraus eingetragenen Termin das Erfassungsdatum – so ist z. B. eine Absage vor einem geplanten Interview möglich.
 - `occurred_on` darf nur bei Typen mit „Datum in Zukunft erlaubt“ nach heute liegen.
 - `due_on` nur bei Typen mit „Frist möglich“; sonst `400`.
 
@@ -114,9 +114,13 @@ application_events (
   created_at       timestamptz NOT NULL DEFAULT now()
 )
 -- Index auf application_events(application_id, created_at)
+-- created_at DEFAULT clock_timestamp(), damit mehrere Ereignisse in einer Transaktion eindeutig sortiert sind
+
+latest_events   -- VIEW: letztes Ereignis je Bewerbung (DISTINCT ON application_id ORDER BY created_at DESC)
+                -- Grundlage für Listenansicht, Fristen und Termine
 ```
 
-## REST-API (`/api/v1`, OpenAPI 3.1)
+## REST-API (`/api/v1`, OpenAPI 3.0.3 – oapi-codegen unterstützt 3.1 nicht zuverlässig)
 
 | Methode | Pfad | Zweck |
 |---|---|---|
@@ -136,7 +140,7 @@ application_events (
 | GET | `/stats/funnel` | Funnel mit Anzahl und Quote je Stufe |
 | GET | `/stats/summary` | Antwortzeiten, Absagen je Phase, Erfolg je Quelle |
 
-Zusätzlich liefert das Backend `/api/openapi.yaml` und eine Swagger-UI unter `/api/docs` aus.
+Zusätzlich liefert das Backend die eingebettete Spec unter `/api/openapi.json` und eine Swagger-UI unter `/api/docs` aus.
 
 ### Fehler
 
@@ -149,6 +153,8 @@ Alle Fehler als `application/problem+json` (RFC 9457):
 - `500`: unerwartet; Details nur im Log
 
 ## Statistik – Definitionen
+
+Die Statistik wird in einem reinen Go-Paket (`internal/stats`) aus den Ereignisverläufen berechnet; SQL lädt nur die Ereignisse. So ist sie ohne Datenbank testbar, und die Datenmenge (ein Nutzer) ist klein.
 
 - **Basis:** Bewerbungen mit mindestens einem `Beworben`-Ereignis. `Vorgemerkt`-only zählt nicht.
 - **Funnel-Stufen:** Beworben, Screening, Challenge, Interview, Kennenlerntag, Angebot, Angenommen. Eine Bewerbung hat eine Stufe **erreicht**, wenn sie ein Ereignis dieser oder einer späteren Stufe (nach Reihenfolge) hat; „Angenommen“ zählt nur `AngebotAngenommen`. Ein geplanter, noch nicht stattgefundener Termin zählt bereits als erreicht (Einladung erhalten). Quote = erreicht / Basis.
@@ -165,7 +171,8 @@ Alle Fehler als `application/problem+json` (RFC 9457):
 api/openapi.yaml
 backend/
   cmd/server/main.go       Config, DB-Pool, Migrationen, HTTP-Server
-  internal/domain/         EventType, Phase, CanApply, AllowedNext, CurrentStatus – keine Imports von DB/HTTP
+  internal/domain/         EventType, Phase, CanApply, AllowedNext, CanUndo – keine Imports von DB/HTTP
+  internal/stats/          Funnel und Kennzahlen aus Ereignisverläufen – rein, ohne DB
   internal/service/        Anwendungsfälle mit Transaktionen
   internal/store/          sqlc-generiert + queries/*.sql
   internal/httpapi/        oapi-codegen strict server, Handler, Fehler-Mapping, Middleware
@@ -177,7 +184,7 @@ Abhängigkeiten: `httpapi → service → domain`, `service → store`. `domain`
 
 ### Technik
 
-Go 1.23+, `net/http` mit eingebautem Routing, pgx v5, sqlc, goose (Migrationen laufen beim Start), `log/slog` mit Request-Logging-Middleware. Konfiguration über `DATABASE_URL` und `PORT`.
+Go 1.24+ (wegen `go tool`), `net/http` mit eingebautem Routing, pgx v5, sqlc, goose (Migrationen laufen beim Start), `log/slog` mit Request-Logging-Middleware. Konfiguration über `DATABASE_URL` und `PORT`.
 
 ### Ablauf: Ereignis anlegen
 
@@ -222,8 +229,8 @@ Button öffnet einen Dialog mit Datum (Vorgabe heute), Notiz und – nur bei Typ
 
 | Ebene | Inhalt | Werkzeug |
 |---|---|---|
-| Domain | Jeder erlaubte und verbotene Übergang, Interview-Runden, `KeineRueckmeldung`-Wiedereröffnung, Datumsregeln, Rückgängig | Tabellengetriebene Go-Tests, keine DB |
-| Service + Store | Transaktionen, Status-Neuberechnung, Fristen, Termine, Statistik-Queries | testcontainers-go mit echtem Postgres |
+| Domain + Stats | Jeder erlaubte und verbotene Übergang, Interview-Runden, `KeineRueckmeldung`-Wiedereröffnung, Datumsregeln, Rückgängig | Tabellengetriebene Go-Tests, keine DB |
+| Service + Store | Transaktionen, Status-Neuberechnung, Fristen, Termine, Laden der Statistik-Daten | testcontainers-go mit echtem Postgres |
 | HTTP | Durchstiche inkl. `400`/`404`/`409`/`422`, Form von Problem-JSON | `httptest` mit echtem Router und Container-DB |
 | Frontend | Nur erlaubte Buttons, Fristfeld abhängig vom Typ, Fehler-Snackbar | Angular-Standard-Testrunner, gemockter API-Client |
 
