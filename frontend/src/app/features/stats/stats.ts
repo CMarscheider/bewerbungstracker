@@ -1,9 +1,8 @@
 import { DecimalPipe, PercentPipe } from '@angular/common';
 import { Component, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { catchError, of } from 'rxjs';
-import { FunnelStep } from '../../api/models';
 import { Api } from '../../core/api';
+import { loaded } from '../../core/loaded';
 import { EVENT_LABELS } from '../../shared/labels';
 
 @Component({
@@ -15,7 +14,7 @@ import { EVENT_LABELS } from '../../shared/labels';
 export class Stats {
   private readonly api = inject(Api);
 
-  protected readonly funnel = toSignal(this.api.getFunnel().pipe(catchError(() => of([] as FunnelStep[]))), { initialValue: [] as FunnelStep[] });
-  protected readonly summary = toSignal(this.api.getSummary().pipe(catchError(() => of(undefined))));
+  protected readonly funnel = toSignal(loaded(this.api.getFunnel()));
+  protected readonly summary = toSignal(loaded(this.api.getSummary()));
   protected readonly labels = EVENT_LABELS;
 }

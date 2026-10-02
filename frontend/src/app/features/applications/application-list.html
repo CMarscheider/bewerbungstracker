@@ -28,12 +28,14 @@
   </mat-form-field>
 </form>
 
-@if (applications(); as list) {
-  @if (list.length === 0) {
+@if (applications(); as result) {
+  @if (result.error) {
+    <p class="muted">Konnte nicht geladen werden.</p>
+  } @else if (result.data.length === 0) {
     <p class="muted">Keine Bewerbungen gefunden.</p>
   } @else {
     <div class="table-wrap">
-      <table mat-table [dataSource]="list">
+      <table mat-table [dataSource]="result.data">
         <ng-container matColumnDef="company">
           <th mat-header-cell *matHeaderCellDef>Firma</th>
           <td mat-cell *matCellDef="let a"><a [routerLink]="['/bewerbungen', a.id]">{{ a.company_name }}</a></td>

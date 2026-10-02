@@ -42,7 +42,7 @@ export class ApplicationNew {
   });
 
   constructor() {
-    this.api.listCompanies().subscribe((list) => this.companies.set(list));
+    this.api.listCompanies().subscribe({ next: (list) => this.companies.set(list), error: () => undefined });
   }
 
   private readonly companyName = toSignal(this.form.controls.company.valueChanges, { initialValue: '' });

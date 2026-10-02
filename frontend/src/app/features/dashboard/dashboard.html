@@ -22,7 +22,11 @@
 }
 
 <h2>Fristen der nächsten 7 Tage</h2>
-@if (upcoming().length === 0) {
+@if (!deadlinesResult()) {
+  <p class="muted">Lade …</p>
+} @else if (deadlinesResult()!.error) {
+  <p class="muted">Konnte nicht geladen werden.</p>
+} @else if (upcoming().length === 0) {
   <p class="muted">Keine anstehenden Fristen.</p>
 }
 <ul class="list">
@@ -35,7 +39,11 @@
 </ul>
 
 <h2>Anstehende Termine</h2>
-@if (appointments().length === 0) {
+@if (!appointmentsResult()) {
+  <p class="muted">Lade …</p>
+} @else if (appointmentsResult()!.error) {
+  <p class="muted">Konnte nicht geladen werden.</p>
+} @else if (appointments().length === 0) {
   <p class="muted">Keine Termine in den nächsten 14 Tagen.</p>
 }
 <ul class="list">

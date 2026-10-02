@@ -7,10 +7,11 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTableModule } from '@angular/material/table';
 import { Router, RouterLink } from '@angular/router';
-import { catchError, debounceTime, distinctUntilChanged, map, of, startWith, switchMap } from 'rxjs';
+import { debounceTime, distinctUntilChanged, map, startWith, switchMap } from 'rxjs';
 import { ApplicationSummary, EventType, Phase } from '../../api/models';
 import { Api, ApplicationFilter } from '../../core/api';
 import { formatDate } from '../../core/dates';
+import { loaded } from '../../core/loaded';
 import { ALL_EVENT_TYPES, ALL_PHASES, EVENT_LABELS, PHASE_LABELS } from '../../shared/labels';
 import { StatusBadge } from '../../shared/status-badge';
 
@@ -37,14 +38,14 @@ export class ApplicationList {
     q: new FormControl('', { nonNullable: true }),
   });
 
-  /** undefined, bis die erste Antwort da ist. */
+  /** undefined, bis die erste Antwort da ist; sonst Daten oder `error: true`. */
   protected readonly applications = toSignal(
     this.filter.valueChanges.pipe(
       debounceTime(250),
       startWith(null),
       map(() => this.currentFilter()),
       distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b)),
-      switchMap((f) => this.api.listApplications(f).pipe(catchError(() => of<ApplicationSummary[]>([])))),
+      switchMap((f) => loaded(this.api.listApplications(f))),
     ),
   );
 

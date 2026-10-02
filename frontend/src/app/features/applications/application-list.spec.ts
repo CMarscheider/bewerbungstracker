@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { FormGroup } from '@angular/forms';
 import { provideRouter } from '@angular/router';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { ApplicationSummary } from '../../api/models';
 import { Api } from '../../core/api';
 import { ApplicationList } from './application-list';
@@ -39,5 +39,17 @@ describe('ApplicationList', () => {
     vi.advanceTimersByTime(300);
 
     expect(api.listApplications).toHaveBeenLastCalledWith({ phase: 'Aktiv', status: undefined, q: undefined });
+  });
+
+  it('zeigt einen Fehlertext statt "Keine Bewerbungen gefunden."', async () => {
+    const api = { listApplications: vi.fn(() => throwError(() => new Error('x'))) };
+    TestBed.configureTestingModule({ imports: [ApplicationList], providers: [provideRouter([]), { provide: Api, useValue: api }] });
+    const fixture = TestBed.createComponent(ApplicationList);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const text = (fixture.nativeElement as HTMLElement).textContent;
+    expect(text).toContain('Konnte nicht geladen werden.');
+    expect(text).not.toContain('Keine Bewerbungen gefunden.');
   });
 });

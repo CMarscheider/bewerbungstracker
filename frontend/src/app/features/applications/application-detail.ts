@@ -106,20 +106,20 @@ export class ApplicationDetail {
       .afterClosed()
       .subscribe((event) => {
         if (event) {
-          this.api.addEvent(this.id(), event).subscribe(() => this.load(this.id()));
+          this.api.addEvent(this.id(), event).subscribe({ next: () => this.load(this.id()), error: () => undefined });
         }
       });
   }
 
   protected undo(): void {
     if (window.confirm('Letztes Ereignis wirklich rückgängig machen?')) {
-      this.api.undoLastEvent(this.id()).subscribe(() => this.load(this.id()));
+      this.api.undoLastEvent(this.id()).subscribe({ next: () => this.load(this.id()), error: () => undefined });
     }
   }
 
   protected remove(): void {
     if (window.confirm('Bewerbung wirklich löschen?')) {
-      this.api.deleteApplication(this.id()).subscribe(() => void this.router.navigate(['/bewerbungen']));
+      this.api.deleteApplication(this.id()).subscribe({ next: () => void this.router.navigate(['/bewerbungen']), error: () => undefined });
     }
   }
 

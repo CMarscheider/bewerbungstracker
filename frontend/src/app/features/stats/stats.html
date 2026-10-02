@@ -1,15 +1,26 @@
 <h1>Statistik</h1>
 
 <h2>Funnel</h2>
+@if (!funnel()) {
+  <p class="muted">Lade …</p>
+} @else if (funnel()!.error) {
+  <p class="muted">Konnte nicht geladen werden.</p>
+}
 <div class="funnel">
-  @for (step of funnel(); track step.stage) {
+  @for (step of funnel()?.data ?? []; track step.stage) {
     <span class="stage">{{ step.stage }}</span>
     <div class="bar"><div class="fill" [style.width.%]="step.rate * 100"></div></div>
     <span class="num">{{ step.reached }} ({{ step.rate | percent: '1.0-0' }})</span>
   }
 </div>
 
-@if (summary(); as s) {
+@if (!summary()) {
+  <p class="muted">Lade …</p>
+} @else if (summary()!.error) {
+  <h2>Antworten</h2>
+  <p class="muted">Konnte nicht geladen werden.</p>
+} @else {
+  @let s = summary()!.data!;
   <h2>Antworten</h2>
   <p>
     {{ s.responded }} von {{ s.applied }} Bewerbungen beantwortet ({{ s.response_rate | percent: '1.0-0' }}).
@@ -30,9 +41,12 @@
   </ul>
 
   <h2>Erfolg je Quelle</h2>
+  @if (s.by_source.length === 0) {
+    <p class="muted">Noch keine Bewerbungen mit Quelle.</p>
+  } @else {
   <div class="table-wrap">
     <table class="sources">
-      <thead><tr><th>Quelle</th><th>Beworben</th><th>Interview</th><th>Angebot</th></tr></thead>
+      <thead><tr><th scope="col">Quelle</th><th scope="col">Beworben</th><th scope="col">Interview</th><th scope="col">Angebot</th></tr></thead>
       <tbody>
         @for (src of s.by_source; track src.source) {
           <tr><td>{{ src.source }}</td><td>{{ src.applied }}</td><td>{{ src.reached_interview }}</td><td>{{ src.reached_offer }}</td></tr>
@@ -40,4 +54,5 @@
       </tbody>
     </table>
   </div>
+  }
 }

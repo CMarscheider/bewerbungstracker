@@ -13,15 +13,9 @@
   font-weight: 600;
 }
 .label {
-  color: #6b7280;
-}
-.list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
+  color: var(--mat-sys-on-surface-variant, #6b7280);
 }
 .list li {
-  border-bottom: 1px solid #e5e7eb;
   display: flex;
   flex-wrap: wrap;
   gap: 4px 16px;
@@ -30,5 +24,5 @@
 }
 .overdue,
 .overdue-title {
-  color: #b91c1c;
+  color: var(--mat-sys-error, #b91c1c);
 }
