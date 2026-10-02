@@ -6,6 +6,7 @@ tasks:
     cmds:
       - task: generate:sqlc
       - task: generate:api
+      - task: generate:client
 
   generate:sqlc:
     desc: Generiert typsicheren DB-Code mit sqlc (per Docker)
@@ -23,3 +24,15 @@ tasks:
     dir: backend
     cmds:
       - go test ./...
+
+  generate:client:
+    desc: Generiert den Angular-API-Client aus api/openapi.yaml
+    dir: frontend
+    cmds:
+      - npm run generate:api
+
+  test:frontend:
+    desc: Führt die Frontend-Tests aus
+    dir: frontend
+    cmds:
+      - npx ng test --watch=false
