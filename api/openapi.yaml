@@ -1,0 +1,459 @@
+openapi: 3.0.3
+info:
+  title: Bewerbungs-Tracker API
+  version: 1.0.0
+  description: >
+    Verwaltung von Bewerbungen. Jeder Statuswechsel wird als Ereignis gespeichert;
+    der aktuelle Status ergibt sich aus dem zuletzt erfassten Ereignis.
+    Fehler werden als application/problem+json (RFC 9457) geliefert.
+tags:
+  - name: Firmen
+  - name: Bewerbungen
+  - name: Übersicht
+paths:
+  /api/v1/companies:
+    get:
+      operationId: listCompanies
+      tags: [Firmen]
+      summary: Alle Firmen mit Anzahl Bewerbungen
+      responses:
+        "200":
+          description: Firmen, alphabetisch
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Company" }
+        default: { $ref: "#/components/responses/Problem" }
+    post:
+      operationId: createCompany
+      tags: [Firmen]
+      summary: Firma anlegen
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CompanyInput" }
+      responses:
+        "201":
+          description: Angelegt
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Company" }
+        default: { $ref: "#/components/responses/Problem" }
+  /api/v1/companies/{id}:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    get:
+      operationId: getCompany
+      tags: [Firmen]
+      responses:
+        "200":
+          description: Firma
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Company" }
+        default: { $ref: "#/components/responses/Problem" }
+    patch:
+      operationId: updateCompany
+      tags: [Firmen]
+      summary: Firma ändern (nur gesetzte Felder; "" löscht optionale Felder)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CompanyPatch" }
+      responses:
+        "200":
+          description: Geändert
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Company" }
+        default: { $ref: "#/components/responses/Problem" }
+    delete:
+      operationId: deleteCompany
+      tags: [Firmen]
+      summary: Firma löschen (nur ohne Bewerbungen, sonst 409)
+      responses:
+        "204":
+          description: Gelöscht
+        default: { $ref: "#/components/responses/Problem" }
+  /api/v1/applications:
+    get:
+      operationId: listApplications
+      tags: [Bewerbungen]
+      parameters:
+        - name: phase
+          in: query
+          schema: { $ref: "#/components/schemas/Phase" }
+        - name: status
+          in: query
+          schema: { $ref: "#/components/schemas/EventType" }
+        - name: q
+          in: query
+          description: Suche in Firmenname und Stellentitel
+          schema: { type: string, maxLength: 200 }
+      responses:
+        "200":
+          description: Bewerbungen, zuletzt geänderte zuerst
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/ApplicationSummary" }
+        default: { $ref: "#/components/responses/Problem" }
+    post:
+      operationId: createApplication
+      tags: [Bewerbungen]
+      summary: Bewerbung inklusive erstem Ereignis (Vorgemerkt oder Beworben) anlegen
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ApplicationInput" }
+      responses:
+        "201":
+          description: Angelegt
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Application" }
+        default: { $ref: "#/components/responses/Problem" }
+  /api/v1/applications/{id}:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    get:
+      operationId: getApplication
+      tags: [Bewerbungen]
+      responses:
+        "200":
+          description: Bewerbung mit Ereignis-Timeline
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Application" }
+        default: { $ref: "#/components/responses/Problem" }
+    patch:
+      operationId: updateApplication
+      tags: [Bewerbungen]
+      summary: Stammdaten ändern (nicht den Status)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ApplicationPatch" }
+      responses:
+        "200":
+          description: Geändert
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Application" }
+        default: { $ref: "#/components/responses/Problem" }
+    delete:
+      operationId: deleteApplication
+      tags: [Bewerbungen]
+      responses:
+        "204":
+          description: Gelöscht
+        default: { $ref: "#/components/responses/Problem" }
+  /api/v1/applications/{id}/events:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    post:
+      operationId: addEvent
+      tags: [Bewerbungen]
+      summary: Statuswechsel als Ereignis erfassen (422 bei unerlaubtem Übergang)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/NewEvent" }
+      responses:
+        "201":
+          description: Erfasst
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Event" }
+        default: { $ref: "#/components/responses/Problem" }
+  /api/v1/applications/{id}/events/latest:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    delete:
+      operationId: undoLastEvent
+      tags: [Bewerbungen]
+      summary: Letztes Ereignis rückgängig machen
+      responses:
+        "200":
+          description: Bewerbung nach dem Rückgängigmachen
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Application" }
+        default: { $ref: "#/components/responses/Problem" }
+  /api/v1/applications/{id}/allowed-events:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    get:
+      operationId: listAllowedEvents
+      tags: [Bewerbungen]
+      responses:
+        "200":
+          description: Als Nächstes erlaubte Ereignistypen
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/EventType" }
+        default: { $ref: "#/components/responses/Problem" }
+  /api/v1/deadlines:
+    get:
+      operationId: listDeadlines
+      tags: [Übersicht]
+      parameters:
+        - name: within_days
+          in: query
+          description: Zeitraum ab heute (Standard 7); überfällige Fristen sind immer enthalten
+          schema: { type: integer, minimum: 0, maximum: 365 }
+      responses:
+        "200":
+          description: Offene Fristen
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Deadline" }
+        default: { $ref: "#/components/responses/Problem" }
+  /api/v1/appointments:
+    get:
+      operationId: listAppointments
+      tags: [Übersicht]
+      parameters:
+        - name: within_days
+          in: query
+          description: Zeitraum ab heute (Standard 14)
+          schema: { type: integer, minimum: 0, maximum: 365 }
+      responses:
+        "200":
+          description: Anstehende Termine
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Appointment" }
+        default: { $ref: "#/components/responses/Problem" }
+  /api/v1/stats/funnel:
+    get:
+      operationId: getFunnel
+      tags: [Übersicht]
+      responses:
+        "200":
+          description: Funnel-Stufen
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/FunnelStep" }
+        default: { $ref: "#/components/responses/Problem" }
+  /api/v1/stats/summary:
+    get:
+      operationId: getSummary
+      tags: [Übersicht]
+      responses:
+        "200":
+          description: Kennzahlen
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Summary" }
+        default: { $ref: "#/components/responses/Problem" }
+components:
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+  responses:
+    Problem:
+      description: Fehler nach RFC 9457
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+  schemas:
+    EventType:
+      type: string
+      enum:
+        - Vorgemerkt
+        - Beworben
+        - ScreeningGespraech
+        - ChallengeErhalten
+        - ChallengeAbgegeben
+        - Interview
+        - Kennenlerntag
+        - AngebotErhalten
+        - AngebotAngenommen
+        - AngebotAbgelehnt
+        - Absage
+        - Zurueckgezogen
+        - KeineRueckmeldung
+    Phase:
+      type: string
+      enum: [Vorbereitung, Aktiv, Abgeschlossen]
+    CompanyInput:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 200 }
+        website: { type: string, maxLength: 500 }
+        notes: { type: string, maxLength: 5000 }
+    CompanyPatch:
+      type: object
+      properties:
+        name: { type: string, minLength: 1, maxLength: 200 }
+        website: { type: string, maxLength: 500 }
+        notes: { type: string, maxLength: 5000 }
+    Company:
+      type: object
+      required: [id, name, created_at, application_count]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        website: { type: string }
+        notes: { type: string }
+        created_at: { type: string, format: date-time }
+        application_count: { type: integer }
+    NewEvent:
+      type: object
+      required: [type, occurred_on]
+      properties:
+        type: { $ref: "#/components/schemas/EventType" }
+        occurred_on: { type: string, format: date }
+        due_on:
+          type: string
+          format: date
+          description: Nur bei Vorgemerkt, ChallengeErhalten und AngebotErhalten erlaubt
+        note: { type: string, maxLength: 5000 }
+    Event:
+      type: object
+      required: [id, type, occurred_on, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        type: { $ref: "#/components/schemas/EventType" }
+        occurred_on: { type: string, format: date }
+        due_on: { type: string, format: date }
+        interview_round: { type: integer }
+        note: { type: string }
+        created_at: { type: string, format: date-time }
+    ApplicationInput:
+      type: object
+      required: [company_id, position_title, first_event]
+      properties:
+        company_id: { type: string, format: uuid }
+        position_title: { type: string, minLength: 1, maxLength: 300 }
+        job_url: { type: string, maxLength: 1000 }
+        location: { type: string, maxLength: 200 }
+        source: { type: string, maxLength: 100 }
+        notes: { type: string, maxLength: 5000 }
+        first_event: { $ref: "#/components/schemas/NewEvent" }
+    ApplicationPatch:
+      type: object
+      properties:
+        company_id: { type: string, format: uuid }
+        position_title: { type: string, minLength: 1, maxLength: 300 }
+        job_url: { type: string, maxLength: 1000 }
+        location: { type: string, maxLength: 200 }
+        source: { type: string, maxLength: 100 }
+        notes: { type: string, maxLength: 5000 }
+    ApplicationSummary:
+      type: object
+      required: [id, company_id, company_name, position_title, status, phase, updated_at, last_event_on]
+      properties:
+        id: { type: string, format: uuid }
+        company_id: { type: string, format: uuid }
+        company_name: { type: string }
+        position_title: { type: string }
+        status: { $ref: "#/components/schemas/EventType" }
+        phase: { $ref: "#/components/schemas/Phase" }
+        updated_at: { type: string, format: date-time }
+        last_event_on: { type: string, format: date }
+        open_due_on: { type: string, format: date }
+    Application:
+      type: object
+      required: [id, company_id, company_name, position_title, status, phase, created_at, updated_at, events]
+      properties:
+        id: { type: string, format: uuid }
+        company_id: { type: string, format: uuid }
+        company_name: { type: string }
+        position_title: { type: string }
+        job_url: { type: string }
+        location: { type: string }
+        source: { type: string }
+        notes: { type: string }
+        status: { $ref: "#/components/schemas/EventType" }
+        phase: { $ref: "#/components/schemas/Phase" }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        events:
+          type: array
+          items: { $ref: "#/components/schemas/Event" }
+    Deadline:
+      type: object
+      required: [application_id, company_name, position_title, event_type, due_on, overdue]
+      properties:
+        application_id: { type: string, format: uuid }
+        company_name: { type: string }
+        position_title: { type: string }
+        event_type: { $ref: "#/components/schemas/EventType" }
+        due_on: { type: string, format: date }
+        overdue: { type: boolean }
+    Appointment:
+      type: object
+      required: [application_id, company_name, position_title, event_type, date]
+      properties:
+        application_id: { type: string, format: uuid }
+        company_name: { type: string }
+        position_title: { type: string }
+        event_type: { $ref: "#/components/schemas/EventType" }
+        date: { type: string, format: date }
+        interview_round: { type: integer }
+    FunnelStep:
+      type: object
+      required: [stage, reached, rate]
+      properties:
+        stage: { type: string }
+        reached: { type: integer }
+        rate: { type: number, format: double }
+    RejectionCount:
+      type: object
+      required: [event_type, count]
+      properties:
+        event_type: { $ref: "#/components/schemas/EventType" }
+        count: { type: integer }
+    SourceStats:
+      type: object
+      required: [source, applied, reached_interview, reached_offer]
+      properties:
+        source: { type: string }
+        applied: { type: integer }
+        reached_interview: { type: integer }
+        reached_offer: { type: integer }
+    Summary:
+      type: object
+      required: [applied, responded, response_rate, rejections_after, by_source]
+      properties:
+        applied: { type: integer }
+        responded: { type: integer }
+        response_rate: { type: number, format: double }
+        median_days_to_response: { type: number, format: double }
+        avg_days_to_response: { type: number, format: double }
+        rejections_after:
+          type: array
+          items: { $ref: "#/components/schemas/RejectionCount" }
+        by_source:
+          type: array
+          items: { $ref: "#/components/schemas/SourceStats" }
+    Problem:
+      type: object
+      required: [type, title, status]
+      additionalProperties: true
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
