@@ -12,6 +12,7 @@ export function fromIsoDate(s: string): Date {
   return new Date(y, m - 1, d);
 }
 
+/** Nur für Kalendertag-Felder (YYYY-MM-DD); für Zeitstempel DatePipe verwenden. */
 export function formatDate(s: string | null | undefined): string {
   if (!s) {
     return '–';

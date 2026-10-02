@@ -16,6 +16,6 @@ import { EVENT_LABELS } from './labels';
 })
 export class StatusBadge {
   readonly status = input.required<EventType>();
-  readonly phase = input<Phase>('Aktiv');
+  readonly phase = input.required<Phase>();
   protected readonly label = computed(() => EVENT_LABELS[this.status()]);
 }

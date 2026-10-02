@@ -1,8 +1,8 @@
 <mat-toolbar class="toolbar">
-  <a class="brand" routerLink="/">Bewerbungs-Tracker</a>
-  <nav>
+  <a class="brand" routerLink="/" tabindex="-1" aria-hidden="true">Bewerbungs-Tracker</a>
+  <nav aria-label="Hauptnavigation">
     @for (link of links; track link.path) {
-      <a mat-button [routerLink]="link.path" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: link.exact }">{{ link.label }}</a>
+      <a mat-button [routerLink]="link.path" routerLinkActive="active" ariaCurrentWhenActive="page" [routerLinkActiveOptions]="{ exact: link.exact }">{{ link.label }}</a>
     }
   </nav>
   <span class="spacer"></span>
