@@ -1,0 +1,76 @@
+@if (application(); as app) {
+  <header class="head">
+    <div>
+      <h1>{{ app.position_title }}</h1>
+      <p class="company">{{ app.company_name }} <app-status-badge [status]="app.status" [phase]="app.phase" /></p>
+    </div>
+    <button mat-button (click)="remove()">Bewerbung löschen</button>
+  </header>
+
+  <section>
+    <h2>Nächster Schritt</h2>
+    @if (allowed().length === 0) {
+      <p class="muted">Diese Bewerbung ist abgeschlossen.</p>
+    }
+    <div class="buttons">
+      @for (type of allowed(); track type) {
+        <button mat-stroked-button data-testid="event-button" (click)="openEventDialog(type)">{{ labels[type] }}</button>
+      }
+    </div>
+  </section>
+
+  <section class="timeline">
+    <h2>Verlauf</h2>
+    <ol>
+      @for (e of eventsNewestFirst(); track e.id) {
+        <li>
+          <span class="date">{{ formatDate(e.occurred_on) }}</span>
+          <strong>{{ eventLabel(e.type, e.interview_round) }}</strong>
+          @if (e.due_on) {
+            <span class="due">{{ deadlineLabels[e.type] ?? 'Frist' }}: {{ formatDate(e.due_on) }}</span>
+          }
+          @if (e.note) {
+            <p class="note">{{ e.note }}</p>
+          }
+        </li>
+      }
+    </ol>
+    @if (canUndo()) {
+      <button mat-button (click)="undo()">Letztes Ereignis rückgängig</button>
+    }
+  </section>
+
+  <section>
+    <h2>Stammdaten</h2>
+    @if (editing()) {
+      <form class="form" [formGroup]="form" (ngSubmit)="saveDetails()">
+        <mat-form-field><mat-label>Stelle</mat-label><input matInput formControlName="position_title" required /></mat-form-field>
+        <mat-form-field><mat-label>Link</mat-label><input matInput formControlName="job_url" type="url" /></mat-form-field>
+        <mat-form-field><mat-label>Ort</mat-label><input matInput formControlName="location" /></mat-form-field>
+        <mat-form-field><mat-label>Quelle</mat-label><input matInput formControlName="source" /></mat-form-field>
+        <mat-form-field><mat-label>Notizen</mat-label><textarea matInput formControlName="notes" rows="3"></textarea></mat-form-field>
+        <div class="buttons">
+          <button mat-flat-button type="submit">Speichern</button>
+          <button mat-button type="button" (click)="editing.set(false)">Abbrechen</button>
+        </div>
+      </form>
+    } @else {
+      <dl>
+        <dt>Link</dt>
+        <dd>
+          @if (app.job_url) {
+            <a [href]="app.job_url" target="_blank" rel="noopener">{{ app.job_url }}</a>
+          } @else {
+            –
+          }
+        </dd>
+        <dt>Ort</dt><dd>{{ app.location ?? '–' }}</dd>
+        <dt>Quelle</dt><dd>{{ app.source ?? '–' }}</dd>
+        <dt>Notizen</dt><dd class="pre">{{ app.notes ?? '–' }}</dd>
+      </dl>
+      <button mat-button (click)="startEdit()">Bearbeiten</button>
+    }
+  </section>
+} @else {
+  <p class="muted">Lade …</p>
+}
