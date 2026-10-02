@@ -1,0 +1,69 @@
+package httpapi
+
+import (
+	"fmt"
+	"io"
+	"log/slog"
+	"net/http"
+
+	nethttpmiddleware "github.com/oapi-codegen/nethttp-middleware"
+
+	"bewerbungsmanager/internal/service"
+)
+
+const docsPage = `<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <title>Bewerbungs-Tracker API</title>
+  <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css">
+</head>
+<body>
+  <div id="swagger-ui"></div>
+  <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+  <script>SwaggerUIBundle({ url: "/api/openapi.json", dom_id: "#swagger-ui" });</script>
+</body>
+</html>`
+
+// NewRouter baut den kompletten HTTP-Handler: API, Validierung, Doku, Logging.
+func NewRouter(svc *service.Service, logger *slog.Logger) (http.Handler, error) {
+	spec, err := GetSwagger()
+	if err != nil {
+		return nil, fmt.Errorf("openapi-spec laden: %w", err)
+	}
+	specJSON, err := spec.MarshalJSON()
+	if err != nil {
+		return nil, fmt.Errorf("openapi-spec serialisieren: %w", err)
+	}
+	spec.Servers = nil // Pfade in der Spec sind absolut
+
+	validator := nethttpmiddleware.OapiRequestValidatorWithOptions(spec, &nethttpmiddleware.Options{
+		SilenceServersWarning: true,
+		ErrorHandler: func(w http.ResponseWriter, message string, status int) {
+			p := badRequest(message)
+			p.Status = status
+			writeProblem(w, p)
+		},
+	})
+
+	strict := NewStrictHandlerWithOptions(&Server{svc: svc}, nil, StrictHTTPServerOptions{
+		RequestErrorHandlerFunc:  requestErrorHandler,
+		ResponseErrorHandlerFunc: responseErrorHandler(logger),
+	})
+
+	mux := http.NewServeMux()
+	HandlerWithOptions(strict, StdHTTPServerOptions{
+		BaseRouter:       mux,
+		Middlewares:      []MiddlewareFunc{validator},
+		ErrorHandlerFunc: requestErrorHandler,
+	})
+	mux.HandleFunc("GET /api/openapi.json", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write(specJSON)
+	})
+	mux.HandleFunc("GET /api/docs", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = io.WriteString(w, docsPage)
+	})
+	return logRequests(logger, mux), nil
+}
