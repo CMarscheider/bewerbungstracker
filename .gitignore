@@ -12,3 +12,4 @@ frontend/.angular/
 # Lokales
 .env
 .idea/
+tools/screenshots/node_modules/

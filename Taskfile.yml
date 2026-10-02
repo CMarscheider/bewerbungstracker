@@ -57,3 +57,11 @@ tasks:
     dir: backend
     cmds:
       - go run ./cmd/seed -url {{.URL | default "http://localhost:4200"}}
+
+  screenshots:
+    desc: Erstellt README-Screenshots (Stack muss laufen und Demo-Daten enthalten)
+    dir: tools/screenshots
+    cmds:
+      - npm install --no-audit --no-fund
+      - npx playwright install chromium
+      - BASE_URL={{.URL | default "http://localhost:4200"}} npm run shoot
