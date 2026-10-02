@@ -130,3 +130,25 @@ func TestAllowedEvents(t *testing.T) {
 		t.Fatalf("erwartet NotFoundError, bekommen %v", err)
 	}
 }
+
+func TestUndoLastEventUnknownApplication(t *testing.T) {
+	svc := newService(t)
+	_, err := svc.UndoLastEvent(ctx, uuid.New())
+	var nf *service.NotFoundError
+	if !errors.As(err, &nf) {
+		t.Fatalf("erwartet NotFoundError, bekommen %v", err)
+	}
+}
+
+func TestAllowedEventsAfterAbsageIsEmpty(t *testing.T) {
+	svc := newService(t)
+	app := appliedApp(t, svc)
+	mustAdd(t, svc, app.ID, domain.NewEvent{Type: domain.Absage, OccurredOn: day(-1)})
+	got, err := svc.AllowedEvents(ctx, app.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 0 {
+		t.Errorf("AllowedEvents = %v, erwartet leer", got)
+	}
+}

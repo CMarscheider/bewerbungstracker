@@ -67,11 +67,15 @@ func (s *Service) UndoLastEvent(ctx context.Context, appID uuid.UUID) (Applicati
 
 // AllowedEvents liefert die Ereignistypen, die als Nächstes erlaubt sind.
 func (s *Service) AllowedEvents(ctx context.Context, appID uuid.UUID) ([]domain.EventType, error) {
-	q := s.queries()
-	if _, err := q.GetApplication(ctx, appID); err != nil {
-		return nil, notFoundIfNoRows(err, "Bewerbung")
-	}
-	rows, err := q.ListEvents(ctx, appID)
+	var rows []store.ApplicationEvent
+	err := s.inReadTx(ctx, func(q *store.Queries) error {
+		if _, err := q.GetApplication(ctx, appID); err != nil {
+			return notFoundIfNoRows(err, "Bewerbung")
+		}
+		var err error
+		rows, err = q.ListEvents(ctx, appID)
+		return err
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -81,11 +85,16 @@ func (s *Service) AllowedEvents(ctx context.Context, appID uuid.UUID) ([]domain.
 func toHistory(rows []store.ApplicationEvent) []domain.Event {
 	out := make([]domain.Event, 0, len(rows))
 	for _, r := range rows {
-		out = append(out, domain.Event{
-			Type:       domain.EventType(r.Type),
-			OccurredOn: r.OccurredOn,
-			RecordedOn: domain.DateOf(r.CreatedAt.In(time.Local)),
-		})
+		out = append(out, toDomainEvent(r.Type, r.OccurredOn, r.CreatedAt))
 	}
 	return out
+}
+
+// toDomainEvent übersetzt eine gespeicherte Zeile; RecordedOn ist das lokale Anlegedatum.
+func toDomainEvent(eventType string, occurredOn, createdAt time.Time) domain.Event {
+	return domain.Event{
+		Type:       domain.EventType(eventType),
+		OccurredOn: occurredOn,
+		RecordedOn: domain.DateOf(createdAt.In(time.Local)),
+	}
 }

@@ -35,6 +35,9 @@ func validateDays(days int) error {
 	if days < 0 {
 		return &domain.ValidationError{Field: "within_days", Detail: "darf nicht negativ sein"}
 	}
+	if days > 365 {
+		return &domain.ValidationError{Field: "within_days", Detail: "darf höchstens 365 sein"}
+	}
 	return nil
 }
 
@@ -118,11 +121,7 @@ func (s *Service) statsInput(ctx context.Context) ([]stats.Application, error) {
 			current = r.ApplicationID
 		}
 		last := &apps[len(apps)-1]
-		last.Events = append(last.Events, domain.Event{
-			Type:       domain.EventType(r.Type),
-			OccurredOn: r.OccurredOn,
-			RecordedOn: domain.DateOf(r.CreatedAt.In(time.Local)),
-		})
+		last.Events = append(last.Events, toDomainEvent(r.Type, r.OccurredOn, r.CreatedAt))
 	}
 	return apps, nil
 }
