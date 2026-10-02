@@ -76,6 +76,7 @@ type NewEvent struct {
 }
 
 // DateOf schneidet die Uhrzeit ab und liefert Mitternacht UTC desselben Kalendertags.
+// t muss bereits in der fachlichen Zeitzone (time.Local) vorliegen; der Kalendertag wird in t's Location bestimmt.
 func DateOf(t time.Time) time.Time {
 	y, m, day := t.Date()
 	return time.Date(y, m, day, 0, 0, 0, 0, time.UTC)
@@ -91,9 +92,13 @@ func Types(history []Event) []EventType {
 }
 
 // CanApply prüft, ob next an den Verlauf angehängt werden darf.
+// history muss in Erfassungsreihenfolge (created_at) sortiert sein.
 func CanApply(history []Event, next NewEvent, today time.Time) error {
 	if !next.Type.Valid() {
 		return &ValidationError{Field: "type", Detail: fmt.Sprintf("unbekannter Ereignistyp %q", next.Type)}
+	}
+	if next.OccurredOn.IsZero() {
+		return &ValidationError{Field: "occurred_on", Detail: "fehlt"}
 	}
 	if next.DueOn != nil && !next.Type.AllowsDeadline() {
 		return &ValidationError{Field: "due_on", Detail: fmt.Sprintf("%s hat keine Frist", next.Type)}

@@ -45,19 +45,19 @@ var allEventTypes = []EventType{
 }
 
 var eventInfos = map[EventType]eventInfo{
-	Vorgemerkt:         {PhaseVorbereitung, 0, true, false},
-	Beworben:           {PhaseAktiv, 1, false, false},
-	ScreeningGespraech: {PhaseAktiv, 2, false, true},
-	ChallengeErhalten:  {PhaseAktiv, 3, true, false},
-	ChallengeAbgegeben: {PhaseAktiv, 4, false, false},
-	Interview:          {PhaseAktiv, 5, false, true},
-	Kennenlerntag:      {PhaseAktiv, 6, false, true},
-	AngebotErhalten:    {PhaseAktiv, 7, true, false},
-	AngebotAngenommen:  {PhaseAbgeschlossen, -1, false, false},
-	AngebotAbgelehnt:   {PhaseAbgeschlossen, -1, false, false},
-	Absage:             {PhaseAbgeschlossen, -1, false, false},
-	Zurueckgezogen:     {PhaseAbgeschlossen, -1, false, false},
-	KeineRueckmeldung:  {PhaseAbgeschlossen, -1, false, false},
+	Vorgemerkt:         {phase: PhaseVorbereitung, order: 0, deadline: true},
+	Beworben:           {phase: PhaseAktiv, order: 1},
+	ScreeningGespraech: {phase: PhaseAktiv, order: 2, futureDate: true},
+	ChallengeErhalten:  {phase: PhaseAktiv, order: 3, deadline: true},
+	ChallengeAbgegeben: {phase: PhaseAktiv, order: 4},
+	Interview:          {phase: PhaseAktiv, order: 5, futureDate: true},
+	Kennenlerntag:      {phase: PhaseAktiv, order: 6, futureDate: true},
+	AngebotErhalten:    {phase: PhaseAktiv, order: 7, deadline: true},
+	AngebotAngenommen:  {phase: PhaseAbgeschlossen, order: -1},
+	AngebotAbgelehnt:   {phase: PhaseAbgeschlossen, order: -1},
+	Absage:             {phase: PhaseAbgeschlossen, order: -1},
+	Zurueckgezogen:     {phase: PhaseAbgeschlossen, order: -1},
+	KeineRueckmeldung:  {phase: PhaseAbgeschlossen, order: -1},
 }
 
 // AllEventTypes liefert alle Ereignistypen in kanonischer Reihenfolge.
