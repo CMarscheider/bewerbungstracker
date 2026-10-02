@@ -51,3 +51,9 @@ tasks:
     desc: Zeigt die Logs aller Dienste
     cmds:
       - docker compose logs -f
+
+  seed:
+    desc: Lädt Demo-Daten in den laufenden Stack (nur bei leerer Datenbank)
+    dir: backend
+    cmds:
+      - go run ./cmd/seed -url {{.URL | default "http://localhost:4200"}}
