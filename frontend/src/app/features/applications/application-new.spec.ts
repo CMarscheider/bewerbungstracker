@@ -1,17 +1,17 @@
 import { TestBed } from '@angular/core/testing';
 import { FormGroup } from '@angular/forms';
 import { Router, provideRouter } from '@angular/router';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { Api } from '../../core/api';
 import { toIsoDate } from '../../core/dates';
 import { provideGermanDates } from '../../core/german-date-adapter';
 import { ApplicationNew } from './application-new';
 
-function setup() {
+function setup(createApplication: () => unknown = () => of({ id: 'a9' })) {
   const api = {
     listCompanies: vi.fn(() => of([{ id: 'c1', name: 'Acme', created_at: '', application_count: 0 }])),
     createCompany: vi.fn(() => of({ id: 'c2', name: 'Neu GmbH', created_at: '', application_count: 0 })),
-    createApplication: vi.fn(() => of({ id: 'a9' })),
+    createApplication: vi.fn(createApplication),
   };
   TestBed.configureTestingModule({
     imports: [ApplicationNew],
@@ -61,5 +61,17 @@ describe('ApplicationNew', () => {
     const { api, submit } = setup();
     submit();
     expect(api.createApplication).not.toHaveBeenCalled();
+  });
+
+  it('legt die Firma beim erneuten Absenden nach einem Fehler nicht noch einmal an', () => {
+    let calls = 0;
+    const { api, form, submit } = setup(() => (calls++ === 0 ? throwError(() => new Error('x')) : of({ id: 'a9' })));
+    form.patchValue({ company: 'Neu GmbH', position_title: 'Backend' });
+    submit();
+    submit();
+
+    expect(api.createCompany).toHaveBeenCalledTimes(1);
+    expect(api.createApplication).toHaveBeenCalledTimes(2);
+    expect(api.createApplication).toHaveBeenLastCalledWith(expect.objectContaining({ company_id: 'c2' }));
   });
 });

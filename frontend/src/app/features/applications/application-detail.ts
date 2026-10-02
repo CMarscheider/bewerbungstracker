@@ -4,8 +4,8 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
-import { Router } from '@angular/router';
-import { forkJoin } from 'rxjs';
+import { Router, RouterLink } from '@angular/router';
+import { finalize, forkJoin } from 'rxjs';
 import { Application, EventType, NewEvent } from '../../api/models';
 import { Api } from '../../core/api';
 import { formatDate } from '../../core/dates';
@@ -15,7 +15,7 @@ import { EventDialog, EventDialogData } from './event-dialog';
 
 @Component({
   selector: 'app-application-detail',
-  imports: [ReactiveFormsModule, MatButtonModule, MatFormFieldModule, MatInputModule, StatusBadge],
+  imports: [ReactiveFormsModule, RouterLink, MatButtonModule, MatFormFieldModule, MatInputModule, StatusBadge],
   templateUrl: './application-detail.html',
   styleUrl: './application-detail.scss',
 })
@@ -30,6 +30,8 @@ export class ApplicationDetail {
   protected readonly application = signal<Application | null>(null);
   protected readonly allowed = signal<EventType[]>([]);
   protected readonly editing = signal(false);
+  protected readonly loadError = signal(false);
+  protected readonly savingDetails = signal(false);
   protected readonly eventsNewestFirst = computed(() => [...(this.application()?.events ?? [])].reverse());
   protected readonly canUndo = computed(() => (this.application()?.events.length ?? 0) > 1);
 
@@ -39,7 +41,7 @@ export class ApplicationDetail {
   protected readonly formatDate = formatDate;
 
   protected readonly form = new FormGroup({
-    position_title: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
+    position_title: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.pattern(/\S/)] }),
     job_url: new FormControl('', { nonNullable: true }),
     location: new FormControl('', { nonNullable: true }),
     source: new FormControl('', { nonNullable: true }),
@@ -50,7 +52,10 @@ export class ApplicationDetail {
     // Lädt neu, sobald sich die Route (:id) ändert.
     effect(() => {
       const id = this.id();
-      untracked(() => this.load(id));
+      untracked(() => {
+        this.editing.set(false);
+        this.load(id);
+      });
     });
   }
 
@@ -70,14 +75,29 @@ export class ApplicationDetail {
   }
 
   protected saveDetails(): void {
-    if (this.form.invalid) {
+    if (this.form.invalid || this.savingDetails()) {
       return;
     }
     // Leere Strings löschen optionale Felder (PATCH-Semantik des Backends).
-    this.api.updateApplication(this.id(), this.form.getRawValue()).subscribe((app) => {
-      this.application.set(app);
-      this.editing.set(false);
-    });
+    const v = this.form.getRawValue();
+    const body = {
+      position_title: v.position_title.trim(),
+      job_url: v.job_url.trim(),
+      location: v.location.trim(),
+      source: v.source.trim(),
+      notes: v.notes.trim(),
+    };
+    this.savingDetails.set(true);
+    this.api
+      .updateApplication(this.id(), body)
+      .pipe(finalize(() => this.savingDetails.set(false)))
+      .subscribe({
+        next: (app) => {
+          this.application.set(app);
+          this.editing.set(false);
+        },
+        error: () => undefined, // Meldung zeigt der Interceptor
+      });
   }
 
   protected openEventDialog(type: EventType): void {
@@ -104,9 +124,21 @@ export class ApplicationDetail {
   }
 
   private load(id: string): void {
-    forkJoin({ app: this.api.getApplication(id), allowed: this.api.listAllowedEvents(id) }).subscribe(({ app, allowed }) => {
-      this.application.set(app);
-      this.allowed.set(allowed);
+    this.loadError.set(false);
+    forkJoin({ app: this.api.getApplication(id), allowed: this.api.listAllowedEvents(id) }).subscribe({
+      next: ({ app, allowed }) => {
+        // Veraltete Antworten (Route wurde inzwischen gewechselt) verwerfen.
+        if (id === this.id()) {
+          this.application.set(app);
+          this.allowed.set(allowed);
+        }
+      },
+      error: () => {
+        if (id === this.id()) {
+          this.application.set(null);
+          this.loadError.set(true);
+        }
+      },
     });
   }
 }

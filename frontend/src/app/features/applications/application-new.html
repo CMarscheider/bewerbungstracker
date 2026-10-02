@@ -3,7 +3,7 @@
 <form class="form" [formGroup]="form" (ngSubmit)="submit()">
   <mat-form-field>
     <mat-label>Firma</mat-label>
-    <input matInput formControlName="company" [matAutocomplete]="auto" required />
+    <input matInput formControlName="company" maxlength="200" [matAutocomplete]="auto" required />
     <mat-autocomplete #auto="matAutocomplete">
       @for (c of suggestions(); track c.id) {
         <mat-option [value]="c.name">{{ c.name }}</mat-option>
@@ -16,23 +16,23 @@
 
   <mat-form-field>
     <mat-label>Stelle</mat-label>
-    <input matInput formControlName="position_title" required />
+    <input matInput formControlName="position_title" maxlength="300" required />
   </mat-form-field>
 
   <div class="row">
     <mat-form-field>
       <mat-label>Ort</mat-label>
-      <input matInput formControlName="location" />
+      <input matInput formControlName="location" maxlength="200" />
     </mat-form-field>
     <mat-form-field>
       <mat-label>Quelle</mat-label>
-      <input matInput formControlName="source" placeholder="z. B. LinkedIn" />
+      <input matInput formControlName="source" maxlength="100" placeholder="z. B. LinkedIn" />
     </mat-form-field>
   </div>
 
   <mat-form-field>
     <mat-label>Link zur Ausschreibung</mat-label>
-    <input matInput formControlName="job_url" type="url" />
+    <input matInput formControlName="job_url" maxlength="1000" type="url" />
   </mat-form-field>
 
   <mat-button-toggle-group formControlName="first_type" aria-label="Stand">
@@ -59,7 +59,7 @@
 
   <mat-form-field>
     <mat-label>Notizen</mat-label>
-    <textarea matInput formControlName="notes" rows="3"></textarea>
+    <textarea matInput formControlName="notes" rows="3" maxlength="5000"></textarea>
   </mat-form-field>
 
   <div class="actions">

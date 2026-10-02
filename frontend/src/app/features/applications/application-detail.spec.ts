@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { Application, EventType } from '../../api/models';
 import { Api } from '../../core/api';
 import { ApplicationDetail } from './application-detail';
@@ -50,5 +50,16 @@ describe('ApplicationDetail', () => {
   it('meldet abgeschlossene Bewerbungen', async () => {
     const { el } = await render([]);
     expect(el.textContent).toContain('Diese Bewerbung ist abgeschlossen.');
+  });
+
+  it('zeigt eine Fehlermeldung, wenn die Bewerbung nicht geladen werden kann', async () => {
+    const api = { getApplication: vi.fn(() => throwError(() => new Error('404'))), listAllowedEvents: vi.fn(() => of([])) };
+    TestBed.configureTestingModule({ imports: [ApplicationDetail], providers: [provideRouter([]), { provide: Api, useValue: api }] });
+    const fixture = TestBed.createComponent(ApplicationDetail);
+    fixture.componentRef.setInput('id', 'x');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Bewerbung nicht gefunden.');
   });
 });

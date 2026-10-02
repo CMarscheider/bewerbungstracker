@@ -37,6 +37,7 @@ export class ApplicationList {
     q: new FormControl('', { nonNullable: true }),
   });
 
+  /** undefined, bis die erste Antwort da ist. */
   protected readonly applications = toSignal(
     this.filter.valueChanges.pipe(
       debounceTime(250),
@@ -45,7 +46,6 @@ export class ApplicationList {
       distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b)),
       switchMap((f) => this.api.listApplications(f).pipe(catchError(() => of<ApplicationSummary[]>([])))),
     ),
-    { initialValue: [] as ApplicationSummary[] },
   );
 
   protected open(a: ApplicationSummary): void {
