@@ -16,7 +16,7 @@ const listAllEventsWithSource = `-- name: ListAllEventsWithSource :many
 SELECT e.application_id, a.source, e.type, e.occurred_on, e.created_at
 FROM application_events e
 JOIN applications a ON a.id = e.application_id
-ORDER BY e.application_id, e.created_at
+ORDER BY e.application_id, e.created_at, e.id
 `
 
 type ListAllEventsWithSourceRow struct {
@@ -61,7 +61,7 @@ JOIN applications a ON a.id = le.application_id
 JOIN companies c ON c.id = a.company_id
 WHERE le.due_on IS NOT NULL
   AND le.due_on <= $1::date
-ORDER BY le.due_on, c.name
+ORDER BY le.due_on, c.name, a.id
 `
 
 type ListOpenDeadlinesRow struct {
@@ -106,7 +106,7 @@ JOIN applications a ON a.id = le.application_id
 JOIN companies c ON c.id = a.company_id
 WHERE le.type IN ('ScreeningGespraech', 'Interview', 'Kennenlerntag')
   AND le.occurred_on BETWEEN $1::date AND $2::date
-ORDER BY le.occurred_on, c.name
+ORDER BY le.occurred_on, c.name, a.id
 `
 
 type ListUpcomingAppointmentsParams struct {

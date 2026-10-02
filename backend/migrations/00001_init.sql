@@ -25,6 +25,7 @@ CREATE TABLE applications (
 
 CREATE INDEX applications_by_company ON applications (company_id);
 
+-- append-only; einzige Ausnahme: Rückgängig löscht das jeweils letzte Ereignis
 CREATE TABLE application_events (
     id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     application_id  uuid NOT NULL REFERENCES applications (id) ON DELETE CASCADE,
@@ -47,7 +48,7 @@ CREATE VIEW latest_events AS
 SELECT DISTINCT ON (application_id)
        application_id, id AS event_id, type, occurred_on, due_on, interview_round
 FROM application_events
-ORDER BY application_id, created_at DESC;
+ORDER BY application_id, created_at DESC, id DESC;
 
 -- +goose Down
 DROP VIEW latest_events;

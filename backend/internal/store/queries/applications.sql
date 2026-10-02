@@ -21,9 +21,9 @@ JOIN companies c ON c.id = a.company_id
 JOIN latest_events le ON le.application_id = a.id
 WHERE (sqlc.narg('statuses')::text[] IS NULL OR a.current_status = ANY (sqlc.narg('statuses')::text[]))
   AND (sqlc.narg('query')::text IS NULL
-       OR c.name ILIKE '%' || sqlc.narg('query')::text || '%'
-       OR a.position_title ILIKE '%' || sqlc.narg('query')::text || '%')
-ORDER BY a.updated_at DESC;
+       OR strpos(lower(c.name), lower(sqlc.narg('query')::text)) > 0
+       OR strpos(lower(a.position_title), lower(sqlc.narg('query')::text)) > 0)
+ORDER BY a.updated_at DESC, a.id;
 
 -- name: UpdateApplication :one
 UPDATE applications

@@ -22,6 +22,7 @@ func Start(ctx context.Context) (*pgxpool.Pool, string, func(), error) {
 		postgres.BasicWaitStrategies(),
 	)
 	if err != nil {
+		_ = testcontainers.TerminateContainer(ctr)
 		return nil, "", nil, fmt.Errorf("container starten: %w", err)
 	}
 	terminate := func() { _ = testcontainers.TerminateContainer(ctr) }

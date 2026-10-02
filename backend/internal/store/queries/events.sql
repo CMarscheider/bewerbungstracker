@@ -6,7 +6,7 @@ RETURNING *;
 -- name: ListEvents :many
 SELECT * FROM application_events
 WHERE application_id = $1
-ORDER BY created_at;
+ORDER BY created_at, id;
 
 -- name: DeleteEvent :exec
 DELETE FROM application_events WHERE id = $1;

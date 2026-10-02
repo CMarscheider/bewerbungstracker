@@ -115,9 +115,9 @@ JOIN companies c ON c.id = a.company_id
 JOIN latest_events le ON le.application_id = a.id
 WHERE ($1::text[] IS NULL OR a.current_status = ANY ($1::text[]))
   AND ($2::text IS NULL
-       OR c.name ILIKE '%' || $2::text || '%'
-       OR a.position_title ILIKE '%' || $2::text || '%')
-ORDER BY a.updated_at DESC
+       OR strpos(lower(c.name), lower($2::text)) > 0
+       OR strpos(lower(a.position_title), lower($2::text)) > 0)
+ORDER BY a.updated_at DESC, a.id
 `
 
 type ListApplicationsParams struct {

@@ -62,7 +62,7 @@ func (q *Queries) InsertEvent(ctx context.Context, arg InsertEventParams) (Appli
 const listEvents = `-- name: ListEvents :many
 SELECT id, application_id, type, occurred_on, due_on, interview_round, note, created_at FROM application_events
 WHERE application_id = $1
-ORDER BY created_at
+ORDER BY created_at, id
 `
 
 func (q *Queries) ListEvents(ctx context.Context, applicationID uuid.UUID) ([]ApplicationEvent, error) {
