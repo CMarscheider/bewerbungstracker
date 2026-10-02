@@ -1,0 +1,27 @@
+<h2 mat-dialog-title>{{ title }}</h2>
+<form [formGroup]="form" (ngSubmit)="save()">
+  <mat-dialog-content class="fields">
+    <mat-form-field>
+      <mat-label>Datum</mat-label>
+      <input matInput [matDatepicker]="occurredPicker" formControlName="occurred_on" [max]="maxDate" required />
+      <mat-datepicker-toggle matIconSuffix [for]="occurredPicker" />
+      <mat-datepicker #occurredPicker />
+    </mat-form-field>
+    @if (showDeadline) {
+      <mat-form-field data-testid="due-field">
+        <mat-label>{{ deadlineLabel }}</mat-label>
+        <input matInput [matDatepicker]="duePicker" formControlName="due_on" />
+        <mat-datepicker-toggle matIconSuffix [for]="duePicker" />
+        <mat-datepicker #duePicker />
+      </mat-form-field>
+    }
+    <mat-form-field>
+      <mat-label>Notiz</mat-label>
+      <textarea matInput formControlName="note" rows="3"></textarea>
+    </mat-form-field>
+  </mat-dialog-content>
+  <mat-dialog-actions align="end">
+    <button mat-button type="button" mat-dialog-close>Abbrechen</button>
+    <button mat-flat-button type="submit" data-testid="save">Speichern</button>
+  </mat-dialog-actions>
+</form>
