@@ -1,0 +1,20 @@
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 12px;
+}
+.search {
+  flex: 1 1 220px;
+}
+.table-wrap {
+  overflow-x: auto;
+}
+table {
+  width: 100%;
+}
+.row {
+  cursor: pointer;
+}
+.row:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
