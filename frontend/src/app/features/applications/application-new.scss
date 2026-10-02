@@ -1,0 +1,23 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 640px;
+}
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 12px;
+}
+.row mat-form-field {
+  flex: 1 1 220px;
+}
+mat-button-toggle-group {
+  align-self: flex-start;
+  margin: 8px 0 16px;
+}
+.actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
