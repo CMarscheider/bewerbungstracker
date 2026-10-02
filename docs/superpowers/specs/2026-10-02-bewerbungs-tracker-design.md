@@ -158,9 +158,9 @@ Die Statistik wird in einem reinen Go-Paket (`internal/stats`) aus den Ereignisv
 
 - **Basis:** Bewerbungen mit mindestens einem `Beworben`-Ereignis. `Vorgemerkt`-only zählt nicht.
 - **Funnel-Stufen:** Beworben, Screening, Challenge, Interview, Kennenlerntag, Angebot, Angenommen. Eine Bewerbung hat eine Stufe **erreicht**, wenn sie ein Ereignis dieser oder einer späteren Stufe (nach Reihenfolge) hat; „Angenommen“ zählt nur `AngebotAngenommen`. Ein geplanter, noch nicht stattgefundener Termin zählt bereits als erreicht (Einladung erhalten). Quote = erreicht / Basis.
-- **Tage bis zur ersten Antwort:** Differenz zwischen `Beworben.occurred_on` und dem ersten folgenden Ereignis, das nicht `Zurueckgezogen` oder `KeineRueckmeldung` ist. Ausgegeben als Median und Durchschnitt.
+- **Tage bis zur ersten Antwort:** Differenz zwischen `Beworben.occurred_on` und dem ersten folgenden Ereignis, das nicht `Zurueckgezogen` oder `KeineRueckmeldung` ist. Als Antwortdatum gilt das frühere von `occurred_on` und Erfassungsdatum (die Einladung zählt, nicht der Termin). Ausgegeben als Median und Durchschnitt.
 - **Antwortquote:** Anteil der Basis mit mindestens einer solchen Antwort.
-- **Absagen je Phase:** `Absage`-Ereignisse gruppiert nach dem Typ des davor liegenden Ereignisses.
+- **Absagen je Phase:** `Absage`-Ereignisse gruppiert nach dem Typ des davor liegenden Ereignisses; `KeineRueckmeldung` wird dabei übersprungen (Ersatz, falls kein anderes Ereignis davor liegt).
 - **Erfolg je Quelle:** je `source` die Anzahl Beworben, Interview erreicht, Angebot erreicht.
 
 ## Backend (Go)

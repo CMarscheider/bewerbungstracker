@@ -24,6 +24,10 @@ func e(t domain.EventType, occurred string) domain.Event {
 	return domain.Event{Type: t, OccurredOn: d(occurred), RecordedOn: d(occurred)}
 }
 
+func eRec(t domain.EventType, occurred, recorded string) domain.Event {
+	return domain.Event{Type: t, OccurredOn: d(occurred), RecordedOn: d(recorded)}
+}
+
 func str(s string) *string { return &s }
 
 // sampleApps: 4 Bewerbungen in der Basis, 1 nur vorgemerkt.
@@ -73,5 +77,12 @@ func TestFunnelEmpty(t *testing.T) {
 		if s.Reached != 0 || s.Rate != 0 {
 			t.Errorf("leerer Funnel: %+v", s)
 		}
+	}
+}
+
+func TestFunnelExcludesVorgemerktThenZurueckgezogen(t *testing.T) {
+	got := Funnel([]Application{app(nil, e(domain.Vorgemerkt, "2026-09-01"), e(domain.Zurueckgezogen, "2026-09-02"))})
+	if got[0].Reached != 0 || got[0].Rate != 0 {
+		t.Errorf("Basis sollte leer sein: %+v", got[0])
 	}
 }
