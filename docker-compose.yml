@@ -1,0 +1,38 @@
+name: bewerbungsmanager
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: bewerbungen
+      POSTGRES_USER: bewerbungen
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-bewerbungen}
+      TZ: Europe/Berlin
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bewerbungen -d bewerbungen"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  backend:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgres://bewerbungen:${POSTGRES_PASSWORD:-bewerbungen}@db:5432/bewerbungen?sslmode=disable
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "${APP_PORT:-4200}:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  pgdata:

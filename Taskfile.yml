@@ -36,3 +36,18 @@ tasks:
     dir: frontend
     cmds:
       - npx ng test --watch=false
+
+  up:
+    desc: Startet den kompletten Stack (http://localhost:4200)
+    cmds:
+      - docker compose up -d --build
+
+  down:
+    desc: Stoppt den Stack (Daten bleiben erhalten)
+    cmds:
+      - docker compose down
+
+  logs:
+    desc: Zeigt die Logs aller Dienste
+    cmds:
+      - docker compose logs -f
