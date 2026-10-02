@@ -1,0 +1,48 @@
+<h1>Übersicht</h1>
+
+<div class="tiles">
+  <mat-card class="tile"><span class="value">{{ activeCount() ?? '–' }}</span><span class="label">aktive Bewerbungen</span></mat-card>
+  <mat-card class="tile"><span class="value">{{ openOffers() ?? '–' }}</span><span class="label">offene Angebote</span></mat-card>
+  <mat-card class="tile">
+    <span class="value">{{ summary() ? (summary()!.response_rate | percent: '1.0-0') : '–' }}</span>
+    <span class="label">Antwortquote</span>
+  </mat-card>
+</div>
+
+@if (overdue().length) {
+  <h2 class="overdue-title">Überfällige Fristen</h2>
+  <ul class="list">
+    @for (d of overdue(); track d.application_id) {
+      <li class="overdue">
+        <a [routerLink]="['/bewerbungen', d.application_id]">{{ d.company_name }} – {{ d.position_title }}</a>
+        <span>{{ deadlineLabels[d.event_type] ?? 'Frist' }} {{ formatDate(d.due_on) }}</span>
+      </li>
+    }
+  </ul>
+}
+
+<h2>Fristen der nächsten 7 Tage</h2>
+@if (upcoming().length === 0) {
+  <p class="muted">Keine anstehenden Fristen.</p>
+}
+<ul class="list">
+  @for (d of upcoming(); track d.application_id) {
+    <li>
+      <a [routerLink]="['/bewerbungen', d.application_id]">{{ d.company_name }} – {{ d.position_title }}</a>
+      <span>{{ deadlineLabels[d.event_type] ?? 'Frist' }} {{ formatDate(d.due_on) }}</span>
+    </li>
+  }
+</ul>
+
+<h2>Anstehende Termine</h2>
+@if (appointments().length === 0) {
+  <p class="muted">Keine Termine in den nächsten 14 Tagen.</p>
+}
+<ul class="list">
+  @for (a of appointments(); track a.application_id) {
+    <li>
+      <a [routerLink]="['/bewerbungen', a.application_id]">{{ a.company_name }} – {{ a.position_title }}</a>
+      <span>{{ eventLabel(a.event_type, a.interview_round) }} am {{ formatDate(a.date) }}</span>
+    </li>
+  }
+</ul>

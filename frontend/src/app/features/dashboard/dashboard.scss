@@ -1,0 +1,34 @@
+.tiles {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+.tile {
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+}
+.value {
+  font-size: 2rem;
+  font-weight: 600;
+}
+.label {
+  color: #6b7280;
+}
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.list li {
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  justify-content: space-between;
+  padding: 8px 0;
+}
+.overdue,
+.overdue-title {
+  color: #b91c1c;
+}

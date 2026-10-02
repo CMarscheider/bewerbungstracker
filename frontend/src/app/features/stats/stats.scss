@@ -1,0 +1,32 @@
+.funnel {
+  align-items: center;
+  display: grid;
+  gap: 8px 12px;
+  grid-template-columns: max-content 1fr max-content;
+}
+.bar {
+  background: #eef2f7;
+  border-radius: 4px;
+  height: 18px;
+  overflow: hidden;
+}
+.fill {
+  background: #3b82f6;
+  height: 100%;
+}
+.num {
+  font-variant-numeric: tabular-nums;
+}
+.table-wrap {
+  overflow-x: auto;
+}
+.sources {
+  border-collapse: collapse;
+  min-width: 360px;
+}
+.sources th,
+.sources td {
+  border-bottom: 1px solid #e5e7eb;
+  padding: 6px 12px;
+  text-align: left;
+}

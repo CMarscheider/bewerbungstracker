@@ -1,0 +1,43 @@
+<h1>Statistik</h1>
+
+<h2>Funnel</h2>
+<div class="funnel">
+  @for (step of funnel(); track step.stage) {
+    <span class="stage">{{ step.stage }}</span>
+    <div class="bar"><div class="fill" [style.width.%]="step.rate * 100"></div></div>
+    <span class="num">{{ step.reached }} ({{ step.rate | percent: '1.0-0' }})</span>
+  }
+</div>
+
+@if (summary(); as s) {
+  <h2>Antworten</h2>
+  <p>
+    {{ s.responded }} von {{ s.applied }} Bewerbungen beantwortet ({{ s.response_rate | percent: '1.0-0' }}).
+    @if (s.median_days_to_response !== undefined && s.median_days_to_response !== null) {
+      Erste Antwort nach {{ s.median_days_to_response | number: '1.0-1' }} Tagen (Median),
+      Ø {{ s.avg_days_to_response | number: '1.0-1' }} Tagen.
+    }
+  </p>
+
+  <h2>Absagen nach Phase</h2>
+  @if (s.rejections_after.length === 0) {
+    <p class="muted">Noch keine Absagen.</p>
+  }
+  <ul>
+    @for (r of s.rejections_after; track r.event_type) {
+      <li>nach „{{ labels[r.event_type] }}“: {{ r.count }}</li>
+    }
+  </ul>
+
+  <h2>Erfolg je Quelle</h2>
+  <div class="table-wrap">
+    <table class="sources">
+      <thead><tr><th>Quelle</th><th>Beworben</th><th>Interview</th><th>Angebot</th></tr></thead>
+      <tbody>
+        @for (src of s.by_source; track src.source) {
+          <tr><td>{{ src.source }}</td><td>{{ src.applied }}</td><td>{{ src.reached_interview }}</td><td>{{ src.reached_offer }}</td></tr>
+        }
+      </tbody>
+    </table>
+  </div>
+}
