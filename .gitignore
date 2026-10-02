@@ -1,0 +1,14 @@
+# Go
+backend/bin/
+*.exe
+*.test
+coverage.out
+
+# Node / Angular
+node_modules/
+frontend/dist/
+frontend/.angular/
+
+# Lokales
+.env
+.idea/

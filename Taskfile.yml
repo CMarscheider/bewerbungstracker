@@ -1,0 +1,25 @@
+version: '3'
+
+tasks:
+  generate:
+    desc: Generiert sqlc- und OpenAPI-Code
+    cmds:
+      - task: generate:sqlc
+      - task: generate:api
+
+  generate:sqlc:
+    desc: Generiert typsicheren DB-Code mit sqlc (per Docker)
+    cmds:
+      - docker run --rm -v "{{.ROOT_DIR}}/backend:/src" -w /src sqlc/sqlc:1.29.0 generate
+
+  generate:api:
+    desc: Generiert den Go-Server aus api/openapi.yaml
+    dir: backend
+    cmds:
+      - go tool oapi-codegen -config oapi-codegen.yaml ../api/openapi.yaml
+
+  test:
+    desc: Führt alle Backend-Tests aus (Docker muss laufen)
+    dir: backend
+    cmds:
+      - go test ./...
