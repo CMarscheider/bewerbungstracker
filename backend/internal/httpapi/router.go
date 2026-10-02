@@ -31,11 +31,11 @@ func NewRouter(svc *service.Service, logger *slog.Logger) (http.Handler, error) 
 	if err != nil {
 		return nil, fmt.Errorf("openapi-spec laden: %w", err)
 	}
+	spec.Servers = nil // Pfade in der Spec sind absolut
 	specJSON, err := spec.MarshalJSON()
 	if err != nil {
 		return nil, fmt.Errorf("openapi-spec serialisieren: %w", err)
 	}
-	spec.Servers = nil // Pfade in der Spec sind absolut
 
 	validator := nethttpmiddleware.OapiRequestValidatorWithOptions(spec, &nethttpmiddleware.Options{
 		SilenceServersWarning: true,

@@ -2,6 +2,8 @@ package db_test
 
 import (
 	"context"
+	"io"
+	"log/slog"
 	"testing"
 
 	"bewerbungsmanager/internal/db"
@@ -17,7 +19,7 @@ func TestMigrateCreatesSchemaAndIsIdempotent(t *testing.T) {
 	defer cleanup()
 
 	// testdb.Start hat bereits migriert; ein zweiter Lauf darf nichts kaputt machen.
-	if err := db.Migrate(ctx, url); err != nil {
+	if err := db.Migrate(ctx, url, slog.New(slog.NewTextHandler(io.Discard, nil))); err != nil {
 		t.Fatalf("zweite Migration: %v", err)
 	}
 

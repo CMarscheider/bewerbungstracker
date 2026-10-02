@@ -135,8 +135,8 @@ latest_events   -- VIEW: letztes Ereignis je Bewerbung (DISTINCT ON application_
 | POST | `/applications/{id}/events` | Neues Ereignis, geprüft durch Zustandsautomat |
 | DELETE | `/applications/{id}/events/latest` | Rückgängig |
 | GET | `/applications/{id}/allowed-events` | Erlaubte nächste Ereignistypen |
-| GET | `/deadlines?within_days=7` | Offene Fristen bis heute + N Tage, inkl. überfälliger |
-| GET | `/appointments?within_days=14` | Anstehende Termine |
+| GET | `/deadlines?within_days=7` | Offene Fristen bis heute + N Tage, inkl. überfälliger; `within_days` 0–365 (Standard 7) |
+| GET | `/appointments?within_days=14` | Anstehende Termine; `within_days` 0–365 (Standard 14) |
 | GET | `/stats/funnel` | Funnel mit Anzahl und Quote je Stufe |
 | GET | `/stats/summary` | Antwortzeiten, Absagen je Phase, Erfolg je Quelle |
 
@@ -149,8 +149,10 @@ Alle Fehler als `application/problem+json` (RFC 9457):
 - `400`: Request ungültig (Format, Pflichtfelder, `due_on` bei falschem Typ)
 - `404`: Ressource nicht gefunden
 - `409`: Konflikt (Firmenname doppelt, Firma mit Bewerbungen löschen)
-- `422`: fachlich unerlaubt, mit Erweiterungsfeldern, z. B. `{"type": ".../invalid-transition", "from": "Absage", "attempted": "Interview"}`
+- `422`: fachlich unerlaubt, mit Erweiterungsfeldern, z. B. `{"type": "/problems/invalid-transition", "from": "Absage", "attempted": "Interview"}`. `RuleError`-Codes: `date-in-future`, `date-before-previous`, `cannot-undo-first-event`, `unknown-company`. Problem-Typen sind relativ (`/problems/<code>`).
 - `500`: unerwartet; Details nur im Log
+
+Unbekannte `/api`-Routen liefern ein `404`-Problem. Das Request-Body-Limit beträgt 1 MiB.
 
 ## Statistik – Definitionen
 
@@ -161,7 +163,7 @@ Die Statistik wird in einem reinen Go-Paket (`internal/stats`) aus den Ereignisv
 - **Tage bis zur ersten Antwort:** Differenz zwischen `Beworben.occurred_on` und dem ersten folgenden Ereignis, das nicht `Zurueckgezogen` oder `KeineRueckmeldung` ist. Als Antwortdatum gilt das frühere von `occurred_on` und Erfassungsdatum (die Einladung zählt, nicht der Termin). Ausgegeben als Median und Durchschnitt.
 - **Antwortquote:** Anteil der Basis mit mindestens einer solchen Antwort.
 - **Absagen je Phase:** `Absage`-Ereignisse gruppiert nach dem Typ des davor liegenden Ereignisses; `KeineRueckmeldung` wird dabei übersprungen (Ersatz, falls kein anderes Ereignis davor liegt).
-- **Erfolg je Quelle:** je `source` die Anzahl Beworben, Interview erreicht, Angebot erreicht.
+- **Erfolg je Quelle:** je `source` die Anzahl Beworben, Interview erreicht, Angebot erreicht. Fehlende oder leere Quelle → „Unbekannt“.
 
 ## Backend (Go)
 
@@ -177,14 +179,16 @@ backend/
   internal/store/          sqlc-generiert + queries/*.sql
   internal/httpapi/        oapi-codegen strict server, Handler, Fehler-Mapping, Middleware
   internal/config/         Umgebungsvariablen → Config
+  internal/db/             Connect, Migrate
+  internal/testdb/         Testcontainer-Helfer für Tests
   migrations/              goose-SQL, per go:embed eingebunden
 ```
 
-Abhängigkeiten: `httpapi → service → domain`, `service → store`. `domain` hängt von nichts ab.
+Abhängigkeiten: `httpapi → service → domain`, zusätzlich `httpapi → domain` (Fehler-Mapping), `service → store`. `domain` hängt von nichts ab.
 
 ### Technik
 
-Go 1.24+ (wegen `go tool`), `net/http` mit eingebautem Routing, pgx v5, sqlc, goose (Migrationen laufen beim Start), `log/slog` mit Request-Logging-Middleware. Konfiguration über `DATABASE_URL` und `PORT`.
+Go 1.27, `net/http` mit eingebautem Routing, pgx v5, sqlc, goose (Migrationen laufen beim Start), `log/slog` mit Request-Logging-Middleware. Konfiguration über `DATABASE_URL` und `PORT`.
 
 ### Ablauf: Ereignis anlegen
 
@@ -198,7 +202,7 @@ Rückgängig nutzt denselben Sperr-Mechanismus.
 
 ### Fehler-Mapping
 
-Domain und Service liefern Sentinel-Errors (`ErrNotFound`, `ErrInvalidTransition`, `ErrConflict`, `ErrValidation`). `httpapi` übersetzt sie an genau einer Stelle in Problem-JSON. Alles andere wird geloggt und als generischer `500` beantwortet.
+Domain und Service liefern typisierte Fehler (`domain.ValidationError`, `domain.TransitionError`, `domain.RuleError`, `service.NotFoundError`, `service.ConflictError`). `httpapi/problem.go` ordnet sie per `errors.As` an genau einer Stelle zu und übersetzt sie in Problem-JSON. Alles andere wird geloggt und als generischer `500` beantwortet.
 
 ## Frontend (Angular)
 

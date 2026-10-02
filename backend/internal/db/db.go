@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log/slog"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib" // registriert den Treiber "pgx" für goose
@@ -27,7 +28,7 @@ func Connect(ctx context.Context, url string) (*pgxpool.Pool, error) {
 }
 
 // Migrate bringt das Schema auf den neuesten Stand.
-func Migrate(ctx context.Context, url string) error {
+func Migrate(ctx context.Context, url string, logger *slog.Logger) error {
 	sqlDB, err := sql.Open("pgx", url)
 	if err != nil {
 		return fmt.Errorf("datenbank öffnen: %w", err)
@@ -38,8 +39,14 @@ func Migrate(ctx context.Context, url string) error {
 	if err != nil {
 		return fmt.Errorf("goose: %w", err)
 	}
-	if _, err := provider.Up(ctx); err != nil {
+	results, err := provider.Up(ctx)
+	if err != nil {
 		return fmt.Errorf("migrationen: %w", err)
 	}
+	versions := make([]int64, 0, len(results))
+	for _, r := range results {
+		versions = append(versions, r.Source.Version)
+	}
+	logger.Info("migrationen angewendet", "anzahl", len(results), "versionen", versions)
 	return nil
 }

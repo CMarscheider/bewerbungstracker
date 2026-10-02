@@ -34,7 +34,7 @@ func run(logger *slog.Logger) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	if err := db.Migrate(ctx, cfg.DatabaseURL); err != nil {
+	if err := db.Migrate(ctx, cfg.DatabaseURL, logger); err != nil {
 		return err
 	}
 	pool, err := db.Connect(ctx, cfg.DatabaseURL)
@@ -54,6 +54,7 @@ func run(logger *slog.Logger) error {
 		ReadTimeout:       15 * time.Second,
 		WriteTimeout:      30 * time.Second,
 		IdleTimeout:       60 * time.Second,
+		ErrorLog:          slog.NewLogLogger(logger.Handler(), slog.LevelWarn),
 	}
 
 	errCh := make(chan error, 1)
@@ -70,6 +71,7 @@ func run(logger *slog.Logger) error {
 		return err
 	case <-ctx.Done():
 	}
+	stop() // zweites Signal beendet den Prozess sofort
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()

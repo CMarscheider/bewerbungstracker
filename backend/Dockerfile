@@ -1,11 +1,11 @@
-FROM golang:1-alpine AS build
+FROM golang:1.27-alpine AS build
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/server ./cmd/server
 
-FROM gcr.io/distroless/static-debian12
+FROM gcr.io/distroless/static-debian12:nonroot
 COPY --from=build /out/server /server
 ENV PORT=8080 TZ=Europe/Berlin
 EXPOSE 8080

@@ -4,6 +4,8 @@ package testdb
 import (
 	"context"
 	"fmt"
+	"io"
+	"log/slog"
 	"testing"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -32,7 +34,7 @@ func Start(ctx context.Context) (*pgxpool.Pool, string, func(), error) {
 		terminate()
 		return nil, "", nil, err
 	}
-	if err := db.Migrate(ctx, url); err != nil {
+	if err := db.Migrate(ctx, url, slog.New(slog.NewTextHandler(io.Discard, nil))); err != nil {
 		terminate()
 		return nil, "", nil, err
 	}
