@@ -97,7 +97,7 @@ func (s *Service) UpdateCompany(ctx context.Context, id uuid.UUID, p CompanyPatc
 		return Company{}, &ConflictError{Detail: fmt.Sprintf("Firma %q existiert bereits", name)}
 	}
 	if err != nil {
-		return Company{}, err
+		return Company{}, notFoundIfNoRows(err, "Firma")
 	}
 	return Company{
 		ID: c.ID, Name: c.Name, Website: c.Website, Notes: c.Notes,

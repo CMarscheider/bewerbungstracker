@@ -120,12 +120,18 @@ func (s *Service) CreateApplication(ctx context.Context, in NewApplication) (App
 }
 
 func (s *Service) GetApplication(ctx context.Context, id uuid.UUID) (Application, error) {
-	q := s.queries()
-	r, err := q.GetApplication(ctx, id)
-	if err != nil {
-		return Application{}, notFoundIfNoRows(err, "Bewerbung")
-	}
-	rows, err := q.ListEvents(ctx, id)
+	var (
+		r    store.GetApplicationRow
+		rows []store.ApplicationEvent
+	)
+	err := s.inReadTx(ctx, func(q *store.Queries) error {
+		var err error
+		if r, err = q.GetApplication(ctx, id); err != nil {
+			return notFoundIfNoRows(err, "Bewerbung")
+		}
+		rows, err = q.ListEvents(ctx, id)
+		return err
+	})
 	if err != nil {
 		return Application{}, err
 	}
@@ -173,6 +179,9 @@ func (s *Service) ListApplications(ctx context.Context, f ApplicationFilter) ([]
 func statusFilter(f ApplicationFilter) ([]string, error) {
 	if f.Status != nil && !f.Status.Valid() {
 		return nil, &domain.ValidationError{Field: "status", Detail: "unbekannter Status"}
+	}
+	if f.Phase != nil && len(domain.StatusesInPhase(*f.Phase)) == 0 {
+		return nil, &domain.ValidationError{Field: "phase", Detail: "unbekannte Phase"}
 	}
 	switch {
 	case f.Phase != nil:

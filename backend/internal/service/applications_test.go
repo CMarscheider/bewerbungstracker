@@ -2,6 +2,7 @@ package service_test
 
 import (
 	"errors"
+	"slices"
 	"testing"
 
 	"github.com/google/uuid"
@@ -98,7 +99,7 @@ func TestListApplicationsFilters(t *testing.T) {
 			for _, a := range list {
 				got = append(got, a.ID)
 			}
-			if len(got) != len(tt.want) || (len(got) > 0 && got[0] != tt.want[0]) {
+			if !slices.Equal(got, tt.want) {
 				t.Errorf("IDs = %v, erwartet %v", got, tt.want)
 			}
 		})
@@ -159,5 +160,52 @@ func TestDeleteApplicationAndCompanyConflict(t *testing.T) {
 	}
 	if err := svc.DeleteCompany(ctx, c.ID); err != nil {
 		t.Fatalf("Firma ohne Bewerbungen löschen: %v", err)
+	}
+}
+
+func TestListApplicationsUnknownPhase(t *testing.T) {
+	svc := newService(t)
+	_, err := svc.ListApplications(ctx, service.ApplicationFilter{Phase: ptr(domain.Phase("Quatsch"))})
+	var ve *domain.ValidationError
+	if !errors.As(err, &ve) || ve.Field != "phase" {
+		t.Fatalf("erwartet ValidationError(phase), bekommen %v", err)
+	}
+}
+
+func TestUpdateApplicationUnknownID(t *testing.T) {
+	svc := newService(t)
+	_, err := svc.UpdateApplication(ctx, uuid.New(), service.ApplicationPatch{PositionTitle: ptr("X")})
+	var nf *service.NotFoundError
+	if !errors.As(err, &nf) {
+		t.Fatalf("erwartet NotFoundError, bekommen %v", err)
+	}
+}
+
+func TestUpdateApplicationUnknownCompany(t *testing.T) {
+	svc := newService(t)
+	c := mustCompany(t, svc, "Acme")
+	app, err := svc.CreateApplication(ctx, newApp(c.ID, "Go", domain.NewEvent{Type: domain.Beworben, OccurredOn: day(0)}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = svc.UpdateApplication(ctx, app.ID, service.ApplicationPatch{CompanyID: ptr(uuid.New())})
+	var re *domain.RuleError
+	if !errors.As(err, &re) || re.Code != service.CodeUnknownCompany {
+		t.Fatalf("erwartet RuleError %s, bekommen %v", service.CodeUnknownCompany, err)
+	}
+}
+
+func TestGetCompanyCountsApplications(t *testing.T) {
+	svc := newService(t)
+	c := mustCompany(t, svc, "Acme")
+	if _, err := svc.CreateApplication(ctx, newApp(c.ID, "Go", domain.NewEvent{Type: domain.Beworben, OccurredOn: day(0)})); err != nil {
+		t.Fatal(err)
+	}
+	got, err := svc.GetCompany(ctx, c.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.ApplicationCount != 1 {
+		t.Errorf("ApplicationCount = %d", got.ApplicationCount)
 	}
 }

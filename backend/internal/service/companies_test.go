@@ -4,6 +4,8 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/google/uuid"
+
 	"bewerbungsmanager/internal/domain"
 	"bewerbungsmanager/internal/service"
 )
@@ -86,5 +88,25 @@ func TestDeleteCompany(t *testing.T) {
 	}
 	if err := svc.DeleteCompany(ctx, c.ID); !errors.As(err, &nf) {
 		t.Fatalf("zweites Löschen: erwartet NotFoundError, bekommen %v", err)
+	}
+}
+
+func TestUpdateCompanyDuplicateNameConflicts(t *testing.T) {
+	svc := newService(t)
+	mustCompany(t, svc, "Acme")
+	b := mustCompany(t, svc, "Beta")
+	_, err := svc.UpdateCompany(ctx, b.ID, service.CompanyPatch{Name: ptr("Acme")})
+	var ce *service.ConflictError
+	if !errors.As(err, &ce) {
+		t.Fatalf("erwartet ConflictError, bekommen %v", err)
+	}
+}
+
+func TestUpdateCompanyUnknownID(t *testing.T) {
+	svc := newService(t)
+	_, err := svc.UpdateCompany(ctx, uuid.New(), service.CompanyPatch{Name: ptr("X")})
+	var nf *service.NotFoundError
+	if !errors.As(err, &nf) {
+		t.Fatalf("erwartet NotFoundError, bekommen %v", err)
 	}
 }
