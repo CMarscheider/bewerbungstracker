@@ -34,7 +34,7 @@ func (s *Server) GetCv(ctx context.Context, _ GetCvRequestObject) (GetCvResponse
 }
 
 func (s *Server) SaveCv(ctx context.Context, req SaveCvRequestObject) (SaveCvResponseObject, error) {
-	body := Cv(*req.Body)
+	body := *req.Body
 	body.UpdatedAt = nil
 	data, err := json.Marshal(body)
 	if err != nil {

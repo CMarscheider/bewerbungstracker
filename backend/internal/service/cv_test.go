@@ -37,7 +37,7 @@ func TestSaveCVStoresAndOverwrites(t *testing.T) {
 	}
 	var body struct {
 		Person struct{ Name string } `json:"person"`
-		Skills []string             `json:"skills"`
+		Skills []string              `json:"skills"`
 	}
 	if err := json.Unmarshal(got.Data, &body); err != nil {
 		t.Fatal(err)
