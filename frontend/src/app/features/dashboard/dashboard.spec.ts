@@ -25,8 +25,19 @@ describe('Dashboard', () => {
     await fixture.whenStable();
     fixture.detectChanges();
     const el = fixture.nativeElement as HTMLElement;
-    expect(el.textContent).toContain('Überfällige Fristen');
-    expect(el.textContent).toContain('Interview (Runde 2)');
+    const deadlineRows = [...el.querySelectorAll('.deadlines .row')];
+    expect(deadlineRows.length).toBe(2);
+    expect(deadlineRows[0].classList).toContain('overdue');
+    expect(deadlineRows[0].textContent).toContain('überfällig');
+    expect(deadlineRows[0].textContent).toContain('Acme');
+    expect(deadlineRows[1].classList).not.toContain('overdue');
+    expect(el.querySelector('.deadlines .card-title')?.textContent).toContain('2');
+
+    const appointment = el.querySelector('.appointments .row') as HTMLElement;
+    expect(appointment.textContent).toContain('Interview (Runde 2)');
+    expect(appointment.querySelector('.when')?.textContent).toContain('08.10.');
+    expect(appointment.querySelector('.when')?.textContent).toContain('Do');
+    expect(appointment.querySelector('.dot')?.classList).toContain('tone-violet');
     expect(el.querySelector('.tile .value')?.textContent?.trim()).toBe('3');
     expect(el.querySelectorAll('.tile .value')[2].textContent?.trim()).toBe('–');
   });

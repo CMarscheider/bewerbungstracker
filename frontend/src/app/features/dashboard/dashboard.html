@@ -9,48 +9,58 @@
   </mat-card>
 </div>
 
-@if (overdue().length) {
-  <h2 class="overdue-title">Überfällige Fristen</h2>
-  <ul class="list">
-    @for (d of overdue(); track d.application_id) {
-      <li class="overdue">
-        <a [routerLink]="['/bewerbungen', d.application_id]">{{ d.company_name }} – {{ d.position_title }}</a>
-        <span>{{ deadlineLabels[d.event_type] ?? 'Frist' }} {{ formatDate(d.due_on) }}</span>
-      </li>
+<div class="columns">
+  <mat-card class="card deadlines">
+    <h2 class="card-title">Fristen <span class="count">· {{ deadlines().length }}</span></h2>
+    <p class="hint muted">Überfällig und in den nächsten 7 Tagen</p>
+    @if (!deadlinesResult()) {
+      <p class="muted state">Lade …</p>
+    } @else if (deadlinesResult()!.error) {
+      <p class="muted state">Konnte nicht geladen werden.</p>
+    } @else if (deadlines().length === 0) {
+      <p class="muted state">Keine anstehenden Fristen.</p>
     }
-  </ul>
-}
+    <ul class="rows">
+      @for (d of deadlines(); track d.application_id + d.due_on) {
+        <li class="row" [class.overdue]="d.overdue">
+          <span class="when">
+            <span class="day">{{ formatDayMonth(d.due_on) }}</span>
+            <span class="weekday">{{ d.overdue ? 'überfällig' : weekdayShort(d.due_on) }}</span>
+          </span>
+          <a class="what" [routerLink]="['/bewerbungen', d.application_id]">
+            <span class="company">{{ d.company_name }}</span>
+            <span class="position">{{ d.position_title }}</span>
+          </a>
+          <span class="kind"><span class="dot" [class]="'tone-' + tones[d.event_type]"></span>{{ deadlineLabels[d.event_type] ?? 'Frist' }}</span>
+        </li>
+      }
+    </ul>
+  </mat-card>
 
-<h2>Fristen der nächsten 7 Tage</h2>
-@if (!deadlinesResult()) {
-  <p class="muted">Lade …</p>
-} @else if (deadlinesResult()!.error) {
-  <p class="muted">Konnte nicht geladen werden.</p>
-} @else if (upcoming().length === 0) {
-  <p class="muted">Keine anstehenden Fristen.</p>
-}
-<ul class="list">
-  @for (d of upcoming(); track d.application_id) {
-    <li>
-      <a [routerLink]="['/bewerbungen', d.application_id]">{{ d.company_name }} – {{ d.position_title }}</a>
-      <span>{{ deadlineLabels[d.event_type] ?? 'Frist' }} {{ formatDate(d.due_on) }}</span>
-    </li>
-  }
-</ul>
-
-<h2>Anstehende Termine</h2>
-@if (!appointmentsResult()) {
-  <p class="muted">Lade …</p>
-} @else if (appointmentsResult()!.error) {
-  <p class="muted">Konnte nicht geladen werden.</p>
-} @else if (appointments().length === 0) {
-  <p class="muted">Keine Termine in den nächsten 14 Tagen.</p>
-}
-<ul class="list">
-  @for (a of appointments(); track a.application_id) {
-    <li>
-      <a [routerLink]="['/bewerbungen', a.application_id]">{{ a.company_name }} – {{ a.position_title }}</a>
-      <span>{{ eventLabel(a.event_type, a.interview_round) }} am {{ formatDate(a.date) }}</span>
-    </li>
-  }
-</ul>
+  <mat-card class="card appointments">
+    <h2 class="card-title">Termine <span class="count">· {{ appointments().length }}</span></h2>
+    <p class="hint muted">In den nächsten 14 Tagen</p>
+    @if (!appointmentsResult()) {
+      <p class="muted state">Lade …</p>
+    } @else if (appointmentsResult()!.error) {
+      <p class="muted state">Konnte nicht geladen werden.</p>
+    } @else if (appointments().length === 0) {
+      <p class="muted state">Keine Termine in den nächsten 14 Tagen.</p>
+    }
+    <ul class="rows">
+      @for (a of appointments(); track a.application_id + a.date) {
+        <li class="row">
+          <span class="when">
+            <span class="day">{{ formatDayMonth(a.date) }}</span>
+            <span class="weekday">{{ weekdayShort(a.date) }}</span>
+          </span>
+          <a class="what" [routerLink]="['/bewerbungen', a.application_id]">
+            <span class="company">{{ a.company_name }}</span>
+            <span class="position">{{ a.position_title }}</span>
+          </a>
+          <span class="kind"><span class="dot" [class]="'tone-' + tones[a.event_type]"></span>{{ eventLabel(a.event_type, a.interview_round) }}</span>
+        </li>
+      }
+    </ul>
+  </mat-card>
+</div>

@@ -16,6 +16,25 @@ export const EVENT_LABELS: Record<EventType, string> = {
   KeineRueckmeldung: 'Keine Rückmeldung',
 };
 
+/** Farbton je Status; Status desselben Prozessschritts teilen sich einen Ton. Farben in styles.scss. */
+export type StatusTone = 'neutral' | 'blue' | 'violet' | 'amber' | 'green' | 'success' | 'red';
+
+export const STATUS_TONE: Record<EventType, StatusTone> = {
+  Vorgemerkt: 'neutral',
+  Beworben: 'blue',
+  ScreeningGespraech: 'violet',
+  ChallengeErhalten: 'amber',
+  ChallengeAbgegeben: 'amber',
+  Interview: 'violet',
+  Kennenlerntag: 'violet',
+  AngebotErhalten: 'green',
+  AngebotAngenommen: 'success',
+  AngebotAbgelehnt: 'neutral',
+  Absage: 'red',
+  Zurueckgezogen: 'neutral',
+  KeineRueckmeldung: 'neutral',
+};
+
 export const ALL_EVENT_TYPES = Object.keys(EVENT_LABELS) as EventType[];
 
 export const PHASE_LABELS: Record<Phase, string> = {

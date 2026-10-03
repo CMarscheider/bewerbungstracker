@@ -5,9 +5,9 @@ import { MatCardModule } from '@angular/material/card';
 import { RouterLink } from '@angular/router';
 import { map } from 'rxjs';
 import { Api } from '../../core/api';
-import { formatDate } from '../../core/dates';
+import { formatDayMonth, weekdayShort } from '../../core/dates';
 import { loaded } from '../../core/loaded';
-import { DEADLINE_LABELS, eventLabel } from '../../shared/labels';
+import { DEADLINE_LABELS, STATUS_TONE, eventLabel } from '../../shared/labels';
 
 @Component({
   selector: 'app-dashboard',
@@ -25,12 +25,16 @@ export class Dashboard {
   protected readonly activeCount = toSignal(loaded(this.api.listApplications({ phase: 'Aktiv' })).pipe(map((r) => r.data?.length)));
   protected readonly openOffers = toSignal(loaded(this.api.listApplications({ status: 'AngebotErhalten' })).pipe(map((r) => r.data?.length)));
 
-  protected readonly deadlines = computed(() => this.deadlinesResult()?.data ?? []);
+  /** Überfällige zuerst, sonst in der Reihenfolge der API (nach Datum). */
+  protected readonly deadlines = computed(() => {
+    const all = this.deadlinesResult()?.data ?? [];
+    return [...all.filter((d) => d.overdue), ...all.filter((d) => !d.overdue)];
+  });
   protected readonly appointments = computed(() => this.appointmentsResult()?.data ?? []);
-  protected readonly overdue = computed(() => this.deadlines().filter((d) => d.overdue));
-  protected readonly upcoming = computed(() => this.deadlines().filter((d) => !d.overdue));
 
-  protected readonly formatDate = formatDate;
+  protected readonly formatDayMonth = formatDayMonth;
+  protected readonly weekdayShort = weekdayShort;
+  protected readonly tones = STATUS_TONE;
   protected readonly eventLabel = eventLabel;
   protected readonly deadlineLabels = DEADLINE_LABELS;
 }

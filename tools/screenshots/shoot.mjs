@@ -21,8 +21,9 @@ const pages = [
   { name: 'neu', path: '/bewerbungen/neu' },
 ];
 const viewports = [
-  { suffix: 'desktop', viewport: { width: 1280, height: 860 }, scale: 1, only: null },
-  { suffix: 'mobile', viewport: { width: 390, height: 844 }, scale: 2, only: ['dashboard', 'detail'] },
+  { suffix: 'desktop', viewport: { width: 1280, height: 860 }, scale: 1, scheme: 'light', only: null },
+  { suffix: 'mobile', viewport: { width: 390, height: 844 }, scale: 2, scheme: 'light', only: ['dashboard', 'detail'] },
+  { suffix: 'desktop-dark', viewport: { width: 1280, height: 860 }, scale: 1, scheme: 'dark', only: ['dashboard', 'detail'] },
 ];
 
 const browser = await chromium.launch();
@@ -33,7 +34,7 @@ try {
       deviceScaleFactor: vp.scale,
       locale: 'de-DE',
       timezoneId: 'Europe/Berlin',
-      colorScheme: 'light',
+      colorScheme: vp.scheme,
     });
     const page = await context.newPage();
     for (const p of pages) {

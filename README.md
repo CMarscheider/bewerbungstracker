@@ -17,11 +17,16 @@ entstehen Dashboard, Verlauf und Statistik.
 - **Verlauf:** Timeline je Bewerbung; nur fachlich erlaubte nächste Schritte werden angeboten,
   Fristen nur dort, wo sie Sinn ergeben (Bewerbungsschluss, Challenge-Abgabe, Antwort auf Angebot)
 - **Statistik:** Funnel, Tage bis zur ersten Antwort, Absagen je Phase, Erfolg je Quelle
+- **Darstellung:** Hell, Dunkel oder nach Systemeinstellung; Status-Farben je Prozessschritt
 - **API-Doku:** Swagger UI unter `/api/docs`
 
 | Bewerbung im Detail | Statistik |
 |---|---|
 | ![Detail](docs/screenshots/detail-desktop.png) | ![Statistik](docs/screenshots/statistik-desktop.png) |
+
+| Dark Mode | Bewerbungen |
+|---|---|
+| ![Übersicht im Dark Mode](docs/screenshots/dashboard-desktop-dark.png) | ![Bewerbungsliste](docs/screenshots/bewerbungen-desktop.png) |
 
 <p>
   <img src="docs/screenshots/dashboard-mobile.png" alt="Dashboard auf dem Handy" width="240">

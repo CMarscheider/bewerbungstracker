@@ -20,3 +20,16 @@ export function formatDate(s: string | null | undefined): string {
   const [y, m, d] = s.slice(0, 10).split('-');
   return `${d}.${m}.${y}`;
 }
+
+/** "07.10." – für schmale Datumsspalten. */
+export function formatDayMonth(s: string): string {
+  const [, m, d] = s.slice(0, 10).split('-');
+  return `${d}.${m}.`;
+}
+
+const WEEKDAYS = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
+
+/** Kurzer deutscher Wochentag eines Kalendertags, z. B. "Mi". */
+export function weekdayShort(s: string): string {
+  return WEEKDAYS[fromIsoDate(s).getDay()];
+}

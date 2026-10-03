@@ -1,7 +1,7 @@
 @if (application(); as app) {
   <header>
     <h1>{{ app.position_title }}</h1>
-    <p class="company">{{ app.company_name }} <app-status-badge [status]="app.status" [phase]="app.phase" /></p>
+    <p class="company">{{ app.company_name }} <app-status-badge [status]="app.status" /></p>
   </header>
 
   <section>

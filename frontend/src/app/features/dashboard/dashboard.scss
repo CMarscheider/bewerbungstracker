@@ -2,6 +2,7 @@
   display: grid;
   gap: 12px;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+  margin-bottom: 16px;
 }
 .tile {
   display: flex;
@@ -14,21 +15,114 @@
   font-weight: 600;
 }
 .label {
-  color: var(--mat-sys-on-surface-variant, #6b7280);
+  color: var(--mat-sys-on-surface-variant);
 }
-.list li {
+
+.columns {
+  align-items: start;
+  display: grid;
+  gap: 16px;
+  grid-template-columns: 1fr 1fr;
+}
+@media (max-width: 900px) {
+  .columns {
+    grid-template-columns: 1fr;
+  }
+}
+.card {
+  padding: 16px 16px 8px;
+}
+.card-title {
+  font-size: 1.1rem;
+  margin: 0;
+}
+.count {
+  color: var(--mat-sys-on-surface-variant);
+  font-weight: 400;
+}
+.hint {
+  font-size: 0.85rem;
+  margin: 2px 0 8px;
+}
+.state {
+  margin: 8px 0 12px;
+}
+
+.rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.row {
+  align-items: center;
+  border-top: 1px solid var(--mat-sys-outline-variant);
+  display: grid;
+  gap: 4px 12px;
+  grid-template-columns: 4.5rem minmax(0, 1fr) auto;
+  padding: 10px 0;
+}
+.when {
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px 16px;
-  justify-content: space-between;
-  padding: 8px 0;
+  flex-direction: column;
+  line-height: 1.25;
 }
-.overdue,
-.overdue-title {
-  color: var(--mat-sys-error, #b91c1c);
+.day {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
 }
-@media (max-width: 600px) {
-  .list li {
-    flex-direction: column;
+.weekday {
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.8rem;
+}
+.what {
+  color: inherit;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+  min-width: 0;
+  text-decoration: none;
+}
+.what:hover .company {
+  color: var(--mat-sys-primary);
+  text-decoration: underline;
+}
+.company {
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.position {
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.85rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.kind {
+  align-items: center;
+  display: inline-flex;
+  font-size: 0.85rem;
+  gap: 6px;
+  white-space: nowrap;
+}
+.dot {
+  background: var(--tone-dot);
+  border-radius: 50%;
+  display: inline-block;
+  height: 8px;
+  width: 8px;
+}
+.overdue .day,
+.overdue .weekday {
+  color: var(--mat-sys-error);
+}
+
+@media (max-width: 480px) {
+  .row {
+    grid-template-columns: 4rem minmax(0, 1fr);
+  }
+  .kind {
+    grid-column: 2;
   }
 }
