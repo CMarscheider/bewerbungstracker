@@ -1,8 +1,8 @@
-import { HttpClient, HttpErrorResponse, provideHttpClient, withInterceptors } from '@angular/common/http';
+import { HttpClient, HttpContext, HttpErrorResponse, provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { errorInterceptor, problemMessage } from './error.interceptor';
+import { SILENT_NOT_FOUND, errorInterceptor, problemMessage } from './error.interceptor';
 
 describe('problemMessage', () => {
   it('nimmt detail aus Problem-JSON', () => {
@@ -50,5 +50,29 @@ describe('errorInterceptor', () => {
 
     expect(open).toHaveBeenCalledWith('Firma existiert bereits', 'OK', { duration: 6000 });
     expect(failed).toBe(true);
+  });
+
+  it('meldet 404 nicht, wenn SILENT_NOT_FOUND gesetzt ist, andere Fehler schon', () => {
+    const open = vi.fn();
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(withInterceptors([errorInterceptor])),
+        provideHttpClientTesting(),
+        { provide: MatSnackBar, useValue: { open } },
+      ],
+    });
+    const http = TestBed.inject(HttpClient);
+    const ctrl = TestBed.inject(HttpTestingController);
+    const context = new HttpContext().set(SILENT_NOT_FOUND, true);
+
+    let failed = 0;
+    http.get('/api/v1/cv/photo', { context }).subscribe({ error: () => failed++ });
+    ctrl.expectOne('/api/v1/cv/photo').flush(null, { status: 404, statusText: 'Not Found' });
+    expect(open).not.toHaveBeenCalled();
+    expect(failed).toBe(1);
+
+    http.get('/api/v1/cv/photo', { context }).subscribe({ error: () => failed++ });
+    ctrl.expectOne('/api/v1/cv/photo').flush(null, { status: 500, statusText: 'Server Error' });
+    expect(open).toHaveBeenCalledTimes(1);
   });
 });

@@ -1,4 +1,8 @@
 <h1>Lebenslauf</h1>
+<section class="photo-section">
+  <h2>Foto</h2>
+  <app-cv-photo />
+</section>
 
 @if (loadError()) {
   <p class="muted">Konnte nicht geladen werden.</p>
@@ -117,7 +121,12 @@
 
     <div class="actions">
       <button mat-flat-button type="submit" [disabled]="saving()">Speichern</button>
-      @if (updatedAt(); as at) {
+      @if (updatedAt()) {
+        <a mat-stroked-button class="pdf" href="/api/v1/cv/pdf" target="_blank" rel="noopener" [class.disabled]="f.dirty" [attr.aria-disabled]="f.dirty">PDF ansehen</a>
+      }
+      @if (f.dirty) {
+        <span class="muted">Ungespeicherte Änderungen – vor „PDF ansehen“ speichern.</span>
+      } @else if (updatedAt(); as at) {
         <span class="muted">Zuletzt gespeichert: {{ at | date: 'dd.MM.yyyy' }}</span>
       }
     </div>

@@ -1,0 +1,17 @@
+<div class="photo-box">
+  @if (url(); as src) {
+    <img [src]="src" alt="Bewerbungsfoto" />
+  } @else {
+    <div class="placeholder muted">Noch kein Foto</div>
+  }
+  <div class="photo-actions">
+    <input #fileInput type="file" accept="image/jpeg,image/png,image/webp" (change)="choose($event)" hidden />
+    <button mat-stroked-button type="button" class="upload" (click)="fileInput.click()" [disabled]="busy()">
+      {{ url() ? 'Foto ersetzen' : 'Foto hochladen' }}
+    </button>
+    @if (url()) {
+      <button mat-button type="button" class="remove" (click)="remove()" [disabled]="busy()">Foto entfernen</button>
+    }
+    <span class="muted hint">Wird auf 3:4 zugeschnitten.</span>
+  </div>
+</div>

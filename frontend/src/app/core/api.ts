@@ -1,3 +1,4 @@
+import { HttpContext } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import {
@@ -18,6 +19,7 @@ import {
   Phase,
   Summary,
 } from '../api/models';
+import { SILENT_NOT_FOUND } from './error.interceptor';
 import { ApplicationsService, CompaniesService, CvService, DashboardService } from '../api/services';
 
 export interface ApplicationFilter {
@@ -90,5 +92,15 @@ export class Api {
   }
   saveCv(body: Cv): Observable<Cv> {
     return this.cv.saveCv({ body });
+  }
+  /** 404 heißt „noch kein Foto“ und wird nicht als Fehler gemeldet. */
+  getCvPhoto(): Observable<Blob> {
+    return this.cv.getCvPhoto(undefined, new HttpContext().set(SILENT_NOT_FOUND, true));
+  }
+  saveCvPhoto(image: Blob): Observable<void> {
+    return this.cv.saveCvPhoto({ body: image });
+  }
+  deleteCvPhoto(): Observable<void> {
+    return this.cv.deleteCvPhoto();
   }
 }

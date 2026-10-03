@@ -11,10 +11,18 @@ import { ApiConfiguration } from '../api-configuration';
 import { StrictHttpResponse } from '../strict-http-response';
 
 import { Cv } from '../models/cv';
+import { deleteCvPhoto } from '../fn/cv/delete-cv-photo';
+import { DeleteCvPhoto$Params } from '../fn/cv/delete-cv-photo';
 import { getCv } from '../fn/cv/get-cv';
 import { GetCv$Params } from '../fn/cv/get-cv';
+import { getCvPdf } from '../fn/cv/get-cv-pdf';
+import { GetCvPdf$Params } from '../fn/cv/get-cv-pdf';
+import { getCvPhoto } from '../fn/cv/get-cv-photo';
+import { GetCvPhoto$Params } from '../fn/cv/get-cv-photo';
 import { saveCv } from '../fn/cv/save-cv';
 import { SaveCv$Params } from '../fn/cv/save-cv';
+import { saveCvPhoto } from '../fn/cv/save-cv-photo';
+import { SaveCvPhoto$Params } from '../fn/cv/save-cv-photo';
 
 
 /**
@@ -93,6 +101,146 @@ export class CvService extends BaseService {
     const resp = this.saveCv$Response(params, context);
     return resp.pipe(
       map((r: StrictHttpResponse<Cv>): Cv => r.body)
+    );
+  }
+
+  /** Path part for operation `getCvPhoto()` */
+  static readonly GetCvPhotoPath = '/api/v1/cv/photo';
+
+  /**
+   * Bewerbungsfoto (JPEG); 404, solange keines gespeichert ist.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `getCvPhoto()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  getCvPhoto$Response(params?: GetCvPhoto$Params, context?: HttpContext): Observable<StrictHttpResponse<Blob>> {
+    const obs = getCvPhoto(this.http, this.rootUrl, params, context);
+    return obs;
+  }
+
+  /**
+   * Bewerbungsfoto (JPEG); 404, solange keines gespeichert ist.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `getCvPhoto$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  getCvPhoto(params?: GetCvPhoto$Params, context?: HttpContext): Observable<Blob> {
+    const resp = this.getCvPhoto$Response(params, context);
+    return resp.pipe(
+      map((r: StrictHttpResponse<Blob>): Blob => r.body)
+    );
+  }
+
+  /** Path part for operation `saveCvPhoto()` */
+  static readonly SaveCvPhotoPath = '/api/v1/cv/photo';
+
+  /**
+   * Bewerbungsfoto ersetzen (JPEG, max. 1 MB).
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `saveCvPhoto()` instead.
+   *
+   * This method sends `application/octet-stream` and handles request body of type `application/octet-stream`.
+   */
+  saveCvPhoto$Response(params: SaveCvPhoto$Params, context?: HttpContext): Observable<StrictHttpResponse<void>> {
+    const obs = saveCvPhoto(this.http, this.rootUrl, params, context);
+    return obs;
+  }
+
+  /**
+   * Bewerbungsfoto ersetzen (JPEG, max. 1 MB).
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `saveCvPhoto$Response()` instead.
+   *
+   * This method sends `application/octet-stream` and handles request body of type `application/octet-stream`.
+   */
+  saveCvPhoto(params: SaveCvPhoto$Params, context?: HttpContext): Observable<void> {
+    const resp = this.saveCvPhoto$Response(params, context);
+    return resp.pipe(
+      map((r: StrictHttpResponse<void>): void => r.body)
+    );
+  }
+
+  /** Path part for operation `deleteCvPhoto()` */
+  static readonly DeleteCvPhotoPath = '/api/v1/cv/photo';
+
+  /**
+   * Bewerbungsfoto entfernen.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `deleteCvPhoto()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  deleteCvPhoto$Response(params?: DeleteCvPhoto$Params, context?: HttpContext): Observable<StrictHttpResponse<void>> {
+    const obs = deleteCvPhoto(this.http, this.rootUrl, params, context);
+    return obs;
+  }
+
+  /**
+   * Bewerbungsfoto entfernen.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `deleteCvPhoto$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  deleteCvPhoto(params?: DeleteCvPhoto$Params, context?: HttpContext): Observable<void> {
+    const resp = this.deleteCvPhoto$Response(params, context);
+    return resp.pipe(
+      map((r: StrictHttpResponse<void>): void => r.body)
+    );
+  }
+
+  /** Path part for operation `getCvPdf()` */
+  static readonly GetCvPdfPath = '/api/v1/cv/pdf';
+
+  /**
+   * Lebenslauf als PDF (404 ohne gespeicherten Lebenslauf, 503 wenn der PDF-Dienst fehlt).
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `getCvPdf()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  getCvPdf$Response(params?: GetCvPdf$Params, context?: HttpContext): Observable<StrictHttpResponse<Blob>> {
+    const obs = getCvPdf(this.http, this.rootUrl, params, context);
+    return obs;
+  }
+
+  /**
+   * Lebenslauf als PDF (404 ohne gespeicherten Lebenslauf, 503 wenn der PDF-Dienst fehlt).
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `getCvPdf$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  getCvPdf(params?: GetCvPdf$Params, context?: HttpContext): Observable<Blob> {
+    const resp = this.getCvPdf$Response(params, context);
+    return resp.pipe(
+      map((r: StrictHttpResponse<Blob>): Blob => r.body)
     );
   }
 

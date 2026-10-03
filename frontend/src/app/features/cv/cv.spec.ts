@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { Cv as CvModel } from '../../api/models';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Api } from '../../core/api';
@@ -16,7 +16,7 @@ const stored: CvModel = {
 };
 
 async function render(cv: CvModel = stored) {
-  const api = { getCv: vi.fn(() => of(cv)), saveCv: vi.fn((body: CvModel) => of({ ...body, updated_at: '2026-10-03T13:00:00+02:00' })) };
+  const api = { getCv: vi.fn(() => of(cv)), getCvPhoto: vi.fn(() => throwError(() => ({ status: 404 }))), saveCv: vi.fn((body: CvModel) => of({ ...body, updated_at: '2026-10-03T13:00:00+02:00' })) };
   TestBed.configureTestingModule({ imports: [CvPage], providers: [{ provide: Api, useValue: api }] });
   const fixture = TestBed.createComponent(CvPage);
   const settle = async () => {
@@ -73,5 +73,22 @@ describe('CvPage', () => {
     await settle();
     expect(api.saveCv).not.toHaveBeenCalled();
     expect(open).toHaveBeenCalledWith('Bitte markierte Felder prüfen', undefined, { duration: 4000 });
+  });
+
+  it('verlinkt das PDF, sobald ein Lebenslauf gespeichert ist', async () => {
+    const { el } = await render();
+    const link = el.querySelector<HTMLAnchorElement>('a.pdf')!;
+    expect(link.getAttribute('href')).toBe('/api/v1/cv/pdf');
+    expect(link.getAttribute('target')).toBe('_blank');
+  });
+
+  it('sperrt „PDF ansehen“ bei ungespeicherten Änderungen', async () => {
+    const { el, settle } = await render();
+    const input = el.querySelector<HTMLInputElement>('input[name="person-name"]')!;
+    input.value = 'Erika Neu';
+    input.dispatchEvent(new Event('input'));
+    await settle();
+    expect(el.querySelector('a.pdf')!.getAttribute('aria-disabled')).toBe('true');
+    expect(el.textContent).toContain('Ungespeicherte Änderungen');
   });
 });
