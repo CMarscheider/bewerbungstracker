@@ -850,7 +850,7 @@ git commit -m "ci: Lint, Tests, Codegen-Prüfung und Image-Builds per GitHub Act
 
 **Files:** Create: `docs/decisions/0001-ereignisse-als-wahrheit.md`, `0002-spec-first-openapi.md`, `0003-sqlc-statt-orm.md`, `0004-integrationstests-mit-echtem-postgres.md`.
 
-- [ ] **Step 1: ADRs schreiben**
+- [x] **Step 1: ADRs schreiben**
 
 `docs/decisions/0001-ereignisse-als-wahrheit.md`:
 
@@ -967,7 +967,7 @@ wird ohne Datenbank getestet.
   setzt deshalb unter Windows `DOCKER_HOST` explizit.
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add docs/decisions
@@ -980,7 +980,7 @@ git commit -m "docs: Architekturentscheidungen als ADRs"
 
 **Files:** Create: `README.md`.
 
-- [ ] **Step 1: README schreiben**
+- [x] **Step 1: README schreiben**
 
 `README.md` ist für zwei Leser gedacht. Recruiter verstehen in 30 Sekunden, was das Projekt ist und kann. Entwickler sehen Architektur, Entscheidungen und wie man es startet. Inhalt:
 
@@ -1097,13 +1097,13 @@ Den Port-Hinweis im Abschnitt „Backend und Frontend einzeln“ so lassen: `pro
 
 `go -C` gibt es seit Go 1.20.
 
-- [ ] **Step 2: Prüfen**
+- [x] **Step 2: Prüfen**
 
 - Alle Links und Bildpfade existieren: `docs/screenshots/*.png` und `docs/decisions/`.
 - Alle Befehle im README stimmen mit Taskfile und Compose überein.
 - Mermaid-Syntax mit einem Online-Renderer (z. B. mermaid.live) oder per Augenmaß prüfen. GitHub rendert `flowchart LR` nativ.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add README.md
