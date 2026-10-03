@@ -1,5 +1,7 @@
 # Bewerbungs-Tracker
 
+[![CI](https://github.com/CMarscheider/bewerbungstracker/actions/workflows/ci.yml/badge.svg)](https://github.com/CMarscheider/bewerbungstracker/actions/workflows/ci.yml)
+
 Verwaltet die eigenen Bewerbungen – Firma, Stelle, Status und Fristen. Jeder Statuswechsel
 (beworben, Challenge erhalten, Interview, Angebot …) wird als Ereignis gespeichert; daraus
 entstehen Dashboard, Verlauf und Statistik.

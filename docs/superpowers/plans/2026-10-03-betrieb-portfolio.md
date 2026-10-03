@@ -1116,21 +1116,21 @@ git commit -m "docs: README mit Screenshots, Architektur und Schnellstart"
 
 Dieser Task braucht den Nutzer. Er legt auf github.com ein **leeres** Repository an, ohne README und ohne Lizenz, und gibt die URL weiter.
 
-- [ ] **Step 1: Remote setzen und pushen** (erst nach ausdrücklichem Okay)
+- [x] **Step 1: Remote setzen und pushen** (erst nach ausdrücklichem Okay)
 
 ```bash
 git remote add origin <URL>
 git push -u origin master
 ```
 
-- [ ] **Step 2: CI beobachten**
+- [x] **Step 2: CI beobachten**
 
 Bei einem öffentlichen Repository geht das ohne Login:
 `curl -s "https://api.github.com/repos/<owner>/<repo>/actions/runs?per_page=1" | grep -E '"status"|"conclusion"|"html_url"' | head`
 
 Läuft ein Job rot, das Log über den `html_url`-Link ansehen und den Fehler beheben. Der Nutzer kann dazu das Log weitergeben, oder bei öffentlichen Repos geht es über die API unter `/actions/runs/<id>/jobs`. Typische Kandidaten sind die Action-Versionen (`setup-go`, `golangci-lint-action`), die golangci-lint-Version und Rechte für Docker.
 
-- [ ] **Step 3: CI-Badge**
+- [x] **Step 3: CI-Badge**
 
 Wenn die CI grün ist, ganz oben im README unter der Überschrift ergänzen:
 `[![CI](https://github.com/<owner>/<repo>/actions/workflows/ci.yml/badge.svg)](https://github.com/<owner>/<repo>/actions/workflows/ci.yml)`. Dann committen und pushen.
