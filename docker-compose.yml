@@ -21,6 +21,11 @@ services:
     image: gotenberg/gotenberg:8.37.0
     command: ["gotenberg", "--libreoffice-disable-routes=true", "--api-timeout=40s"]
     mem_limit: 1g
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:3000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
     restart: unless-stopped
 
   backend:
@@ -32,7 +37,7 @@ services:
       db:
         condition: service_healthy
       gotenberg:
-        condition: service_started
+        condition: service_healthy
     restart: unless-stopped
 
   frontend:
