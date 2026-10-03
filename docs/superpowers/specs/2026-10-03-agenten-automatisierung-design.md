@@ -28,12 +28,13 @@ Claude-Routinen (Cloud) ── HTTPS + Bearer-Token ──► Tailscale Funnel �
 
 ## Suchprofil (R1)
 
-- Suchbegriffe: „Frontend-Developer“ (inkl. Angular/React/TypeScript-Varianten) und „KI-Entwickler“ (inkl. AI/ML/LLM Engineer).
+- Suchbegriffe: „Frontend-Developer“ (inkl. Angular/React/TypeScript-Varianten) und „KI-Entwickler“ (inkl. AI/ML/LLM Engineer), jeweils zusätzlich mit „Junior“ / „Einstieg“ / „Berufseinsteiger“.
+- Schwerpunkt Junior- und Einstiegsstellen: Sie werden gezielt gesucht und beim Score bevorzugt. Stellen mit höherem Level (Mid, Senior, Lead) werden **nicht** ausgeschlossen, sondern nur nach Passung bewertet.
 - Ort: remote in Deutschland **oder** hybrid/vor Ort im Umkreis von 15 km um PLZ 32339 (Espelkamp).
 - Quellen: Bundesagentur-Jobsuche-API, Arbeitnow-API, Websuche (StepStone, Indeed, Karriereseiten). Kein LinkedIn-Scraping.
-- Filter: Anzeige höchstens 14 Tage alt; keine Arbeitnehmerüberlassung; keine Stellen, die ausdrücklich Lead/Principal verlangen.
+- Filter: Anzeige höchstens 14 Tage alt; keine Arbeitnehmerüberlassung. Kein Filter nach Erfahrungslevel.
 - Höchstens 15 neue Stellen pro Lauf.
-- Passungs-Score 0–100 mit kurzer Begründung, gemessen am Lebenslauf (`GET /api/agent/cv`).
+- Passungs-Score 0–100 mit kurzer Begründung, gemessen am Lebenslauf (`GET /api/agent/cv`). Die Begründung nennt das geforderte Level, damit Senior-Stellen in der Liste auf einen Blick erkennbar sind.
 - Dublette = gleiche normalisierte `job_url` oder gleicher Firmenname + Stellentitel (case-insensitive). Dubletten werden übersprungen.
 
 ## Datenmodell
