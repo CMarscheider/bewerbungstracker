@@ -1139,7 +1139,7 @@ Wenn die CI grün ist, ganz oben im README unter der Überschrift ergänzen:
 
 ## Abschluss-Check
 
-- [ ] `task lint`, `task test`, `task test:frontend` grün
-- [ ] `task generate && git status --porcelain` leer
-- [ ] `docker compose up -d --build` startet sauber; nach `task seed` zeigen Dashboard und Statistik Daten
-- [ ] README-Bilder sind aktuell und zeigen gefüllte Seiten
+- [x] `task lint`, `task test`, `task test:frontend` grün
+- [x] `task generate && git status --porcelain` leer
+- [x] `docker compose up -d --build` startet sauber; nach `task seed` zeigen Dashboard und Statistik Daten
+- [x] README-Bilder sind aktuell und zeigen gefüllte Seiten
