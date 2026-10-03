@@ -13,7 +13,15 @@ var testToday = domain.DateOf(time.Date(2026, 10, 3, 12, 0, 0, 0, time.Local))
 func TestScenariosAreValid(t *testing.T) {
 	for _, s := range scenarios() {
 		var history []domain.Event
+		if len(s.Steps) == 0 {
+			t.Errorf("%s / %s: keine Schritte", s.Company, s.Position)
+			continue
+		}
 		for i, st := range s.Steps {
+			// Nur Termine dürfen in der Zukunft liegen; Puffer gegen Zeitzonenabweichung.
+			if !st.Type.AllowsFutureDate() && st.Day > -1 {
+				t.Errorf("%s / %s, Schritt %d (%s): Day %d muss <= -1 sein", s.Company, s.Position, i, st.Type, st.Day)
+			}
 			next := st.event(testToday)
 			if err := domain.CanApply(history, next, testToday); err != nil {
 				t.Errorf("%s / %s, Schritt %d (%s): %v", s.Company, s.Position, i, st.Type, err)
