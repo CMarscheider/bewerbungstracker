@@ -16,8 +16,9 @@ var templateFS embed.FS
 var fontFS embed.FS
 
 var cvTemplate = template.Must(template.New("cv.html.tmpl").Funcs(template.FuncMap{
-	"period":  period,
-	"safeURL": safeURL,
+	"period":   period,
+	"safeURL":  safeURL,
+	"linkText": linkText,
 }).ParseFS(templateFS, "templates/cv.html.tmpl"))
 
 type cvView struct {
@@ -38,15 +39,19 @@ func RenderCV(cv CV, photo []byte) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+// fontNames sind die Schriftdateien, die die Vorlage per relativer URL einbindet.
+var fontNames = []string{"Carlito-Regular.ttf", "Carlito-Bold.ttf", "Carlito-Italic.ttf"}
+
 // Fonts liefert die Schriftdateien, die die Vorlage per relativer URL einbindet.
+// Die Dateien sind eingebettet; fehlt eine, ist das ein Programmierfehler und Fonts löst panic aus.
 func Fonts() map[string][]byte {
-	out := map[string][]byte{}
-	entries, _ := fontFS.ReadDir("fonts")
-	for _, e := range entries {
-		data, err := fontFS.ReadFile("fonts/" + e.Name())
-		if err == nil {
-			out[e.Name()] = data
+	out := make(map[string][]byte, len(fontNames))
+	for _, name := range fontNames {
+		data, err := fontFS.ReadFile("fonts/" + name)
+		if err != nil {
+			panic(fmt.Sprintf("eingebettete Schrift %s: %v", name, err))
 		}
+		out[name] = data
 	}
 	return out
 }
@@ -76,9 +81,19 @@ func safeURL(u string) template.URL {
 	return ""
 }
 
-// LinkText zeigt eine URL ohne Schema und abschließenden Schrägstrich, z. B. "github.com/erika".
-func (cvView) LinkText(u template.URL) string {
+// linkText zeigt eine URL ohne Schema (Groß-/Kleinschreibung egal) und ohne abschließenden
+// Schrägstrich, z. B. "github.com/erika"; bleibt nichts übrig, erscheint die Bezeichnung.
+func linkText(u template.URL, label string) string {
 	s := string(u)
-	s = strings.TrimPrefix(strings.TrimPrefix(s, "https://"), "http://")
-	return strings.TrimSuffix(s, "/")
+	for _, scheme := range []string{"https://", "http://"} {
+		if len(s) >= len(scheme) && strings.EqualFold(s[:len(scheme)], scheme) {
+			s = s[len(scheme):]
+			break
+		}
+	}
+	s = strings.TrimSuffix(s, "/")
+	if s == "" {
+		return label
+	}
+	return s
 }

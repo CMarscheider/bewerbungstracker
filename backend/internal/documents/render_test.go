@@ -40,7 +40,7 @@ func TestRenderCVContainsContent(t *testing.T) {
 	for _, want := range []string{
 		"Erika Mustermann", "Junior Frontend-Entwicklerin", "Espelkamp", "erika@example.com",
 		"Call Center Agent", "Acme GmbH", "Kundenservice für Samsung", "Ring of Fire", "Firebase",
-		"Englisch", "gut", "font-family: Carlito",
+		"Englisch", "gut", "font-family: Carlito", ">github.com/erika</a>",
 	} {
 		if !strings.Contains(s, want) {
 			t.Errorf("HTML enthält %q nicht", want)
@@ -98,6 +98,44 @@ func TestFontsAreEmbedded(t *testing.T) {
 		if len(fonts[name]) < 100_000 {
 			t.Errorf("Schrift %s fehlt oder ist zu klein (%d Bytes)", name, len(fonts[name]))
 		}
+	}
+}
+
+func TestCVFileNameEmpty(t *testing.T) {
+	cv := sample(t)
+	for _, name := range []string{"", "  ", "!!!"} {
+		cv.Person.Name = name
+		if got := documents.CVFileName(cv); got != "Lebenslauf.pdf" {
+			t.Errorf("CVFileName(%q) = %q", name, got)
+		}
+	}
+}
+
+func TestRenderCVLinkText(t *testing.T) {
+	cv := sample(t)
+	cv.Person.Links = []documents.Link{
+		{Label: "Seite", URL: "HTTP://Example.de/"},
+		{Label: "Leer", URL: "HTTPS://"},
+	}
+	s := string(must(documents.RenderCV(cv, nil)))
+	if !strings.Contains(s, ">Example.de</a>") {
+		t.Error("Schema soll ohne Rücksicht auf Groß-/Kleinschreibung entfernt werden")
+	}
+	if !strings.Contains(s, ">Leer</a>") {
+		t.Error("leerer Linktext soll auf die Bezeichnung zurückfallen")
+	}
+}
+
+func TestRenderCVQuoteInURL(t *testing.T) {
+	cv := sample(t)
+	cv.Person.Links = []documents.Link{{Label: "X", URL: `https://x.de/"><script>alert(1)</script>`}}
+	cv.Projects[0].URL = `https://x.de/"><script>alert(1)</script>`
+	s := string(must(documents.RenderCV(cv, nil)))
+	if strings.Contains(s, "<script>") {
+		t.Error("<script> aus der URL landet roh im HTML")
+	}
+	if strings.Contains(s, `href="https://x.de/"`) {
+		t.Error("Anführungszeichen in der URL beendet das href-Attribut")
 	}
 }
 

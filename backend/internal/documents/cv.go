@@ -77,7 +77,8 @@ func ParseCV(data []byte) (CV, error) {
 
 var fileNameReplacer = strings.NewReplacer("ä", "ae", "ö", "oe", "ü", "ue", "Ä", "Ae", "Ö", "Oe", "Ü", "Ue", "ß", "ss")
 
-// CVFileName liefert z. B. "Lebenslauf_Christian_Marscheider.pdf" (nur ASCII, für Content-Disposition).
+// CVFileName liefert z. B. "Lebenslauf_Christian_Marscheider.pdf" (nur ASCII, für Content-Disposition);
+// ohne verwertbaren Namen "Lebenslauf.pdf".
 func CVFileName(cv CV) string {
 	name := fileNameReplacer.Replace(strings.Join(strings.Fields(cv.Person.Name), "_"))
 	var b strings.Builder
@@ -85,6 +86,9 @@ func CVFileName(cv CV) string {
 		if r < 128 && (r == '_' || r == '-' || r >= '0' && r <= '9' || r >= 'A' && r <= 'Z' || r >= 'a' && r <= 'z') {
 			b.WriteRune(r)
 		}
+	}
+	if strings.Trim(b.String(), "_-") == "" {
+		return "Lebenslauf.pdf"
 	}
 	return "Lebenslauf_" + b.String() + ".pdf"
 }
