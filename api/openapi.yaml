@@ -13,6 +13,8 @@ tags:
     description: Bewerbungen und Ereignisse
   - name: Dashboard
     description: "Übersicht: Fristen, Termine, Statistik"
+  - name: Cv
+    description: Lebenslauf
 paths:
   /api/v1/companies:
     get:
@@ -265,6 +267,34 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Summary" }
         default: { $ref: "#/components/responses/Problem" }
+  /api/v1/cv:
+    get:
+      operationId: getCv
+      tags: [Cv]
+      summary: Lebenslauf lesen (leere Struktur, solange keiner gespeichert ist)
+      responses:
+        "200":
+          description: Lebenslauf
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Cv" }
+        default: { $ref: "#/components/responses/Problem" }
+    put:
+      operationId: saveCv
+      tags: [Cv]
+      summary: Lebenslauf ersetzen
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Cv" }
+      responses:
+        "200":
+          description: Gespeichert
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Cv" }
+        default: { $ref: "#/components/responses/Problem" }
 components:
   parameters:
     Id:
@@ -465,3 +495,102 @@ components:
         field: { type: string }
         from: { $ref: "#/components/schemas/EventType" }
         attempted: { $ref: "#/components/schemas/EventType" }
+    CvPeriod:
+      type: string
+      description: Jahr oder Jahr-Monat, z. B. 2024 oder 2024-03
+      pattern: '^\d{4}(-(0[1-9]|1[0-2]))?$'
+    CvLink:
+      type: object
+      required: [label, url]
+      properties:
+        label: { type: string, minLength: 1, maxLength: 100 }
+        url: { type: string, minLength: 1, maxLength: 500 }
+    CvPerson:
+      type: object
+      required: [name, links]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 200 }
+        headline: { type: string, maxLength: 200 }
+        email: { type: string, maxLength: 200 }
+        phone: { type: string, maxLength: 100 }
+        location: { type: string, maxLength: 200 }
+        links:
+          type: array
+          maxItems: 10
+          items: { $ref: "#/components/schemas/CvLink" }
+    CvExperience:
+      type: object
+      required: [role, organization, start, highlights]
+      properties:
+        role: { type: string, minLength: 1, maxLength: 200 }
+        organization: { type: string, minLength: 1, maxLength: 200 }
+        location: { type: string, maxLength: 200 }
+        start: { $ref: "#/components/schemas/CvPeriod" }
+        end: { $ref: "#/components/schemas/CvPeriod" }
+        highlights:
+          type: array
+          maxItems: 15
+          items: { type: string, maxLength: 500 }
+    CvEducation:
+      type: object
+      required: [degree, institution, start]
+      properties:
+        degree: { type: string, minLength: 1, maxLength: 200 }
+        institution: { type: string, minLength: 1, maxLength: 200 }
+        start: { $ref: "#/components/schemas/CvPeriod" }
+        end: { $ref: "#/components/schemas/CvPeriod" }
+        details: { type: string, maxLength: 1000 }
+    CvSkillGroup:
+      type: object
+      required: [category, items]
+      properties:
+        category: { type: string, minLength: 1, maxLength: 100 }
+        items:
+          type: array
+          maxItems: 40
+          items: { type: string, maxLength: 100 }
+    CvProject:
+      type: object
+      required: [name, technologies]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 200 }
+        url: { type: string, maxLength: 500 }
+        description: { type: string, maxLength: 2000 }
+        technologies:
+          type: array
+          maxItems: 20
+          items: { type: string, maxLength: 100 }
+    CvLanguage:
+      type: object
+      required: [language, level]
+      properties:
+        language: { type: string, minLength: 1, maxLength: 100 }
+        level: { type: string, minLength: 1, maxLength: 100 }
+    Cv:
+      type: object
+      description: Lebenslauf. end fehlt = bis heute. updated_at wird beim Speichern ignoriert.
+      required: [person, experience, education, skills, projects, languages]
+      properties:
+        person: { $ref: "#/components/schemas/CvPerson" }
+        summary: { type: string, maxLength: 3000 }
+        experience:
+          type: array
+          maxItems: 30
+          items: { $ref: "#/components/schemas/CvExperience" }
+        education:
+          type: array
+          maxItems: 20
+          items: { $ref: "#/components/schemas/CvEducation" }
+        skills:
+          type: array
+          maxItems: 20
+          items: { $ref: "#/components/schemas/CvSkillGroup" }
+        projects:
+          type: array
+          maxItems: 20
+          items: { $ref: "#/components/schemas/CvProject" }
+        languages:
+          type: array
+          maxItems: 10
+          items: { $ref: "#/components/schemas/CvLanguage" }
+        updated_at: { type: string, format: date-time }

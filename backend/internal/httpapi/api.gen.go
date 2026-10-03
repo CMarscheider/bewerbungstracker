@@ -181,6 +181,83 @@ type CompanyPatch struct {
 	Website *string `json:"website,omitempty"`
 }
 
+// Cv Lebenslauf. end fehlt = bis heute. updated_at wird beim Speichern ignoriert.
+type Cv struct {
+	Education  []CvEducation  `json:"education"`
+	Experience []CvExperience `json:"experience"`
+	Languages  []CvLanguage   `json:"languages"`
+	Person     CvPerson       `json:"person"`
+	Projects   []CvProject    `json:"projects"`
+	Skills     []CvSkillGroup `json:"skills"`
+	Summary    *string        `json:"summary,omitempty"`
+	UpdatedAt  *time.Time     `json:"updated_at,omitempty"`
+}
+
+// CvEducation defines model for CvEducation.
+type CvEducation struct {
+	Degree  string  `json:"degree"`
+	Details *string `json:"details,omitempty"`
+
+	// End Jahr oder Jahr-Monat, z. B. 2024 oder 2024-03
+	End         *CvPeriod `json:"end,omitempty"`
+	Institution string    `json:"institution"`
+
+	// Start Jahr oder Jahr-Monat, z. B. 2024 oder 2024-03
+	Start CvPeriod `json:"start"`
+}
+
+// CvExperience defines model for CvExperience.
+type CvExperience struct {
+	// End Jahr oder Jahr-Monat, z. B. 2024 oder 2024-03
+	End          *CvPeriod `json:"end,omitempty"`
+	Highlights   []string  `json:"highlights"`
+	Location     *string   `json:"location,omitempty"`
+	Organization string    `json:"organization"`
+	Role         string    `json:"role"`
+
+	// Start Jahr oder Jahr-Monat, z. B. 2024 oder 2024-03
+	Start CvPeriod `json:"start"`
+}
+
+// CvLanguage defines model for CvLanguage.
+type CvLanguage struct {
+	Language string `json:"language"`
+	Level    string `json:"level"`
+}
+
+// CvLink defines model for CvLink.
+type CvLink struct {
+	Label string `json:"label"`
+	Url   string `json:"url"`
+}
+
+// CvPeriod Jahr oder Jahr-Monat, z. B. 2024 oder 2024-03
+type CvPeriod = string
+
+// CvPerson defines model for CvPerson.
+type CvPerson struct {
+	Email    *string  `json:"email,omitempty"`
+	Headline *string  `json:"headline,omitempty"`
+	Links    []CvLink `json:"links"`
+	Location *string  `json:"location,omitempty"`
+	Name     string   `json:"name"`
+	Phone    *string  `json:"phone,omitempty"`
+}
+
+// CvProject defines model for CvProject.
+type CvProject struct {
+	Description  *string  `json:"description,omitempty"`
+	Name         string   `json:"name"`
+	Technologies []string `json:"technologies"`
+	Url          *string  `json:"url,omitempty"`
+}
+
+// CvSkillGroup defines model for CvSkillGroup.
+type CvSkillGroup struct {
+	Category string   `json:"category"`
+	Items    []string `json:"items"`
+}
+
 // Deadline defines model for Deadline.
 type Deadline struct {
 	ApplicationId openapi_types.UUID `json:"application_id"`
@@ -299,6 +376,9 @@ type CreateCompanyJSONRequestBody = CompanyInput
 
 // UpdateCompanyJSONRequestBody defines body for UpdateCompany for application/json ContentType.
 type UpdateCompanyJSONRequestBody = CompanyPatch
+
+// SaveCvJSONRequestBody defines body for SaveCv for application/json ContentType.
+type SaveCvJSONRequestBody = Cv
 
 // Getter for additional properties for Problem. Returns the specified
 // element and whether it was found
@@ -496,6 +576,12 @@ type ServerInterface interface {
 	// UpdateCompany Firma ändern (nur gesetzte Felder; "" löscht optionale Felder)
 	// (PATCH /api/v1/companies/{id})
 	UpdateCompany(w http.ResponseWriter, r *http.Request, id Id)
+	// GetCv Lebenslauf lesen (leere Struktur, solange keiner gespeichert ist)
+	// (GET /api/v1/cv)
+	GetCv(w http.ResponseWriter, r *http.Request)
+	// SaveCv Lebenslauf ersetzen
+	// (PUT /api/v1/cv)
+	SaveCv(w http.ResponseWriter, r *http.Request)
 
 	// (GET /api/v1/deadlines)
 	ListDeadlines(w http.ResponseWriter, r *http.Request, params ListDeadlinesParams)
@@ -884,6 +970,34 @@ func (siw *ServerInterfaceWrapper) UpdateCompany(w http.ResponseWriter, r *http.
 	handler.ServeHTTP(w, r)
 }
 
+// GetCv operation middleware
+func (siw *ServerInterfaceWrapper) GetCv(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetCv(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SaveCv operation middleware
+func (siw *ServerInterfaceWrapper) SaveCv(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SaveCv(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListDeadlines operation middleware
 func (siw *ServerInterfaceWrapper) ListDeadlines(w http.ResponseWriter, r *http.Request) {
 
@@ -1082,6 +1196,8 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/appointments", wrapper.ListAppointments)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/stats/funnel", wrapper.GetFunnel)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/stats/summary", wrapper.GetSummary)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/cv", wrapper.GetCv)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/cv", wrapper.SaveCv)
 
 	return m
 }
@@ -1624,6 +1740,83 @@ func (response UpdateCompanydefaultApplicationProblemPlusJSONResponse) VisitUpda
 	return err
 }
 
+type GetCvRequestObject struct {
+}
+
+type GetCvResponseObject interface {
+	VisitGetCvResponse(w http.ResponseWriter) error
+}
+
+type GetCv200JSONResponse Cv
+
+func (response GetCv200JSONResponse) VisitGetCvResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCvdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetCvdefaultApplicationProblemPlusJSONResponse) VisitGetCvResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SaveCvRequestObject struct {
+	Body *SaveCvJSONRequestBody
+}
+
+type SaveCvResponseObject interface {
+	VisitSaveCvResponse(w http.ResponseWriter) error
+}
+
+type SaveCv200JSONResponse Cv
+
+func (response SaveCv200JSONResponse) VisitSaveCvResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SaveCvdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response SaveCvdefaultApplicationProblemPlusJSONResponse) VisitSaveCvResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListDeadlinesRequestObject struct {
 	Params ListDeadlinesParams
 }
@@ -1783,6 +1976,12 @@ type StrictServerInterface interface {
 	// UpdateCompany Firma ändern (nur gesetzte Felder; "" löscht optionale Felder)
 	// (PATCH /api/v1/companies/{id})
 	UpdateCompany(ctx context.Context, request UpdateCompanyRequestObject) (UpdateCompanyResponseObject, error)
+	// GetCv Lebenslauf lesen (leere Struktur, solange keiner gespeichert ist)
+	// (GET /api/v1/cv)
+	GetCv(ctx context.Context, request GetCvRequestObject) (GetCvResponseObject, error)
+	// SaveCv Lebenslauf ersetzen
+	// (PUT /api/v1/cv)
+	SaveCv(ctx context.Context, request SaveCvRequestObject) (SaveCvResponseObject, error)
 
 	// (GET /api/v1/deadlines)
 	ListDeadlines(ctx context.Context, request ListDeadlinesRequestObject) (ListDeadlinesResponseObject, error)
@@ -2226,6 +2425,61 @@ func (sh *strictHandler) UpdateCompany(w http.ResponseWriter, r *http.Request, i
 	}
 }
 
+// GetCv operation middleware
+func (sh *strictHandler) GetCv(w http.ResponseWriter, r *http.Request) {
+	var request GetCvRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetCv(ctx, request.(GetCvRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetCv")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetCvResponseObject); ok {
+		if err := validResponse.VisitGetCvResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SaveCv operation middleware
+func (sh *strictHandler) SaveCv(w http.ResponseWriter, r *http.Request) {
+	var request SaveCvRequestObject
+
+	var body SaveCvJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SaveCv(ctx, request.(SaveCvRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SaveCv")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SaveCvResponseObject); ok {
+		if err := validResponse.VisitSaveCvResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // ListDeadlines operation middleware
 func (sh *strictHandler) ListDeadlines(w http.ResponseWriter, r *http.Request, params ListDeadlinesParams) {
 	var request ListDeadlinesRequestObject
@@ -2305,46 +2559,57 @@ func (sh *strictHandler) GetSummary(w http.ResponseWriter, r *http.Request) {
 // const string: with thousands of chunks the chained `+` fold is several
 // times slower for the Go compiler than parsing a slice literal.
 var swaggerSpec = []string{
-	"5FrNcts4En4VFHYPcS1tKX87NcpJcexUdlLZVJSZw0xSKpBskYhBgAFAa52U3mSPeYY9zc0vtgVA/BNB",
-	"ibZlZabmklhkA2j01//NrzgSWS44cK3w5CvOiSQZaJD216vY/Es5nuCc6BQHmJMM8ATTGAdYwueCSojx",
-	"RMsCAqyiFDJiViyEzIjGE1wUllJf5WaV0pLyBK9WK7NY5YIrsOe8lSJkkJk/I8E1cG3+JHnOaEQ0FXyU",
-	"O4p/fFKCm3f1WX+XsMAT/LdRfZGRe6tG5b72xBhUJGlutsMTfA4pA4k4iVL07vwU/fjk6Q/YkK3Xmq2n",
-	"NQPmZy5FDlJTx7M5jvCrOY0H3DioyJ0Av3oIJBAN8Zzo1n4x0XCsaQa+TeGyxI1qyNQucZwZcryqNiJS",
-	"kivze+AdPolwXkjmZZ+JWlCdl1xoUN43eUoU7ITREhlqoag5ZK6pZn4xKlHIqOeVJroYJqT3Zu0qwEUe",
-	"3xCUVdMufnOG0lCVDUXoXKnishRNSzFaDFXwf6yYEOEniCzCDdV9xfNC31l/F1QqPbcn7pLgG1hWmtZQ",
-	"mYz85zXwRKd48nA8HgfbdahB/chLXOlUg/Kpf9+u2jTWPDZLMsor3oJtStW+xC70W8B3kG6KdAeGb4mO",
-	"UnN+24m9KSRKQIH+ogGdA4tBoiXIGDhK4Pobj0HqZwgoRwxAgkQzyydi1/9TUartG2E3IwyU3eEEB3dT",
-	"lL8e4tuAmxVZRuTV/YePgfswUqrcXPDWCuNXfCtEDnweFzCUfv8e/c/ptlueui32HmMXlOts7V/bytLI",
-	"hPamMBa/IYA6tt3jG2BAuQZ5SWE5l6LgcYMH8yYBOQj+DVw2BLEblgbz6yv7hH/qdtku+EgUDpvuNW6T",
-	"uw3EsRe//pxqCaGieoA07YlrybWyjO61t0itJ78oGd906zsc7w2cfOOebeJd1m1Z23Kj7xlt/2Bi64jo",
-	"BZCYUQ4HclLD484t3ZS4BBkXzdNDIRgQ/h3ck7tszZNPRc8uvRHiNh7oBsIdiOcgn29U1Qu2iKJCSoiH",
-	"MnVDrH3Oby355sktV9iLwPv12cCLzOz2i5AJZCAvNA7wc1gKGYLZaxZJAE558hJULglEKQ7waUoYA57A",
-	"mUwJ08Cbz6ZhAgm41a9KeeIA/wScA2cguSYJDvCUJxAK3dhi/cT8x0WWtZ6FCTBIueFuGiqSmFv/WsgC",
-	"oosEvojEEv8ElMM78ywDFhc8wR89Yj8vOAc205B31VB2kgpRhKyBHi+y0KmBBBKl0KMjShsWd9qbI6v3",
-	"ChwDPtSqorTDc20GXXcfAkU1tAHqIIcKHqMNKBBIRorQyHqnDnPh88Q+t31Y6/AYhk+qb8tkv2EHIUig",
-	"2mhPgKcXml5anUtARSkTSgH3alWjBUjimLoo+bYBlOsxboQcrSHLNcQ3uGiAY9CE+rtYCwos9r+RIrvR",
-	"KXXZ0lXv/mKnRK12tZIeS1iABB7trlvWsG0UJT7k3oH5iwp+Wqa1m/Vpb7Z7q0i7wWgr8PWnmDNbhs80",
-	"0arLoo22fR5k7RLmVUjaTiYWC5B+kt6O4qYzcnRBxZePic0TvZfu6xlsvTC5TOYxuVJzLeZlc32gKw6v",
-	"5vUlB3WSm7h4+skZxJTw27IjS9VUc7LQIAdztaHTHsYcJ3G/0jhG54PjmC8BXENfnrS5reeCTQi6GrGy",
-	"mdVCdEPULyCXhBlfiy4FR89hCTIseAL8BP0LYluCGA+whChVwNCSyhgRptCZBJpwqkw9kwONUlu6mAXk",
-	"QhfAGKxXIpAJDTVSNEoRKRSKIUNfCmaKIARyQZQyEa/c7wSt5yrrusic1TfGQQ/KucsRSoBR4+T0yQde",
-	"+a8Jri6kjt9LEl2ARNO3r3CAL0EqJ4KHJ+OTcdmnIjnFE/z4ZHzyGAd2ZGV1ZkRyOrp8OGpwYp8nYD2c",
-	"MTHXKY/xBL+mSk+bhEFrKPbbeh72uQB5VQ/Eyq7PwLmUpV6tAv9mVS9p2G4tL7upIrMiSgFRjs6pzICb",
-	"E2zOMtMGZa6pBoYDLxufWxzsaM+uPm7M9B6Nx1vmed053iAL93RWO1benfU17CKolLcq2QF9KUAq7VKD",
-	"BSlY74SjumBjshhgTRKjGLilNR9d+ehRsFNbXjSI16NUUPq5iK9uJLSBsnItmlXbW5mEatUB7eF9nO8D",
-	"xSTNDJLbi12VYbLGF1F+wQpFLwEZRCGrHd2DOo1Hwji6skg7QoQzcAVQD5KrwOtCRl9pvHJOmYGGLtIv",
-	"7PNNpFviftJ16i9h3TDav0J6Hd5L0FtZHB9KI2oYM6or5I7f0wxsx2n/9tn2674da5LRqxgbJ5eXzcG2",
-	"FH+27f6DWrVrUw6y6oNh+LL0qnsw65kmWWakypHblKMHnJpOqkktXH5ydDurHRHGxBLi4/oLiv5kwJGe",
-	"OcpDRLlWHbkruE2ZQm+uv0Wp0qDK1gNU5mOW8z+E6WzFo8bhdkbpjbTT2KF2T6ZYf+dw2MDaOLStCmcu",
-	"H9+P6TXKhlbF4JJ+4OjBk0ePbIOs4KXWZej6vyHIhPDktobpFGHEiAaltwXXn3ksXhOla4S/d9Sy35KZ",
-	"+ujd9e/RRXL9jSc0yUy1z/cAyWs7d2oAIRunoPUx92mx5Xh6Z+lUE3ZObYvuV6BakiJDJEQpFBrQg5km",
-	"PCYyRg+fHPWUJUuqU+qaC5sFCs2KDE8e//OpnZe5X+OgU+gfrFYpJTHIj3OlIQUeA3oPMttHwvOCqDQU",
-	"RMZto3NDKQrbgTytqA4hrHICP0BQrpANEGF5SkLQVJks6M72NTVND7e3zT+n/AtJWbOn0rCuWji76rzy",
-	"YvcTgloj+AOHoQqye63tDCLEU6I1EfDp9sDirAnP/Rdmm9dy+5lYyguJRMoBtXoVSnCl0ZPxj0e9utdX",
-	"0vVebHwIBbDXu7P/2rCyvVdrB7HN71KlbYFmnxWa0+K6OOt+IPMMfcAfcPUJTPX5y/r10W6LjtcfnGyP",
-	"Vi8qqjvkHD8cPUPXv4cgF9ffGKMJoHNJbX9bUR4jmmUgEXBdTdz/zOlJKbEhIfffiwXwShr3lZcoTbQa",
-	"LeznBb1gvwTtPkA4SFrS+NZhSGZiqY9nuljct5RUPSPsE1PZIL9HN1Me4ZGF+VzFJFD7FkT9/Ks3L6wN",
-	"sfYn3alII8raaUhZVCmo17cqqO4WttI1YzE9KQ0jKDP3wHanqNL0ot6vvsbq4+r/AwA=",
+	"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",
+	"/x0A",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,
