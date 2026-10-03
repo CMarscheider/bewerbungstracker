@@ -12,8 +12,9 @@ async function render(photo: Blob | null) {
     deleteCvPhoto: vi.fn(() => of(undefined)),
   };
   const resizer = { toPortraitJpeg: vi.fn(async () => new Blob(['jpeg'], { type: 'image/jpeg' })) };
-  URL.createObjectURL = vi.fn(() => 'blob:foto');
-  URL.revokeObjectURL = vi.fn();
+  let n = 0;
+  const create = vi.spyOn(URL, 'createObjectURL').mockImplementation(() => (n++ === 0 ? 'blob:foto' : 'blob:foto' + n));
+  const revoke = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
   TestBed.configureTestingModule({
     imports: [CvPhoto],
     providers: [
@@ -30,7 +31,7 @@ async function render(photo: Blob | null) {
     fixture.detectChanges();
   };
   await settle();
-  return { api, resizer, snackBar, settle, el: fixture.nativeElement as HTMLElement };
+  return { api, resizer, snackBar, create, revoke, settle, el: fixture.nativeElement as HTMLElement };
 }
 
 function choose(el: HTMLElement, file: File) {
@@ -69,7 +70,7 @@ describe('CvPhoto', () => {
     choose(el, new File(['%PDF'], 'lebenslauf.pdf', { type: 'application/pdf' }));
     await settle();
     expect(api.saveCvPhoto).not.toHaveBeenCalled();
-    expect(snackBar.open).toHaveBeenCalledWith('Bitte ein Bild (JPG oder PNG) wählen', 'OK', { duration: 4000 });
+    expect(snackBar.open).toHaveBeenCalledWith('Bitte ein Bild (JPG, PNG oder WebP) wählen', 'OK', { duration: 4000 });
   });
 
   it('entfernt das Foto', async () => {
@@ -79,5 +80,34 @@ describe('CvPhoto', () => {
     await settle();
     expect(api.deleteCvPhoto).toHaveBeenCalled();
     expect(el.querySelector('img')).toBeNull();
+  });
+
+  it('gibt die alte Bild-URL frei, wenn das Foto ersetzt wird', async () => {
+    const { el, revoke, settle } = await render(new Blob(['x'], { type: 'image/jpeg' }));
+    choose(el, new File(['raw'], 'neu.png', { type: 'image/png' }));
+    await settle();
+    await settle();
+    expect(revoke).toHaveBeenCalledWith('blob:foto');
+    expect(el.querySelector<HTMLImageElement>('img')!.src).not.toBe('blob:foto');
+  });
+
+  it('löscht nicht, wenn die Rückfrage abgelehnt wird', async () => {
+    const { el, api, settle } = await render(new Blob(['x'], { type: 'image/jpeg' }));
+    vi.spyOn(window, 'confirm').mockReturnValue(false);
+    el.querySelector<HTMLButtonElement>('button.remove')!.click();
+    await settle();
+    expect(api.deleteCvPhoto).not.toHaveBeenCalled();
+    expect(el.querySelector('img')).not.toBeNull();
+  });
+
+  it('meldet Fehler beim Verkleinern und gibt den Button wieder frei', async () => {
+    const { el, api, resizer, snackBar, settle } = await render(null);
+    resizer.toPortraitJpeg.mockRejectedValueOnce(new Error('kaputt'));
+    choose(el, new File(['raw'], 'foto.png', { type: 'image/png' }));
+    await settle();
+    await settle();
+    expect(api.saveCvPhoto).not.toHaveBeenCalled();
+    expect(snackBar.open).toHaveBeenCalledWith('Das Bild konnte nicht gelesen werden', 'OK', { duration: 4000 });
+    expect(el.querySelector<HTMLButtonElement>('button.upload')!.disabled).toBe(false);
   });
 });

@@ -80,6 +80,7 @@ describe('CvPage', () => {
     const link = el.querySelector<HTMLAnchorElement>('a.pdf')!;
     expect(link.getAttribute('href')).toBe('/api/v1/cv/pdf');
     expect(link.getAttribute('target')).toBe('_blank');
+    expect(link.getAttribute('aria-disabled')).not.toBe('true');
   });
 
   it('sperrt „PDF ansehen“ bei ungespeicherten Änderungen', async () => {
@@ -88,7 +89,9 @@ describe('CvPage', () => {
     input.value = 'Erika Neu';
     input.dispatchEvent(new Event('input'));
     await settle();
-    expect(el.querySelector('a.pdf')!.getAttribute('aria-disabled')).toBe('true');
+    const link = el.querySelector('a.pdf')!;
+    expect(link.getAttribute('aria-disabled')).toBe('true');
+    expect(link.getAttribute('tabindex')).toBe('-1');
     expect(el.textContent).toContain('Ungespeicherte Änderungen');
   });
 });

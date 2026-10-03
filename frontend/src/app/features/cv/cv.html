@@ -122,7 +122,7 @@
     <div class="actions">
       <button mat-flat-button type="submit" [disabled]="saving()">Speichern</button>
       @if (updatedAt()) {
-        <a mat-stroked-button class="pdf" href="/api/v1/cv/pdf" target="_blank" rel="noopener" [class.disabled]="f.dirty" [attr.aria-disabled]="f.dirty">PDF ansehen</a>
+        <a mat-stroked-button class="pdf" href="/api/v1/cv/pdf" target="_blank" rel="noopener" [disabled]="f.dirty">PDF ansehen</a>
       }
       @if (f.dirty) {
         <span class="muted">Ungespeicherte Änderungen – vor „PDF ansehen“ speichern.</span>

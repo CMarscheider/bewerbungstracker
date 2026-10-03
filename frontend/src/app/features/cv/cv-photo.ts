@@ -1,4 +1,5 @@
 import { Component, DestroyRef, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { finalize } from 'rxjs';
@@ -15,13 +16,25 @@ export class CvPhoto {
   private readonly api = inject(Api);
   private readonly resizer = inject(ImageResizer);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly destroyRef = inject(DestroyRef);
+  private destroyed = false;
 
   protected readonly url = signal<string | null>(null);
   protected readonly busy = signal(false);
 
   constructor() {
-    inject(DestroyRef).onDestroy(() => this.setUrl(null));
-    this.api.getCvPhoto().subscribe({
+    this.destroyRef.onDestroy(() => {
+      this.destroyed = true;
+      this.setUrl(null);
+    });
+    this.busy.set(true);
+    this.api
+      .getCvPhoto()
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.busy.set(false)),
+      )
+      .subscribe({
       next: (blob) => this.setUrl(URL.createObjectURL(blob)),
       error: () => undefined, // 404 = noch kein Foto; andere Fehler meldet der Interceptor.
     });
@@ -35,7 +48,7 @@ export class CvPhoto {
       return;
     }
     if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
-      this.snackBar.open('Bitte ein Bild (JPG oder PNG) wählen', 'OK', { duration: 4000 });
+      this.snackBar.open('Bitte ein Bild (JPG, PNG oder WebP) wählen', 'OK', { duration: 4000 });
       return;
     }
     this.busy.set(true);
@@ -47,9 +60,15 @@ export class CvPhoto {
       this.snackBar.open('Das Bild konnte nicht gelesen werden', 'OK', { duration: 4000 });
       return;
     }
+    if (this.destroyed) {
+      return;
+    }
     this.api
       .saveCvPhoto(jpeg)
-      .pipe(finalize(() => this.busy.set(false)))
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.busy.set(false)),
+      )
       .subscribe({
         next: () => this.setUrl(URL.createObjectURL(jpeg)),
         error: () => undefined,
@@ -60,7 +79,14 @@ export class CvPhoto {
     if (!window.confirm('Foto entfernen?')) {
       return;
     }
-    this.api.deleteCvPhoto().subscribe({ next: () => this.setUrl(null), error: () => undefined });
+    this.busy.set(true);
+    this.api
+      .deleteCvPhoto()
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.busy.set(false)),
+      )
+      .subscribe({ next: () => this.setUrl(null), error: () => undefined });
   }
 
   private setUrl(next: string | null): void {
