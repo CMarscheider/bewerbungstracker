@@ -19,6 +19,8 @@ services:
 
   gotenberg:
     image: gotenberg/gotenberg:8.37.0
+    command: ["gotenberg", "--libreoffice-disable-routes=true", "--api-timeout=40s"]
+    mem_limit: 1g
     restart: unless-stopped
 
   backend:

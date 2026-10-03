@@ -91,6 +91,8 @@ DATABASE_URL="postgres://postgres:dev@localhost:5432/bewerbungen?sslmode=disable
 npm --prefix frontend start          # http://localhost:4200, /api → localhost:18080
 ```
 
+Optional: `GOTENBERG_URL` (z. B. `http://localhost:3000` für einen lokalen `gotenberg/gotenberg:8.37.0`-Container) aktiviert den PDF-Export des Lebenslaufs; ohne sie antwortet der Export mit 503. Im Compose-Stack ist sie bereits gesetzt.
+
 ## Projektstruktur
 
 ```

@@ -340,6 +340,8 @@ paths:
         "200":
           description: PDF
           headers:
+            Cache-Control:
+              schema: { type: string }
             Content-Disposition:
               schema: { type: string }
           content:

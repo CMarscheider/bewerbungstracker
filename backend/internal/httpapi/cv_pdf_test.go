@@ -20,7 +20,10 @@ func TestCVPDF(t *testing.T) {
 	expectProblem(t, call(t, srv, http.MethodGet, "/api/v1/cv/pdf", nil), http.StatusNotFound, "/problems/not-found")
 
 	expectStatus(t, call(t, srv, http.MethodPut, "/api/v1/cv", sampleCV()), http.StatusOK)
-	req, _ := http.NewRequest(http.MethodGet, srv.URL+"/api/v1/cv/pdf", nil)
+	req, err := http.NewRequest(http.MethodGet, srv.URL+"/api/v1/cv/pdf", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatal(err)
@@ -28,6 +31,9 @@ func TestCVPDF(t *testing.T) {
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK || res.Header.Get("Content-Type") != "application/pdf" {
 		t.Fatalf("Status %d, Content-Type %q", res.StatusCode, res.Header.Get("Content-Type"))
+	}
+	if cc := res.Header.Get("Cache-Control"); cc != "no-store" {
+		t.Errorf("Cache-Control = %q", cc)
 	}
 	cd := res.Header.Get("Content-Disposition")
 	if !strings.HasPrefix(cd, "inline") || !strings.Contains(cd, `filename="Lebenslauf_Erika_Muster.pdf"`) {

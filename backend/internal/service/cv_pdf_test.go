@@ -90,4 +90,7 @@ func TestCVPDFUnavailable(t *testing.T) {
 	if _, _, err := svc.CVPDF(ctx); !errors.As(err, &ue) {
 		t.Fatalf("Gotenberg weg: erwartet UnavailableError, bekommen %v", err)
 	}
+	if _, _, err := svc.CVPDF(ctx); !errors.Is(err, documents.ErrUnavailable) {
+		t.Errorf("Ursache geht verloren: %v", err)
+	}
 }

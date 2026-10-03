@@ -21,9 +21,14 @@ type ConflictError struct{ Detail string }
 func (e *ConflictError) Error() string { return e.Detail }
 
 // UnavailableError: ein benötigter Dienst fehlt oder ist nicht erreichbar (HTTP 503).
-type UnavailableError struct{ Detail string }
+type UnavailableError struct {
+	Detail string
+	Err    error // ursprüngliche Ursache, optional
+}
 
 func (e *UnavailableError) Error() string { return e.Detail }
+
+func (e *UnavailableError) Unwrap() error { return e.Err }
 
 func notFoundIfNoRows(err error, resource string) error {
 	if errors.Is(err, pgx.ErrNoRows) {

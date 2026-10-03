@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"log/slog"
@@ -79,8 +80,11 @@ func requestErrorHandler(w http.ResponseWriter, _ *http.Request, err error) {
 func responseErrorHandler(logger *slog.Logger) func(http.ResponseWriter, *http.Request, error) {
 	return func(w http.ResponseWriter, r *http.Request, err error) {
 		p := problemFor(err)
-		if p.Status == http.StatusInternalServerError {
+		switch {
+		case p.Status == http.StatusInternalServerError:
 			logger.Error("anfrage fehlgeschlagen", "method", r.Method, "path", r.URL.Path, "err", err)
+		case p.Status == http.StatusServiceUnavailable && !errors.Is(err, context.Canceled):
+			logger.Warn("dienst nicht verfügbar", "method", r.Method, "path", r.URL.Path, "err", err)
 		}
 		writeProblem(w, p)
 	}
