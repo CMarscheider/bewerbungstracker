@@ -120,11 +120,11 @@ func TestGotenbergRejectsOversizedPDF(t *testing.T) {
 	}
 }
 
-// TestGotenbergRendersCV erzeugt mit einem echten Gotenberg-Container ein PDF.
-// Mit CV_PDF_OUT=<pfad> wird das Ergebnis zum Ansehen gespeichert.
 // gotenbergImage ist die festgelegte Gotenberg-Version (auch in docker-compose.yml).
 const gotenbergImage = "gotenberg/gotenberg:8.37.0"
 
+// TestGotenbergRendersCV erzeugt mit einem echten Gotenberg-Container ein PDF.
+// Mit CV_PDF_OUT=<pfad> wird das Ergebnis zum Ansehen gespeichert.
 func TestGotenbergRendersCV(t *testing.T) {
 	if testing.Short() {
 		t.Skip("braucht Docker")
