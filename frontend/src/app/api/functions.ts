@@ -35,3 +35,7 @@ export type { GetFunnel$Params as GetFunnel$Params } from './fn/dashboard/get-fu
 export { getFunnel as getFunnel } from './fn/dashboard/get-funnel';
 export type { GetSummary$Params as GetSummary$Params } from './fn/dashboard/get-summary';
 export { getSummary as getSummary } from './fn/dashboard/get-summary';
+export type { GetCv$Params as GetCv$Params } from './fn/cv/get-cv';
+export { getCv as getCv } from './fn/cv/get-cv';
+export type { SaveCv$Params as SaveCv$Params } from './fn/cv/save-cv';
+export { saveCv as saveCv } from './fn/cv/save-cv';

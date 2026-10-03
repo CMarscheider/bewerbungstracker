@@ -4,3 +4,4 @@
 export { CompaniesService } from './services/companies.service';
 export { ApplicationsService } from './services/applications.service';
 export { DashboardService } from './services/dashboard.service';
+export { CvService } from './services/cv.service';

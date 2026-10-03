@@ -9,6 +9,7 @@ import {
   Company,
   CompanyInput,
   CompanyPatch,
+  Cv,
   Deadline,
   Event,
   EventType,
@@ -17,7 +18,7 @@ import {
   Phase,
   Summary,
 } from '../api/models';
-import { ApplicationsService, CompaniesService, DashboardService } from '../api/services';
+import { ApplicationsService, CompaniesService, CvService, DashboardService } from '../api/services';
 
 export interface ApplicationFilter {
   phase?: Phase;
@@ -31,6 +32,7 @@ export class Api {
   private readonly companies = inject(CompaniesService);
   private readonly applications = inject(ApplicationsService);
   private readonly dashboard = inject(DashboardService);
+  private readonly cv = inject(CvService);
 
   listCompanies(): Observable<Company[]> {
     return this.companies.listCompanies();
@@ -81,5 +83,12 @@ export class Api {
   }
   getSummary(): Observable<Summary> {
     return this.dashboard.getSummary();
+  }
+
+  getCv(): Observable<Cv> {
+    return this.cv.getCv();
+  }
+  saveCv(body: Cv): Observable<Cv> {
+    return this.cv.saveCv({ body });
   }
 }
