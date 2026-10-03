@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 import { Cv as CvModel } from '../../api/models';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { Api } from '../../core/api';
 import { CvPage } from './cv';
 
@@ -61,5 +62,16 @@ describe('CvPage', () => {
     el.querySelector<HTMLFormElement>('form')!.dispatchEvent(new Event('submit'));
     await settle();
     expect(api.saveCv).not.toHaveBeenCalled();
+  });
+
+  it('meldet ungültige Eingaben beim Speichern', async () => {
+    const { el, api, settle } = await render();
+    const open = vi.spyOn(TestBed.inject(MatSnackBar), 'open');
+    el.querySelector<HTMLButtonElement>('[data-section="experience"] button.add')!.click();
+    await settle();
+    el.querySelector<HTMLFormElement>('form')!.dispatchEvent(new Event('submit'));
+    await settle();
+    expect(api.saveCv).not.toHaveBeenCalled();
+    expect(open).toHaveBeenCalledWith('Bitte markierte Felder prüfen', undefined, { duration: 4000 });
   });
 });

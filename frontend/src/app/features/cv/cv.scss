@@ -10,6 +10,9 @@ section {
 .wide {
   width: 100%;
 }
+.grid .wide {
+  grid-column: 1 / -1;
+}
 .entry {
   border-left: 3px solid var(--mat-sys-outline-variant);
   margin-bottom: 16px;
@@ -18,5 +21,6 @@ section {
 .actions {
   align-items: center;
   display: flex;
+  flex-wrap: wrap;
   gap: 16px;
 }

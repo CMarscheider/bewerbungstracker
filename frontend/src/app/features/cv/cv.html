@@ -10,7 +10,7 @@
     <section formGroupName="person">
       <h2>Person</h2>
       <div class="grid">
-        <mat-form-field><mat-label>Name</mat-label><input matInput name="person-name" formControlName="name" maxlength="200" /></mat-form-field>
+        <mat-form-field><mat-label>Name</mat-label><input matInput required name="person-name" formControlName="name" maxlength="200" /><mat-error>Pflichtfeld</mat-error></mat-form-field>
         <mat-form-field><mat-label>Berufsbezeichnung</mat-label><input matInput formControlName="headline" maxlength="200" /></mat-form-field>
         <mat-form-field><mat-label>E-Mail</mat-label><input matInput type="email" formControlName="email" maxlength="200" /></mat-form-field>
         <mat-form-field><mat-label>Telefon</mat-label><input matInput formControlName="phone" maxlength="100" /></mat-form-field>
@@ -20,9 +20,9 @@
         <h3>Links</h3>
         @for (g of f.controls.person.controls.links.controls; track g; let i = $index) {
           <div class="entry grid" [formGroup]="g">
-            <mat-form-field><mat-label>Bezeichnung</mat-label><input matInput formControlName="label" placeholder="GitHub" maxlength="100" /></mat-form-field>
-            <mat-form-field><mat-label>URL</mat-label><input matInput formControlName="url" maxlength="500" /></mat-form-field>
-            <button mat-button type="button" class="remove" (click)="remove(f.controls.person.controls.links, i)">Entfernen</button>
+            <mat-form-field><mat-label>Bezeichnung</mat-label><input matInput required formControlName="label" placeholder="GitHub" maxlength="100" /><mat-error>Pflichtfeld</mat-error></mat-form-field>
+            <mat-form-field><mat-label>URL</mat-label><input matInput required formControlName="url" maxlength="500" /><mat-error>Pflichtfeld</mat-error></mat-form-field>
+            <button mat-button type="button" class="remove" [attr.aria-label]="'Link ' + (i + 1) + ' entfernen'" (click)="remove(f.controls.person.controls.links, i)">Entfernen</button>
           </div>
         }
         <button mat-button type="button" class="add" (click)="add(f.controls.person.controls.links, newLink)">Link hinzufügen</button>
@@ -42,11 +42,11 @@
       @for (g of f.controls.experience.controls; track g; let i = $index) {
         <div class="entry" [formGroup]="g">
           <div class="grid">
-            <mat-form-field><mat-label>Rolle</mat-label><input matInput formControlName="role" maxlength="200" /></mat-form-field>
-            <mat-form-field><mat-label>Firma</mat-label><input matInput formControlName="organization" maxlength="200" /></mat-form-field>
+            <mat-form-field><mat-label>Rolle</mat-label><input matInput required formControlName="role" maxlength="200" /><mat-error>Pflichtfeld</mat-error></mat-form-field>
+            <mat-form-field><mat-label>Firma</mat-label><input matInput required formControlName="organization" maxlength="200" /><mat-error>Pflichtfeld</mat-error></mat-form-field>
             <mat-form-field><mat-label>Ort</mat-label><input matInput formControlName="location" maxlength="200" /></mat-form-field>
-            <mat-form-field><mat-label>Von</mat-label><input matInput formControlName="start" placeholder="2024-03" /><mat-hint>JJJJ oder JJJJ-MM</mat-hint></mat-form-field>
-            <mat-form-field><mat-label>Bis</mat-label><input matInput formControlName="end" placeholder="leer = heute" /><mat-hint>JJJJ oder JJJJ-MM</mat-hint></mat-form-field>
+            <mat-form-field><mat-label>Von</mat-label><input matInput required formControlName="start" placeholder="2024-03" /><mat-hint>JJJJ oder JJJJ-MM</mat-hint><mat-error>@if (g.controls.start.hasError('required')) {Pflichtfeld} @else {Format JJJJ oder JJJJ-MM}</mat-error></mat-form-field>
+            <mat-form-field><mat-label>Bis</mat-label><input matInput formControlName="end" placeholder="leer = heute" /><mat-hint>JJJJ oder JJJJ-MM</mat-hint><mat-error>Format JJJJ oder JJJJ-MM</mat-error></mat-form-field>
           </div>
           <mat-form-field class="wide">
             <mat-label>Stichpunkte (eine Zeile je Punkt)</mat-label>
@@ -63,10 +63,10 @@
       @for (g of f.controls.education.controls; track g; let i = $index) {
         <div class="entry" [formGroup]="g">
           <div class="grid">
-            <mat-form-field><mat-label>Abschluss</mat-label><input matInput formControlName="degree" maxlength="200" /></mat-form-field>
-            <mat-form-field><mat-label>Einrichtung</mat-label><input matInput formControlName="institution" maxlength="200" /></mat-form-field>
-            <mat-form-field><mat-label>Von</mat-label><input matInput formControlName="start" placeholder="2021" /><mat-hint>JJJJ oder JJJJ-MM</mat-hint></mat-form-field>
-            <mat-form-field><mat-label>Bis</mat-label><input matInput formControlName="end" placeholder="leer = heute" /><mat-hint>JJJJ oder JJJJ-MM</mat-hint></mat-form-field>
+            <mat-form-field><mat-label>Abschluss</mat-label><input matInput required formControlName="degree" maxlength="200" /><mat-error>Pflichtfeld</mat-error></mat-form-field>
+            <mat-form-field><mat-label>Einrichtung</mat-label><input matInput required formControlName="institution" maxlength="200" /><mat-error>Pflichtfeld</mat-error></mat-form-field>
+            <mat-form-field><mat-label>Von</mat-label><input matInput required formControlName="start" placeholder="2021" /><mat-hint>JJJJ oder JJJJ-MM</mat-hint><mat-error>@if (g.controls.start.hasError('required')) {Pflichtfeld} @else {Format JJJJ oder JJJJ-MM}</mat-error></mat-form-field>
+            <mat-form-field><mat-label>Bis</mat-label><input matInput formControlName="end" placeholder="leer = heute" /><mat-hint>JJJJ oder JJJJ-MM</mat-hint><mat-error>Format JJJJ oder JJJJ-MM</mat-error></mat-form-field>
           </div>
           <mat-form-field class="wide"><mat-label>Details</mat-label><textarea matInput formControlName="details" rows="2" maxlength="1000"></textarea></mat-form-field>
           <button mat-button type="button" class="remove" (click)="remove(f.controls.education, i)">Eintrag entfernen</button>
@@ -79,9 +79,9 @@
       <h2>Kenntnisse</h2>
       @for (g of f.controls.skills.controls; track g; let i = $index) {
         <div class="entry grid" [formGroup]="g">
-          <mat-form-field><mat-label>Bereich</mat-label><input matInput formControlName="category" placeholder="Frontend" maxlength="100" /></mat-form-field>
+          <mat-form-field><mat-label>Bereich</mat-label><input matInput required formControlName="category" placeholder="Frontend" maxlength="100" /><mat-error>Pflichtfeld</mat-error></mat-form-field>
           <mat-form-field class="wide"><mat-label>Kenntnisse (kommagetrennt)</mat-label><input matInput formControlName="items" /></mat-form-field>
-          <button mat-button type="button" class="remove" (click)="remove(f.controls.skills, i)">Entfernen</button>
+          <button mat-button type="button" class="remove" [attr.aria-label]="'Bereich ' + (i + 1) + ' entfernen'" (click)="remove(f.controls.skills, i)">Entfernen</button>
         </div>
       }
       <button mat-button type="button" class="add" (click)="add(f.controls.skills, newSkill)">Bereich hinzufügen</button>
@@ -92,7 +92,7 @@
       @for (g of f.controls.projects.controls; track g; let i = $index) {
         <div class="entry" [formGroup]="g">
           <div class="grid">
-            <mat-form-field><mat-label>Name</mat-label><input matInput formControlName="name" maxlength="200" /></mat-form-field>
+            <mat-form-field><mat-label>Name</mat-label><input matInput required formControlName="name" maxlength="200" /><mat-error>Pflichtfeld</mat-error></mat-form-field>
             <mat-form-field><mat-label>URL</mat-label><input matInput formControlName="url" maxlength="500" /></mat-form-field>
             <mat-form-field><mat-label>Technologien (kommagetrennt)</mat-label><input matInput formControlName="technologies" /></mat-form-field>
           </div>
@@ -107,9 +107,9 @@
       <h2>Sprachen</h2>
       @for (g of f.controls.languages.controls; track g; let i = $index) {
         <div class="entry grid" [formGroup]="g">
-          <mat-form-field><mat-label>Sprache</mat-label><input matInput formControlName="language" maxlength="100" /></mat-form-field>
-          <mat-form-field><mat-label>Niveau</mat-label><input matInput formControlName="level" placeholder="C1" maxlength="100" /></mat-form-field>
-          <button mat-button type="button" class="remove" (click)="remove(f.controls.languages, i)">Entfernen</button>
+          <mat-form-field><mat-label>Sprache</mat-label><input matInput required formControlName="language" maxlength="100" /><mat-error>Pflichtfeld</mat-error></mat-form-field>
+          <mat-form-field><mat-label>Niveau</mat-label><input matInput required formControlName="level" placeholder="C1" maxlength="100" /><mat-error>Pflichtfeld</mat-error></mat-form-field>
+          <button mat-button type="button" class="remove" [attr.aria-label]="'Sprache ' + (i + 1) + ' entfernen'" (click)="remove(f.controls.languages, i)">Entfernen</button>
         </div>
       }
       <button mat-button type="button" class="add" (click)="add(f.controls.languages, newLanguage)">Sprache hinzufügen</button>
@@ -118,7 +118,7 @@
     <div class="actions">
       <button mat-flat-button type="submit" [disabled]="saving()">Speichern</button>
       @if (updatedAt(); as at) {
-        <span class="muted">Zuletzt gespeichert: {{ at.slice(0, 10) }}</span>
+        <span class="muted">Zuletzt gespeichert: {{ at | date: 'dd.MM.yyyy' }}</span>
       }
     </div>
   </form>

@@ -1,4 +1,5 @@
-import { Component, inject, signal } from '@angular/core';
+import { DatePipe } from '@angular/common';
+import { Component, ElementRef, inject, signal } from '@angular/core';
 import { FormArray, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -10,13 +11,14 @@ import { cvForm, CvForm, educationGroup, experienceGroup, formToCv, languageGrou
 
 @Component({
   selector: 'app-cv',
-  imports: [ReactiveFormsModule, MatButtonModule, MatFormFieldModule, MatInputModule],
+  imports: [DatePipe, ReactiveFormsModule, MatButtonModule, MatFormFieldModule, MatInputModule],
   templateUrl: './cv.html',
   styleUrl: './cv.scss',
 })
 export class CvPage {
   private readonly api = inject(Api);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   protected readonly form = signal<CvForm | null>(null);
   protected readonly loadError = signal(false);
@@ -55,6 +57,10 @@ export class CvPage {
     }
     if (form.invalid) {
       form.markAllAsTouched();
+      this.snackBar.open('Bitte markierte Felder prüfen', undefined, { duration: 4000 });
+      setTimeout(() =>
+        this.host.nativeElement.querySelector<HTMLElement>('.mat-form-field-invalid input, .mat-form-field-invalid textarea')?.focus(),
+      );
       return;
     }
     this.saving.set(true);
