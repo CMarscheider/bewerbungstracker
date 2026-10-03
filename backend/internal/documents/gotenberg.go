@@ -47,11 +47,11 @@ func (g *Gotenberg) Convert(ctx context.Context, html []byte, assets map[string]
 			return nil, err
 		}
 	}
-	for k, v := range map[string]string{
-		"printBackground": "true", "preferCssPageSize": "true",
-		"marginTop": "0", "marginBottom": "0", "marginLeft": "0", "marginRight": "0",
+	for _, f := range [][2]string{
+		{"printBackground", "true"}, {"preferCssPageSize", "true"},
+		{"marginTop", "0"}, {"marginBottom", "0"}, {"marginLeft", "0"}, {"marginRight", "0"},
 	} {
-		if err := w.WriteField(k, v); err != nil {
+		if err := w.WriteField(f[0], f[1]); err != nil {
 			return nil, err
 		}
 	}
@@ -66,7 +66,7 @@ func (g *Gotenberg) Convert(ctx context.Context, html []byte, assets map[string]
 	req.Header.Set("Content-Type", w.FormDataContentType())
 	res, err := g.client.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrUnavailable, err) //nolint:errorlint // Ursache nur als Text
+		return nil, fmt.Errorf("%w: %w", ErrUnavailable, err)
 	}
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
@@ -76,7 +76,17 @@ func (g *Gotenberg) Convert(ctx context.Context, html []byte, assets map[string]
 		}
 		return nil, fmt.Errorf("gotenberg: status %d: %s", res.StatusCode, msg)
 	}
-	return io.ReadAll(io.LimitReader(res.Body, maxPDFBytes))
+	pdf, err := io.ReadAll(io.LimitReader(res.Body, maxPDFBytes+1))
+	if err != nil {
+		return nil, fmt.Errorf("gotenberg: antwort lesen: %w", err)
+	}
+	if len(pdf) > maxPDFBytes {
+		return nil, fmt.Errorf("gotenberg: pdf größer als %d bytes", maxPDFBytes)
+	}
+	if !bytes.HasPrefix(pdf, []byte("%PDF-")) {
+		return nil, errors.New("gotenberg: antwort ist kein pdf")
+	}
+	return pdf, nil
 }
 
 func addFile(w *multipart.Writer, name string, data []byte) error {

@@ -33,7 +33,11 @@ func TestGotenbergSendsFilesAndOptions(t *testing.T) {
 		mr := multipart.NewReader(r.Body, params["boundary"])
 		for {
 			p, err := mr.NextPart()
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			if err != nil {
+				t.Errorf("multipart: %v", err)
 				break
 			}
 			if p.FileName() != "" {
@@ -57,29 +61,70 @@ func TestGotenbergSendsFilesAndOptions(t *testing.T) {
 	if len(files) != 2 || files[0] != "index.html" || files[1] != "a.ttf" {
 		t.Errorf("Dateien = %v", files)
 	}
-	if fields["printBackground"] != "true" || fields["preferCssPageSize"] != "true" {
-		t.Errorf("Felder = %v", fields)
+	want := map[string]string{
+		"printBackground": "true", "preferCssPageSize": "true",
+		"marginTop": "0", "marginBottom": "0", "marginLeft": "0", "marginRight": "0",
+	}
+	for k, v := range want {
+		if fields[k] != v {
+			t.Errorf("Feld %s = %q, erwartet %q", k, fields[k], v)
+		}
 	}
 }
 
-func TestGotenbergUnavailable(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		http.Error(w, "kaputt", http.StatusServiceUnavailable)
-	}))
-	defer srv.Close()
-	_, err := documents.NewGotenberg(srv.URL).Convert(context.Background(), []byte("x"), nil)
+func TestGotenbergErrors(t *testing.T) {
+	for _, tc := range []struct {
+		name        string
+		status      int
+		body        string
+		unavailable bool
+	}{
+		{"503", http.StatusServiceUnavailable, "kaputt", true},
+		{"429", http.StatusTooManyRequests, "zu viel", true},
+		{"400", http.StatusBadRequest, "falsch", false},
+		{"200 ohne PDF", http.StatusOK, "<html>kein pdf</html>", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(tc.status)
+				_, _ = w.Write([]byte(tc.body))
+			}))
+			defer srv.Close()
+			_, err := documents.NewGotenberg(srv.URL).Convert(context.Background(), []byte("x"), nil)
+			if err == nil {
+				t.Fatal("Fehler erwartet")
+			}
+			if got := errors.Is(err, documents.ErrUnavailable); got != tc.unavailable {
+				t.Errorf("errors.Is(ErrUnavailable) = %v, erwartet %v (%v)", got, tc.unavailable, err)
+			}
+		})
+	}
+}
+
+func TestGotenbergUnreachable(t *testing.T) {
+	_, err := documents.NewGotenberg("http://127.0.0.1:1").Convert(context.Background(), []byte("x"), nil)
 	if !errors.Is(err, documents.ErrUnavailable) {
 		t.Fatalf("erwartet ErrUnavailable, bekommen %v", err)
 	}
+}
 
-	_, err = documents.NewGotenberg("http://127.0.0.1:1").Convert(context.Background(), []byte("x"), nil)
-	if !errors.Is(err, documents.ErrUnavailable) {
-		t.Fatalf("nicht erreichbar: erwartet ErrUnavailable, bekommen %v", err)
+func TestGotenbergRejectsOversizedPDF(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte("%PDF-1.7 "))
+		_, _ = w.Write(make([]byte, 20<<20))
+	}))
+	defer srv.Close()
+	_, err := documents.NewGotenberg(srv.URL).Convert(context.Background(), []byte("x"), nil)
+	if err == nil {
+		t.Fatal("zu großes PDF muss abgelehnt werden")
 	}
 }
 
 // TestGotenbergRendersCV erzeugt mit einem echten Gotenberg-Container ein PDF.
 // Mit CV_PDF_OUT=<pfad> wird das Ergebnis zum Ansehen gespeichert.
+// gotenbergImage ist die festgelegte Gotenberg-Version (auch in docker-compose.yml).
+const gotenbergImage = "gotenberg/gotenberg:8.37.0"
+
 func TestGotenbergRendersCV(t *testing.T) {
 	if testing.Short() {
 		t.Skip("braucht Docker")
@@ -88,7 +133,7 @@ func TestGotenbergRendersCV(t *testing.T) {
 		t.Fatal(err)
 	}
 	ctx := context.Background()
-	ctr, err := testcontainers.Run(ctx, "gotenberg/gotenberg:8",
+	ctr, err := testcontainers.Run(ctx, gotenbergImage,
 		testcontainers.WithExposedPorts("3000/tcp"),
 		testcontainers.WithWaitStrategy(wait.ForHTTP("/health").WithPort("3000/tcp")),
 	)
