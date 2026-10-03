@@ -45,6 +45,9 @@ h2 { font-size: 1.15rem; margin: 24px 0 8px; }
 .muted { color: var(--mat-sys-on-surface-variant, #6b7280); }
 .head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
 .list { list-style: none; margin: 0; padding: 0; }
+.list a { color: var(--mat-sys-primary); text-decoration: none; }
+.list a:hover { text-decoration: underline; }
+.flush { margin-inline-start: -12px; }
 .list li { border-bottom: 1px solid var(--mat-sys-outline-variant, #e5e7eb); padding: 8px 0; }
 .table-wrap { overflow-x: auto; }
 .danger {

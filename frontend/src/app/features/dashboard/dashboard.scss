@@ -1,11 +1,12 @@
 .tiles {
   display: grid;
   gap: 12px;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
 }
 .tile {
   display: flex;
   flex-direction: column;
+  gap: 4px;
   padding: 16px;
 }
 .value {
@@ -25,4 +26,9 @@
 .overdue,
 .overdue-title {
   color: var(--mat-sys-error, #b91c1c);
+}
+@media (max-width: 600px) {
+  .list li {
+    flex-direction: column;
+  }
 }

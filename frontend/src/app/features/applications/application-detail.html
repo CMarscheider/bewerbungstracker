@@ -1,10 +1,7 @@
 @if (application(); as app) {
-  <header class="head">
-    <div>
-      <h1>{{ app.position_title }}</h1>
-      <p class="company">{{ app.company_name }} <app-status-badge [status]="app.status" [phase]="app.phase" /></p>
-    </div>
-    <button mat-button class="danger" (click)="remove()">Bewerbung löschen</button>
+  <header>
+    <h1>{{ app.position_title }}</h1>
+    <p class="company">{{ app.company_name }} <app-status-badge [status]="app.status" [phase]="app.phase" /></p>
   </header>
 
   <section>
@@ -36,7 +33,7 @@
       }
     </ol>
     @if (canUndo()) {
-      <button mat-button (click)="undo()">Letztes Ereignis rückgängig</button>
+      <button mat-button class="flush" (click)="undo()">Letztes Ereignis rückgängig</button>
     }
   </section>
 
@@ -68,8 +65,12 @@
         <dt>Quelle</dt><dd>{{ app.source || '–' }}</dd>
         <dt>Notizen</dt><dd class="pre">{{ app.notes || '–' }}</dd>
       </dl>
-      <button mat-button (click)="startEdit()">Bearbeiten</button>
+      <button mat-button class="flush" (click)="startEdit()">Bearbeiten</button>
     }
+  </section>
+
+  <section>
+    <button mat-button class="danger flush" (click)="remove()">Bewerbung löschen</button>
   </section>
 } @else if (loadError()) {
   <p>Bewerbung nicht gefunden. <a routerLink="/bewerbungen">Zurück zur Liste</a></p>
