@@ -23,7 +23,7 @@ func putPhoto(t *testing.T, srv *httptest.Server, data []byte) response {
 	}
 	defer res.Body.Close()
 	body, _ := io.ReadAll(res.Body)
-	return response{Status: res.StatusCode, ContentType: res.Header.Get("Content-Type"), Body: body}
+	return response{Status: res.StatusCode, ContentType: res.Header.Get("Content-Type"), Body: body, Header: res.Header}
 }
 
 func TestCVPhotoUploadDownloadDelete(t *testing.T) {
@@ -34,6 +34,9 @@ func TestCVPhotoUploadDownloadDelete(t *testing.T) {
 
 	got := call(t, srv, http.MethodGet, "/api/v1/cv/photo", nil)
 	expectStatus(t, got, http.StatusOK)
+	if cc := got.Header.Get("Cache-Control"); cc != "no-cache" {
+		t.Errorf("Cache-Control = %q", cc)
+	}
 	if got.ContentType != "image/jpeg" || !bytes.Equal(got.Body, jpegHeader) {
 		t.Errorf("GET = %s, %d Bytes", got.ContentType, len(got.Body))
 	}
@@ -50,12 +53,13 @@ func TestCVPhotoRejectsNonJPEG(t *testing.T) {
 	}
 }
 
-func TestCVPhotoTooLargeIsBadRequest(t *testing.T) {
+func TestCVPhotoTooLarge(t *testing.T) {
 	srv := newTestServer(t)
 	big := append(append([]byte{}, jpegHeader...), make([]byte, 2<<20)...)
-	r := putPhoto(t, srv, big)
-	if r.Status != http.StatusBadRequest && r.Status != http.StatusRequestEntityTooLarge {
-		t.Fatalf("Status %d, erwartet 400 oder 413; Body %s", r.Status, r.Body)
-	}
-	t.Logf("zu großer Upload: Status %d, Body %s", r.Status, r.Body)
+	expectProblem(t, putPhoto(t, srv, big), http.StatusRequestEntityTooLarge, "/problems/payload-too-large")
+}
+
+func TestCVPhotoEmptyBody(t *testing.T) {
+	srv := newTestServer(t)
+	expectProblem(t, putPhoto(t, srv, nil), http.StatusBadRequest, "/problems/bad-request")
 }

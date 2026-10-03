@@ -303,6 +303,9 @@ paths:
       responses:
         "200":
           description: Foto
+          headers:
+            Cache-Control:
+              schema: { type: string }
           content:
             image/jpeg:
               schema: { type: string, format: binary }

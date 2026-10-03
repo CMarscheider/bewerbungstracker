@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"context"
 	"io"
-
-	"bewerbungsmanager/internal/domain"
 )
 
 func (s *Server) GetCvPhoto(ctx context.Context, _ GetCvPhotoRequestObject) (GetCvPhotoResponseObject, error) {
@@ -13,14 +11,16 @@ func (s *Server) GetCvPhoto(ctx context.Context, _ GetCvPhotoRequestObject) (Get
 	if err != nil {
 		return nil, err
 	}
-	return GetCvPhoto200ImagejpegResponse{Body: bytes.NewReader(p.Data), ContentLength: int64(len(p.Data))}, nil
+	noCache := "no-cache"
+	return GetCvPhoto200ImagejpegResponse{Headers: GetCvPhoto200ResponseHeaders{CacheControl: &noCache}, Body: bytes.NewReader(p.Data), ContentLength: int64(len(p.Data))}, nil
 }
 
 func (s *Server) SaveCvPhoto(ctx context.Context, req SaveCvPhotoRequestObject) (SaveCvPhotoResponseObject, error) {
 	data, err := io.ReadAll(req.Body)
 	if err != nil {
-		// http.MaxBytesReader (router.go) bricht bei mehr als 1 MB ab.
-		return nil, &domain.ValidationError{Field: "photo", Detail: "zu groß oder unvollständig (max. 1 MB)"}
+		// Zu große Bodys lehnt schon die Validierung im Router mit 413 ab; hier
+		// bleibt nur ein unerwarteter Lesefehler (wird als 500 behandelt).
+		return nil, err
 	}
 	if err := s.svc.SaveCVPhoto(ctx, data); err != nil {
 		return nil, err

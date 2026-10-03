@@ -30,6 +30,7 @@ func newTestServer(t *testing.T) *httptest.Server {
 type response struct {
 	Status      int
 	ContentType string
+	Header      http.Header
 	Body        []byte
 }
 
@@ -59,7 +60,7 @@ func call(t *testing.T, srv *httptest.Server, method, path string, body any) res
 	if err != nil {
 		t.Fatal(err)
 	}
-	return response{Status: res.StatusCode, ContentType: res.Header.Get("Content-Type"), Body: data}
+	return response{Status: res.StatusCode, ContentType: res.Header.Get("Content-Type"), Body: data, Header: res.Header}
 }
 
 func (r response) object(t *testing.T) map[string]any {
