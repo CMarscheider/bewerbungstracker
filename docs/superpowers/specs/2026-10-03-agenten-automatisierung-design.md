@@ -109,7 +109,7 @@ Alle Routinen: Vorab `GET /api/agent/cv` als Erreichbarkeitsprüfung. Ist der Pi
 **R1 Jobsuche** – täglich 07:00. Sucht laut Suchprofil, bewertet, legt neue Stellen an.
 
 **R2 Unterlagen** – stündlich 08:00–20:00. Für jede Stelle mit `angefordert`:
-1. Anschreiben (Deutsch; Englisch, wenn die Anzeige englisch ist), Profil-Satz und 3–5 Schwerpunkte schreiben. Nur Fakten aus dem CV, nichts erfinden.
+1. Anschreiben (Deutsch; Englisch, wenn die Anzeige englisch ist), Profil-Satz und 3–5 Schwerpunkte schreiben. Nur Fakten aus dem CV, nichts erfinden. Einzige Ausnahme, vom User freigegeben: Erwähnt die Anzeige KI, darf „nutzt KI für Automatisierungen“ in Profil-Satz und Anschreiben ergänzt werden; sonst bleibt KI unerwähnt.
 2. `PUT …/documents`, dann `GET …/documents/pdf`.
 3. Mit `contact_email`: Gmail-Entwurf (Betreff „Bewerbung als <Titel>“, 3–5 Sätze Mailtext, PDF als Anhang), dann `PATCH …/gmail` mit `entwurf_angelegt` und Draft-ID. Ohne Adresse: `PATCH …/gmail` mit `portal`.
 
