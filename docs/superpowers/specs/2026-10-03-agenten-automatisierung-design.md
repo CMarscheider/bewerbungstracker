@@ -96,7 +96,7 @@ Notizen an Ereignissen des Agenten beginnen mit `Agent:` und nennen das Mail-Dat
 
 ### Lebenslauf-PDF und Foto (vorgezogen, vor der Agent-API)
 
-- **Foto:** Tabelle `cv_photo` (genau eine Zeile, `id = 1`, `image bytea`, `content_type`, `updated_at`). API `GET`/`PUT`/`DELETE /api/v1/cv/photo` (PUT nimmt `image/jpeg` oder `image/png`, max. 1 MB). Der Browser schneidet vor dem Hochladen auf 3:4 zu und verkleinert auf 600×800 (JPEG).
+- **Foto:** Tabelle `cv_photo` (`id = 1`, `image bytea`, `updated_at`), nur JPEG. API `GET`/`PUT`/`DELETE /api/v1/cv/photo`; PUT nimmt `application/octet-stream` (max. 1 MB, sonst 413). Der Browser schneidet vor dem Hochladen auf 3:4 zu und verkleinert auf 600×800 (JPEG).
 - **PDF:** `GET /api/v1/cv/pdf` liefert `Lebenslauf_<Vorname>_<Nachname>.pdf` (inline). Kein Lebenslauf gespeichert → 404.
 - **Design:** zweispaltig, A4. Linke Seitenleiste (Petrol #12343b) mit rundem Foto, Kontakt mit Inline-SVG-Icons, Kenntnisse als Chips je Bereich, Sprachen. Rechts Name groß, Berufsbezeichnung in Akzentfarbe (#2a9d8f), Abschnitte Profil · Projekte (Beschreibung, Technologie-Chips, Live-Link) · Berufserfahrung · Ausbildung; Stationen als Zeitleiste. Zeiträume „09/2020 – heute“. Kein Eintrag wird über einen Seitenumbruch zerrissen.
 - **Schrift:** Carlito (freier, maßgleicher Calibri-Nachbau, OFL), als Datei eingebettet und per `@font-face` an Gotenberg übergeben.

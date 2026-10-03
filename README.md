@@ -19,6 +19,8 @@ entstehen Dashboard, Verlauf und Statistik.
 - **Statistik:** Funnel, Tage bis zur ersten Antwort, Absagen je Phase, Erfolg je Quelle
 - **Lebenslauf:** strukturiert gepflegt (Kontakt, Profil, Stationen, Ausbildung, Kenntnisse, Projekte,
   Sprachen) als Grundlage für zugeschnittene Bewerbungsunterlagen
+- **Bewerbungsfoto und PDF:** Foto hochladen (wird auf 3:4 zugeschnitten) und den Lebenslauf als PDF
+  ansehen – modernes zweispaltiges Layout, Schrift Carlito (metrisch kompatibel zu Calibri)
 - **Darstellung:** Hell, Dunkel oder nach Systemeinstellung; Status-Farben je Prozessschritt
 - **API-Doku:** Swagger UI unter `/api/docs`
 
@@ -44,6 +46,9 @@ docker compose up -d --build        # http://localhost:4200
 go -C backend run ./cmd/seed        # optional: fiktive Demo-Daten (benötigt Go)
 ```
 
+Der erste `docker compose up` lädt zusätzlich das Gotenberg-Image (ca. 1,5 GB). Auf Raspberry Pi OS wird
+`mem_limit` nur mit `cgroup_enable=memory` in `/boot/firmware/cmdline.txt` beachtet (sonst ignoriert).
+
 Port ändern: `APP_PORT=8081 docker compose up -d`. Zurücksetzen: `docker compose down -v`.
 
 ## Architektur
@@ -53,6 +58,7 @@ flowchart LR
   B[Browser] -->|HTTP| N[nginx<br/>Angular-App]
   N -->|/api| G[Go-Backend<br/>net/http · oapi-codegen]
   G --> D[(PostgreSQL 17)]
+  G -->|HTML → PDF| P[Gotenberg<br/>Chromium]
   S[api/openapi.yaml] -. generiert .-> G
   S -. generiert .-> N
 ```
@@ -97,7 +103,7 @@ Optional: `GOTENBERG_URL` (z. B. `http://localhost:3000` für einen lokalen `got
 
 ```
 api/openapi.yaml        API-Vertrag
-backend/                Go: cmd/server, cmd/seed, internal/{domain,stats,service,store,httpapi,db}
+backend/                Go: cmd/server, cmd/seed, internal/{domain,stats,service,store,httpapi,documents,db}
 frontend/               Angular: src/app/{core,shared,features}, generierter Client in src/app/api
 docs/decisions/         Architekturentscheidungen (ADRs)
 docs/superpowers/       Design-Spezifikation und Umsetzungspläne
@@ -110,6 +116,7 @@ docs/superpowers/       Design-Spezifikation und Umsetzungspläne
 - **Service & HTTP:** Integrationstests gegen PostgreSQL in Docker (testcontainers)
 - **Frontend:** Komponententests mit Vitest – z. B. dass nur erlaubte Statuswechsel als Buttons
   erscheinen und das Fristfeld nur bei passenden Ereignissen
+- **PDF-Export:** Test des Gotenberg-Clients gegen einen echten Gotenberg-Container (testcontainers)
 - **Demo-Daten:** jedes Szenario wird gegen den echten Zustandsautomaten geprüft
 
 Alle Firmen und Personen in den Demo-Daten sind frei erfunden.
