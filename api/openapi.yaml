@@ -568,7 +568,7 @@ components:
         level: { type: string, minLength: 1, maxLength: 100 }
     Cv:
       type: object
-      description: Lebenslauf. end fehlt = bis heute. updated_at wird beim Speichern ignoriert.
+      description: Lebenslauf. end fehlt = bis heute. updated_at wird beim Speichern ignoriert. Solange kein Lebenslauf gespeichert ist, liefert GET eine leere Struktur (person.name leer, Listen leer, ohne updated_at).
       required: [person, experience, education, skills, projects, languages]
       properties:
         person: { $ref: "#/components/schemas/CvPerson" }

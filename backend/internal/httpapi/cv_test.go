@@ -47,6 +47,9 @@ func TestSaveAndGetCV(t *testing.T) {
 	got := call(t, srv, http.MethodGet, "/api/v1/cv", nil)
 	expectStatus(t, got, http.StatusOK)
 	body := got.object(t)
+	if body["updated_at"] == nil {
+		t.Error("updated_at fehlt beim Lesen")
+	}
 	person := body["person"].(map[string]any)
 	if person["name"] != "Erika Muster" || len(person["links"].([]any)) != 1 {
 		t.Errorf("person = %v", person)
@@ -69,4 +72,14 @@ func TestSaveCVWithInvalidPeriodIsBadRequest(t *testing.T) {
 	cv := sampleCV()
 	cv["education"] = []any{map[string]any{"degree": "Abitur", "institution": "Gymnasium", "start": "März 2018"}}
 	expectProblem(t, call(t, srv, http.MethodPut, "/api/v1/cv", cv), http.StatusBadRequest, "")
+}
+
+func TestSaveCVWithBlankNameIsBadRequest(t *testing.T) {
+	srv := newTestServer(t)
+	cv := sampleCV()
+	cv["person"] = map[string]any{"name": "   ", "links": []any{}}
+	p := expectProblem(t, call(t, srv, http.MethodPut, "/api/v1/cv", cv), http.StatusBadRequest, "/problems/validation-error")
+	if p["field"] != "person.name" {
+		t.Errorf("field = %v", p["field"])
+	}
 }
