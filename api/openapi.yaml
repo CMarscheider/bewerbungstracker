@@ -295,6 +295,39 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Cv" }
         default: { $ref: "#/components/responses/Problem" }
+  /api/v1/cv/photo:
+    get:
+      operationId: getCvPhoto
+      tags: [Cv]
+      summary: Bewerbungsfoto (JPEG); 404, solange keines gespeichert ist
+      responses:
+        "200":
+          description: Foto
+          content:
+            image/jpeg:
+              schema: { type: string, format: binary }
+        default: { $ref: "#/components/responses/Problem" }
+    put:
+      operationId: saveCvPhoto
+      tags: [Cv]
+      summary: Bewerbungsfoto ersetzen (JPEG, max. 1 MB)
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema: { type: string, format: binary }
+      responses:
+        "204":
+          description: Gespeichert
+        default: { $ref: "#/components/responses/Problem" }
+    delete:
+      operationId: deleteCvPhoto
+      tags: [Cv]
+      summary: Bewerbungsfoto entfernen
+      responses:
+        "204":
+          description: Entfernt
+        default: { $ref: "#/components/responses/Problem" }
 components:
   parameters:
     Id:
