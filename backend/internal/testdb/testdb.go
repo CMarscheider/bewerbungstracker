@@ -20,16 +20,24 @@ import (
 // windowsDockerHost ist die Named Pipe, die Docker Desktop unter Windows bereitstellt.
 const windowsDockerHost = "npipe:////./pipe/docker_engine"
 
-// Start startet einen Postgres-Container, migriert ihn und liefert Pool, URL und Aufräumfunktion.
-func Start(ctx context.Context) (*pgxpool.Pool, string, func(), error) {
-	// testcontainers erkennt Docker unter Windows per os.Stat auf die Named Pipe. Nutzen mehrere
-	// Testpakete parallel Docker, scheitert das mit "All pipe instances are busy" und endet in der
-	// irreführenden Meldung "rootless Docker is not supported on Windows". Mit gesetztem DOCKER_HOST
-	// entfällt diese Prüfung; der Docker-Client wartet bei belegter Pipe, statt abzubrechen.
+// EnsureDockerHost setzt unter Windows DOCKER_HOST auf die Named Pipe von Docker Desktop.
+// testcontainers erkennt Docker unter Windows per os.Stat auf die Named Pipe. Nutzen mehrere
+// Testpakete parallel Docker, scheitert das mit "All pipe instances are busy" und endet in der
+// irreführenden Meldung "rootless Docker is not supported on Windows". Mit gesetztem DOCKER_HOST
+// entfällt diese Prüfung; der Docker-Client wartet bei belegter Pipe, statt abzubrechen.
+func EnsureDockerHost() error {
 	if runtime.GOOS == "windows" && os.Getenv("DOCKER_HOST") == "" {
 		if err := os.Setenv("DOCKER_HOST", windowsDockerHost); err != nil {
-			return nil, "", nil, fmt.Errorf("DOCKER_HOST setzen: %w", err)
+			return fmt.Errorf("DOCKER_HOST setzen: %w", err)
 		}
+	}
+	return nil
+}
+
+// Start startet einen Postgres-Container, migriert ihn und liefert Pool, URL und Aufräumfunktion.
+func Start(ctx context.Context) (*pgxpool.Pool, string, func(), error) {
+	if err := EnsureDockerHost(); err != nil {
+		return nil, "", nil, err
 	}
 
 	ctr, err := postgres.Run(ctx, "postgres:17-alpine",
@@ -64,7 +72,7 @@ func Start(ctx context.Context) (*pgxpool.Pool, string, func(), error) {
 // Reset leert alle Tabellen; zu Beginn jedes Tests aufrufen.
 func Reset(t testing.TB, pool *pgxpool.Pool) {
 	t.Helper()
-	_, err := pool.Exec(context.Background(), "TRUNCATE companies, applications, application_events, cv CASCADE")
+	_, err := pool.Exec(context.Background(), "TRUNCATE companies, applications, application_events, cv, cv_photo CASCADE")
 	if err != nil {
 		t.Fatalf("Tabellen leeren: %v", err)
 	}

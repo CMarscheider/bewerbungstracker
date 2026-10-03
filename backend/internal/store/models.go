@@ -48,6 +48,12 @@ type Cv struct {
 	UpdatedAt time.Time
 }
 
+type CvPhoto struct {
+	ID        int32
+	Image     []byte
+	UpdatedAt time.Time
+}
+
 type LatestEvent struct {
 	ApplicationID  uuid.UUID
 	EventID        uuid.UUID
