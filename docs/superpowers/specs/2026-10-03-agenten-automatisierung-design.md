@@ -65,6 +65,8 @@ Eindeutiger Index auf `job_url` (wo nicht NULL) als Dublettenschutz.
 
 **`processed_mails`**: `gmail_message_id` (PK), `application_id` (NULL möglich), `outcome text`, `processed_at`.
 
+**`cv_reviews`**: Optimierungsläufe für den Grund-Lebenslauf. `id`, `state` (`angefordert` · `fertig` · `abgeschlossen`), `based_on_updated_at` (Stand des CV bei Anforderung), `proposal jsonb` (vollständiger Vorschlag im `Cv`-Schema), `notes jsonb` (Liste von Hinweisen, z. B. Lücken, fehlende Kennzahlen), `requested_at`, `completed_at`. Höchstens ein Lauf ist gleichzeitig `angefordert` oder `fertig`.
+
 ## Agent-API
 
 In `api/openapi.yaml` unter Tag `agent`, Präfix `/api/agent`. Jede Anfrage braucht `Authorization: Bearer <AGENT_TOKEN>` (aus `.env`). Ohne `AGENT_TOKEN` ist die gesamte Agent-API deaktiviert (404). Falsches Token → 401 und Log-Eintrag.
@@ -80,6 +82,8 @@ In `api/openapi.yaml` unter Tag `agent`, Präfix `/api/agent`. Jede Anfrage brau
 | `POST /applications/{id}/events` | Status-Ereignis anlegen; nutzt dieselbe Übergangsprüfung wie die Oberfläche (unerlaubt → 422) |
 | `POST /suggestions` | Vorschlag anlegen |
 | `GET /processed-mails/{id}` · `POST /processed-mails` | Doppelverarbeitung verhindern |
+| `GET /cv-reviews?state=angefordert` | offene Optimierungsanfrage |
+| `PUT /cv-reviews/{id}` | Vorschlag und Hinweise abliefern → `fertig` |
 
 Notizen an Ereignissen des Agenten beginnen mit `Agent:` und nennen das Mail-Datum.
 
@@ -92,7 +96,7 @@ Notizen an Ereignissen des Agenten beginnen mit `Agent:` und nennen das Mail-Dat
 
 ## Oberfläche
 
-- **Lebenslauf** (neue Seite): Formular für die CV-Daten, Vorschau-PDF.
+- **Lebenslauf** (neue Seite): Formular für die CV-Daten, Vorschau-PDF. Knopf **„Mit Claude optimieren“** legt einen `cv_review` an. Ist er `fertig`, zeigt die Seite Vorher/Nachher je Abschnitt (Profil, jede Station, Kenntnisse, Projekte) mit „Übernehmen“ je Abschnitt und „Alles übernehmen“, dazu die Hinweise. „Abschließen“ setzt den Lauf auf `abgeschlossen`. Hat sich der CV seit der Anforderung geändert, weist die Seite darauf hin.
 - **Bewerbungen**: Spalte/Sortierung Score, Filter „Neu vom Agenten“.
 - **Detail**: Score mit Begründung, Anzeigentext einklappbar, Knopf **„Unterlagen erstellen“** (setzt `angefordert`), Status der Unterlagen, editierbares Anschreiben mit „Neu rendern“, PDF-Download, Link zum Gmail-Entwurf bzw. Hinweis „Über Portal bewerben“, Fehlertext bei `fehler`.
 - **Dashboard**: Box „Vorschläge des Agenten“ mit Übernehmen (legt Ereignis an) und Verwerfen.
@@ -108,6 +112,8 @@ Alle Routinen: Vorab `GET /api/agent/cv` als Erreichbarkeitsprüfung. Ist der Pi
 1. Anschreiben (Deutsch; Englisch, wenn die Anzeige englisch ist), Profil-Satz und 3–5 Schwerpunkte schreiben. Nur Fakten aus dem CV, nichts erfinden.
 2. `PUT …/documents`, dann `GET …/documents/pdf`.
 3. Mit `contact_email`: Gmail-Entwurf (Betreff „Bewerbung als <Titel>“, 3–5 Sätze Mailtext, PDF als Anhang), dann `PATCH …/gmail` mit `entwurf_angelegt` und Draft-ID. Ohne Adresse: `PATCH …/gmail` mit `portal`.
+
+Zusätzlich bearbeitet R2 bei jedem Lauf eine offene Lebenslauf-Optimierung (`cv_reviews` mit `angefordert`): Formulierungen schärfen, Stichpunkte mit Wirkung und Kennzahlen (nur wenn im CV belegt), Keywords für Frontend- und KI-Stellen, Reihenfolge nach Relevanz für Junior-Stellen. Neue Fakten werden nie erfunden; fehlende Angaben landen als Hinweis in `notes`.
 
 **R3 Postfach** – 08:00 und 17:00. Betrachtet Mails der letzten 3 Tage, die nicht in `processed_mails` stehen:
 1. Gesendete Bewerbungsmails (Draft-ID/Betreff) → Ereignis *Beworben* mit Versanddatum, `gmail_thread_id` speichern.
@@ -133,8 +139,8 @@ Routinen senden nie selbst Mails.
 
 ## Reihenfolge
 
-1. Lebenslauf (Tabelle, API, Seite)
-2. Datenmodell und Agent-API mit Token
+1. Lebenslauf (Tabelle, API, Seite); Erstbefüllung mit einer gemeinsam mit Claude optimierten Fassung
+2. Datenmodell und Agent-API mit Token, inkl. `cv_reviews` und Optimierungs-Ansicht
 3. PDF-Renderer (Gotenberg, Vorlagen)
 4. Oberfläche: Score, Freigabe, Unterlagen, Vorschläge
 5. Tailscale Funnel auf dem Pi

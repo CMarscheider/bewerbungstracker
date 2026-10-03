@@ -1161,9 +1161,14 @@ Dem User vorher ankündigen, dass die Container auf dem Pi neu gebaut und neu ge
 Run: `ssh marsc@pi.local 'cd ~/bewerbungsmanager && git pull -q && docker compose up -d --build && docker compose ps --format "{{.Service}}: {{.Status}}"'`
 Expected: `backend`, `db`, `frontend` jeweils `Up`; Backend-Log enthält `migrationen angewendet` mit Version 2.
 
-- [ ] **Step 3: Lebenslauf in das `Cv`-Schema übertragen**
+- [ ] **Step 3: Lebenslauf in das `Cv`-Schema übertragen und mit dem User optimieren**
 
-Die Angaben des Users 1:1 in `cv.json` (Scratchpad) übertragen: Zeiträume als `JJJJ` oder `JJJJ-MM`, laufende Stationen ohne `end`, Stichpunkte als Liste. Nichts ergänzen, was der User nicht geliefert hat; Unklarheiten beim User nachfragen.
+Diesen Schritt führt der Haupt-Agent im Gespräch mit dem User aus, nicht ein Subagent.
+
+1. Die Angaben des Users 1:1 in `cv.json` (Scratchpad) übertragen: Zeiträume als `JJJJ` oder `JJJJ-MM`, laufende Stationen ohne `end`, Stichpunkte als Liste.
+2. Optimierte Fassung vorschlagen, Ziel Junior-Stellen als Frontend-Developer bzw. KI-Entwickler: Kurzprofil (3–4 Sätze), Stichpunkte als Wirkung statt Tätigkeit, Kennzahlen nur wenn belegt, Keywords (Angular, TypeScript, LLM, Claude API …) nur wo zutreffend, Reihenfolge nach Relevanz, Projekte hervorheben.
+3. Nie Fakten erfinden. Fehlende Angaben (Kennzahlen, Zeiträume, Technologien) als Fragen an den User stellen.
+4. Vorher/Nachher zeigen, Änderungswünsche einarbeiten, erst die freigegebene Fassung als `cv.json` speichern.
 
 - [ ] **Step 4: Einspielen und prüfen**
 
