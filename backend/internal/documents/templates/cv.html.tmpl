@@ -18,13 +18,13 @@
     -webkit-print-color-adjust: exact; print-color-adjust: exact;
     background: linear-gradient(90deg, var(--side) 0 var(--side-width), #fff var(--side-width) 100%);
   }
-  body { margin: 0; font-family: Carlito, Calibri, sans-serif; font-size: 10.5pt; line-height: 1.4; color: var(--text); }
+  body { margin: 0; font-family: Carlito, Calibri, sans-serif; font-size: 10.5pt; line-height: 1.35; color: var(--text); }
   .page { display: grid; grid-template-columns: var(--side-width) 1fr; }
   /* Seitenränder als Innenabstand, damit die Seitenleiste bis zum Blattrand reicht;
      clone wiederholt den Abstand oben/unten auf jeder Folgeseite. */
   aside, main { -webkit-box-decoration-break: clone; box-decoration-break: clone; }
-  aside { color: var(--side-text); padding: 12mm 8mm; }
-  main { padding: 12mm 13mm 12mm 11mm; }
+  aside { color: var(--side-text); padding: 10mm 8mm; }
+  main { padding: 10mm 13mm 10mm 11mm; }
 
   .photo { display: block; width: 38mm; height: 38mm; margin: 0 auto 7mm; border-radius: 50%; object-fit: cover;
            border: 1.2mm solid rgba(255, 255, 255, .85); }
@@ -41,25 +41,25 @@
   .lang { display: flex; justify-content: space-between; margin-bottom: 1.5mm; }
   .lang span:last-child { color: var(--side-muted); }
 
-  header { margin-bottom: 6mm; }
+  header { margin-bottom: 3mm; }
   header h1 { font-size: 26pt; line-height: 1.1; margin: 0; font-weight: 700; color: var(--side); letter-spacing: -.01em; }
   header p { margin: 1.5mm 0 0; font-size: 13pt; color: var(--accent); font-weight: 700; }
   main h2 { display: flex; align-items: center; gap: 3mm; font-size: 11pt; letter-spacing: .14em; text-transform: uppercase;
-            color: var(--side); margin: 7mm 0 3.5mm; break-after: avoid; }
+            color: var(--side); margin: 5mm 0 2.5mm; break-after: avoid; }
   main h2::after { content: ""; flex: 1; height: .4mm; background: linear-gradient(90deg, var(--accent), var(--line)); }
   .summary { margin: 0; color: var(--text); }
 
-  .project { margin-bottom: 4mm; break-inside: avoid; }
+  .project { margin-bottom: 3mm; break-inside: avoid; }
   .project-head { display: flex; justify-content: space-between; gap: 4mm; align-items: baseline; }
   .project h3 { font-size: 11.5pt; margin: 0; color: var(--side); }
   .project a { font-size: 9pt; color: var(--accent); text-decoration: none; white-space: nowrap; }
-  .project p { margin: 1mm 0 1.5mm; }
+  .project p { margin: .6mm 0 1.2mm; }
   .project .chip { background: var(--chip); color: var(--side); }
 
   .timeline { position: relative; margin: 0; padding: 0 0 0 6mm; list-style: none; }
-  .timeline > li { position: relative; margin-bottom: 4mm; break-inside: avoid; }
+  .timeline > li { position: relative; margin-bottom: 2.8mm; break-inside: avoid; }
   /* Linie je Eintrag bis zum nächsten Punkt, damit sie nicht über den Seitenrand läuft. */
-  .timeline > li:not(:last-child)::after { content: ""; position: absolute; left: -4.8mm; top: 2.8mm; bottom: -5.4mm;
+  .timeline > li:not(:last-child)::after { content: ""; position: absolute; left: -4.8mm; top: 2.8mm; bottom: -4.2mm;
                                            width: .4mm; background: var(--line); }
   .timeline > li::before { content: ""; position: absolute; z-index: 1; left: -6mm; top: 1.4mm; width: 2.8mm; height: 2.8mm; border-radius: 50%;
                          background: #fff; border: .7mm solid var(--accent); }
