@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Lebenslauf {{.Person.Name}}</title>
+<style>
+  @font-face { font-family: Carlito; src: url("Carlito-Regular.ttf"); font-weight: 400; font-style: normal; }
+  @font-face { font-family: Carlito; src: url("Carlito-Bold.ttf"); font-weight: 700; font-style: normal; }
+  @font-face { font-family: Carlito; src: url("Carlito-Italic.ttf"); font-weight: 400; font-style: italic; }
+  :root {
+    --side: #12343b; --side-text: #e8f1f2; --side-muted: #9fb8bc;
+    --accent: #2a9d8f; --text: #1f2a2e; --muted: #5b6b70; --line: #d9e3e5; --chip: #e6f4f2;
+    --side-width: 66mm;
+  }
+  @page { size: A4; margin: 12mm 0; }
+  * { box-sizing: border-box; }
+  html {
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+    background: linear-gradient(90deg, var(--side) 0 var(--side-width), #fff var(--side-width) 100%);
+  }
+  body { margin: 0; font-family: Carlito, Calibri, sans-serif; font-size: 10.5pt; line-height: 1.4; color: var(--text); }
+  .page { display: grid; grid-template-columns: var(--side-width) 1fr; }
+  aside { color: var(--side-text); padding: 0 8mm; }
+  main { padding: 0 13mm 0 11mm; }
+
+  .photo { display: block; width: 38mm; height: 38mm; margin: 0 auto 7mm; border-radius: 50%; object-fit: cover;
+           border: 1.2mm solid rgba(255, 255, 255, .85); }
+  aside h2 { color: #fff; font-size: 10pt; letter-spacing: .14em; text-transform: uppercase; margin: 7mm 0 3mm;
+             padding-bottom: 1.5mm; border-bottom: .3mm solid rgba(255, 255, 255, .25); }
+  .contact { list-style: none; margin: 0; padding: 0; }
+  .contact li { display: flex; align-items: flex-start; gap: 2.5mm; margin-bottom: 2.2mm; word-break: break-word; }
+  .contact svg { flex: none; width: 3.6mm; height: 3.6mm; margin-top: .6mm; fill: var(--accent); }
+  .contact a { color: var(--side-text); text-decoration: none; }
+  .skill-group { margin-bottom: 3.5mm; break-inside: avoid; }
+  .skill-group h3 { font-size: 9pt; font-weight: 700; color: var(--side-muted); margin: 0 0 1.5mm; text-transform: uppercase; letter-spacing: .08em; }
+  .chips { display: flex; flex-wrap: wrap; gap: 1.5mm; }
+  .chip { font-size: 9pt; padding: .6mm 2.4mm; border-radius: 3mm; background: rgba(255, 255, 255, .12); color: #fff; }
+  .lang { display: flex; justify-content: space-between; margin-bottom: 1.5mm; }
+  .lang span:last-child { color: var(--side-muted); }
+
+  header { margin-bottom: 6mm; }
+  header h1 { font-size: 26pt; line-height: 1.1; margin: 0; font-weight: 700; color: var(--side); letter-spacing: -.01em; }
+  header p { margin: 1.5mm 0 0; font-size: 13pt; color: var(--accent); font-weight: 700; }
+  main h2 { display: flex; align-items: center; gap: 3mm; font-size: 11pt; letter-spacing: .14em; text-transform: uppercase;
+            color: var(--side); margin: 7mm 0 3.5mm; break-after: avoid; }
+  main h2::after { content: ""; flex: 1; height: .4mm; background: linear-gradient(90deg, var(--accent), var(--line)); }
+  .summary { margin: 0; color: var(--text); }
+
+  .project { margin-bottom: 4mm; break-inside: avoid; }
+  .project-head { display: flex; justify-content: space-between; gap: 4mm; align-items: baseline; }
+  .project h3 { font-size: 11.5pt; margin: 0; color: var(--side); }
+  .project a { font-size: 9pt; color: var(--accent); text-decoration: none; white-space: nowrap; }
+  .project p { margin: 1mm 0 1.5mm; }
+  .project .chip { background: var(--chip); color: var(--side); }
+
+  .timeline { position: relative; margin: 0; padding: 0 0 0 6mm; list-style: none; }
+  .timeline::before { content: ""; position: absolute; left: 1.2mm; top: 1.5mm; bottom: 1.5mm; width: .4mm; background: var(--line); }
+  .timeline li { position: relative; margin-bottom: 4mm; break-inside: avoid; }
+  .timeline li::before { content: ""; position: absolute; left: -6mm; top: 1.4mm; width: 2.8mm; height: 2.8mm; border-radius: 50%;
+                         background: #fff; border: .7mm solid var(--accent); }
+  .entry-head { display: flex; justify-content: space-between; gap: 4mm; align-items: baseline; }
+  .entry-head h3 { font-size: 11pt; margin: 0; color: var(--side); }
+  .when { font-size: 9.5pt; color: var(--muted); white-space: nowrap; }
+  .where { color: var(--muted); font-size: 10pt; }
+  .timeline ul { margin: 1.2mm 0 0; padding-left: 4mm; }
+  .timeline ul li { margin: 0 0 .6mm; break-inside: auto; }
+  .timeline ul li::before { display: none; }
+  .details { margin: 1mm 0 0; color: var(--muted); font-style: italic; }
+</style>
+</head>
+<body>
+<div class="page">
+  <aside>
+    {{if .Photo}}<img class="photo" src="{{.Photo}}" alt="Foto">{{end}}
+    <h2>Kontakt</h2>
+    <ul class="contact">
+      {{with .Person.Location}}<li><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z"/></svg><span>{{.}}</span></li>{{end}}
+      {{with .Person.Phone}}<li><svg viewBox="0 0 24 24"><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.02-.24c1.12.37 2.33.57 3.57.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.25 1.02l-2.2 2.2z"/></svg><span>{{.}}</span></li>{{end}}
+      {{with .Person.Email}}<li><svg viewBox="0 0 24 24"><path d="M20 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm0 4-8 5-8-5V6l8 5 8-5v2z"/></svg><span>{{.}}</span></li>{{end}}
+      {{range .Person.Links}}<li><svg viewBox="0 0 24 24"><path d="M3.9 12a3.1 3.1 0 0 1 3.1-3.1h4V7H7a5 5 0 0 0 0 10h4v-1.9H7A3.1 3.1 0 0 1 3.9 12zM8 13h8v-2H8v2zm9-6h-4v1.9h4a3.1 3.1 0 0 1 0 6.2h-4V17h4a5 5 0 0 0 0-10z"/></svg>{{with safeURL .URL}}<a href="{{.}}">{{$.LinkText .}}</a>{{else}}<span>{{.Label}}</span>{{end}}</li>{{end}}
+    </ul>
+
+    {{if .Skills}}<h2>Kenntnisse</h2>
+    {{range .Skills}}<div class="skill-group"><h3>{{.Category}}</h3><div class="chips">{{range .Items}}<span class="chip">{{.}}</span>{{end}}</div></div>{{end}}{{end}}
+
+    {{if .Languages}}<h2>Sprachen</h2>
+    {{range .Languages}}<div class="lang"><span>{{.Language}}</span><span>{{.Level}}</span></div>{{end}}{{end}}
+  </aside>
+
+  <main>
+    <header>
+      <h1>{{.Person.Name}}</h1>
+      {{with .Person.Headline}}<p>{{.}}</p>{{end}}
+    </header>
+
+    {{with .Summary}}<h2>Profil</h2><p class="summary">{{.}}</p>{{end}}
+
+    {{if .Projects}}<h2>Projekte</h2>
+    {{range .Projects}}<div class="project">
+      <div class="project-head"><h3>{{.Name}}</h3>{{with safeURL .URL}}<a href="{{.}}">Live ansehen ↗</a>{{end}}</div>
+      {{with .Description}}<p>{{.}}</p>{{end}}
+      {{if .Technologies}}<div class="chips">{{range .Technologies}}<span class="chip">{{.}}</span>{{end}}</div>{{end}}
+    </div>{{end}}{{end}}
+
+    {{if .Experience}}<h2>Berufserfahrung</h2>
+    <ul class="timeline">{{range .Experience}}<li>
+      <div class="entry-head"><h3>{{.Role}}</h3><span class="when">{{period .Start .End}}</span></div>
+      <div class="where">{{.Organization}}{{with .Location}} · {{.}}{{end}}</div>
+      {{if .Highlights}}<ul>{{range .Highlights}}<li>{{.}}</li>{{end}}</ul>{{end}}
+    </li>{{end}}</ul>{{end}}
+
+    {{if .Education}}<h2>Ausbildung</h2>
+    <ul class="timeline">{{range .Education}}<li>
+      <div class="entry-head"><h3>{{.Degree}}</h3><span class="when">{{period .Start .End}}</span></div>
+      <div class="where">{{.Institution}}</div>
+      {{with .Details}}<p class="details">{{.}}</p>{{end}}
+    </li>{{end}}</ul>{{end}}
+  </main>
+</div>
+</body>
+</html>
