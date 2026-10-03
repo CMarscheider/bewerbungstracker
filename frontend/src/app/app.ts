@@ -16,5 +16,6 @@ export class App {
     { path: '/bewerbungen', label: 'Bewerbungen', exact: false },
     { path: '/statistik', label: 'Statistik', exact: false },
     { path: '/firmen', label: 'Firmen', exact: false },
+    { path: '/lebenslauf', label: 'Lebenslauf', exact: false },
   ];
 }

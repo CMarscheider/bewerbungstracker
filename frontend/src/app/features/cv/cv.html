@@ -1,0 +1,125 @@
+<h1>Lebenslauf</h1>
+
+@if (loadError()) {
+  <p class="muted">Konnte nicht geladen werden.</p>
+} @else if (form() === null) {
+  <p class="muted">Lade …</p>
+} @else {
+  @let f = form()!;
+  <form [formGroup]="f" (ngSubmit)="save()">
+    <section formGroupName="person">
+      <h2>Person</h2>
+      <div class="grid">
+        <mat-form-field><mat-label>Name</mat-label><input matInput name="person-name" formControlName="name" maxlength="200" /></mat-form-field>
+        <mat-form-field><mat-label>Berufsbezeichnung</mat-label><input matInput formControlName="headline" maxlength="200" /></mat-form-field>
+        <mat-form-field><mat-label>E-Mail</mat-label><input matInput type="email" formControlName="email" maxlength="200" /></mat-form-field>
+        <mat-form-field><mat-label>Telefon</mat-label><input matInput formControlName="phone" maxlength="100" /></mat-form-field>
+        <mat-form-field><mat-label>Wohnort</mat-label><input matInput formControlName="location" maxlength="200" /></mat-form-field>
+      </div>
+      <div data-section="links">
+        <h3>Links</h3>
+        @for (g of f.controls.person.controls.links.controls; track g; let i = $index) {
+          <div class="entry grid" [formGroup]="g">
+            <mat-form-field><mat-label>Bezeichnung</mat-label><input matInput formControlName="label" placeholder="GitHub" maxlength="100" /></mat-form-field>
+            <mat-form-field><mat-label>URL</mat-label><input matInput formControlName="url" maxlength="500" /></mat-form-field>
+            <button mat-button type="button" class="remove" (click)="remove(f.controls.person.controls.links, i)">Entfernen</button>
+          </div>
+        }
+        <button mat-button type="button" class="add" (click)="add(f.controls.person.controls.links, newLink)">Link hinzufügen</button>
+      </div>
+    </section>
+
+    <section>
+      <h2>Profil</h2>
+      <mat-form-field class="wide">
+        <mat-label>Kurzprofil</mat-label>
+        <textarea matInput formControlName="summary" rows="4" maxlength="3000"></textarea>
+      </mat-form-field>
+    </section>
+
+    <section data-section="experience">
+      <h2>Berufserfahrung</h2>
+      @for (g of f.controls.experience.controls; track g; let i = $index) {
+        <div class="entry" [formGroup]="g">
+          <div class="grid">
+            <mat-form-field><mat-label>Rolle</mat-label><input matInput formControlName="role" maxlength="200" /></mat-form-field>
+            <mat-form-field><mat-label>Firma</mat-label><input matInput formControlName="organization" maxlength="200" /></mat-form-field>
+            <mat-form-field><mat-label>Ort</mat-label><input matInput formControlName="location" maxlength="200" /></mat-form-field>
+            <mat-form-field><mat-label>Von</mat-label><input matInput formControlName="start" placeholder="2024-03" /><mat-hint>JJJJ oder JJJJ-MM</mat-hint></mat-form-field>
+            <mat-form-field><mat-label>Bis</mat-label><input matInput formControlName="end" placeholder="leer = heute" /><mat-hint>JJJJ oder JJJJ-MM</mat-hint></mat-form-field>
+          </div>
+          <mat-form-field class="wide">
+            <mat-label>Stichpunkte (eine Zeile je Punkt)</mat-label>
+            <textarea matInput formControlName="highlights" rows="4"></textarea>
+          </mat-form-field>
+          <button mat-button type="button" class="remove" (click)="remove(f.controls.experience, i)">Station entfernen</button>
+        </div>
+      }
+      <button mat-button type="button" class="add" (click)="add(f.controls.experience, newExperience)">Station hinzufügen</button>
+    </section>
+
+    <section data-section="education">
+      <h2>Ausbildung</h2>
+      @for (g of f.controls.education.controls; track g; let i = $index) {
+        <div class="entry" [formGroup]="g">
+          <div class="grid">
+            <mat-form-field><mat-label>Abschluss</mat-label><input matInput formControlName="degree" maxlength="200" /></mat-form-field>
+            <mat-form-field><mat-label>Einrichtung</mat-label><input matInput formControlName="institution" maxlength="200" /></mat-form-field>
+            <mat-form-field><mat-label>Von</mat-label><input matInput formControlName="start" placeholder="2021" /><mat-hint>JJJJ oder JJJJ-MM</mat-hint></mat-form-field>
+            <mat-form-field><mat-label>Bis</mat-label><input matInput formControlName="end" placeholder="leer = heute" /><mat-hint>JJJJ oder JJJJ-MM</mat-hint></mat-form-field>
+          </div>
+          <mat-form-field class="wide"><mat-label>Details</mat-label><textarea matInput formControlName="details" rows="2" maxlength="1000"></textarea></mat-form-field>
+          <button mat-button type="button" class="remove" (click)="remove(f.controls.education, i)">Eintrag entfernen</button>
+        </div>
+      }
+      <button mat-button type="button" class="add" (click)="add(f.controls.education, newEducation)">Ausbildung hinzufügen</button>
+    </section>
+
+    <section data-section="skills">
+      <h2>Kenntnisse</h2>
+      @for (g of f.controls.skills.controls; track g; let i = $index) {
+        <div class="entry grid" [formGroup]="g">
+          <mat-form-field><mat-label>Bereich</mat-label><input matInput formControlName="category" placeholder="Frontend" maxlength="100" /></mat-form-field>
+          <mat-form-field class="wide"><mat-label>Kenntnisse (kommagetrennt)</mat-label><input matInput formControlName="items" /></mat-form-field>
+          <button mat-button type="button" class="remove" (click)="remove(f.controls.skills, i)">Entfernen</button>
+        </div>
+      }
+      <button mat-button type="button" class="add" (click)="add(f.controls.skills, newSkill)">Bereich hinzufügen</button>
+    </section>
+
+    <section data-section="projects">
+      <h2>Projekte</h2>
+      @for (g of f.controls.projects.controls; track g; let i = $index) {
+        <div class="entry" [formGroup]="g">
+          <div class="grid">
+            <mat-form-field><mat-label>Name</mat-label><input matInput formControlName="name" maxlength="200" /></mat-form-field>
+            <mat-form-field><mat-label>URL</mat-label><input matInput formControlName="url" maxlength="500" /></mat-form-field>
+            <mat-form-field><mat-label>Technologien (kommagetrennt)</mat-label><input matInput formControlName="technologies" /></mat-form-field>
+          </div>
+          <mat-form-field class="wide"><mat-label>Beschreibung</mat-label><textarea matInput formControlName="description" rows="3" maxlength="2000"></textarea></mat-form-field>
+          <button mat-button type="button" class="remove" (click)="remove(f.controls.projects, i)">Projekt entfernen</button>
+        </div>
+      }
+      <button mat-button type="button" class="add" (click)="add(f.controls.projects, newProject)">Projekt hinzufügen</button>
+    </section>
+
+    <section data-section="languages">
+      <h2>Sprachen</h2>
+      @for (g of f.controls.languages.controls; track g; let i = $index) {
+        <div class="entry grid" [formGroup]="g">
+          <mat-form-field><mat-label>Sprache</mat-label><input matInput formControlName="language" maxlength="100" /></mat-form-field>
+          <mat-form-field><mat-label>Niveau</mat-label><input matInput formControlName="level" placeholder="C1" maxlength="100" /></mat-form-field>
+          <button mat-button type="button" class="remove" (click)="remove(f.controls.languages, i)">Entfernen</button>
+        </div>
+      }
+      <button mat-button type="button" class="add" (click)="add(f.controls.languages, newLanguage)">Sprache hinzufügen</button>
+    </section>
+
+    <div class="actions">
+      <button mat-flat-button type="submit" [disabled]="saving()">Speichern</button>
+      @if (updatedAt(); as at) {
+        <span class="muted">Zuletzt gespeichert: {{ at.slice(0, 10) }}</span>
+      }
+    </div>
+  </form>
+}

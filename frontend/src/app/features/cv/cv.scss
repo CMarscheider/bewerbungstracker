@@ -1,0 +1,22 @@
+section {
+  margin-bottom: 32px;
+}
+.grid {
+  align-items: start;
+  display: grid;
+  gap: 0 16px;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+.wide {
+  width: 100%;
+}
+.entry {
+  border-left: 3px solid var(--mat-sys-outline-variant);
+  margin-bottom: 16px;
+  padding-left: 12px;
+}
+.actions {
+  align-items: center;
+  display: flex;
+  gap: 16px;
+}

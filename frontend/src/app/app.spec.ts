@@ -11,6 +11,6 @@ describe('App', () => {
 
     const links = [...(fixture.nativeElement as HTMLElement).querySelectorAll('nav a')].map((a) => a.textContent?.trim());
     expect((fixture.nativeElement as HTMLElement).querySelector('main')).not.toBeNull();
-    expect(links).toEqual(['Übersicht', 'Bewerbungen', 'Statistik', 'Firmen']);
+    expect(links).toEqual(['Übersicht', 'Bewerbungen', 'Statistik', 'Firmen', 'Lebenslauf']);
   });
 });

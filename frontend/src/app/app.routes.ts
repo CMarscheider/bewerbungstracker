@@ -7,5 +7,6 @@ export const routes: Routes = [
   { path: 'bewerbungen/:id', title: 'Bewerbung', loadComponent: () => import('./features/applications/application-detail').then((m) => m.ApplicationDetail) },
   { path: 'statistik', title: 'Statistik', loadComponent: () => import('./features/stats/stats').then((m) => m.Stats) },
   { path: 'firmen', title: 'Firmen', loadComponent: () => import('./features/companies/companies').then((m) => m.Companies) },
+  { path: 'lebenslauf', title: 'Lebenslauf', loadComponent: () => import('./features/cv/cv').then((m) => m.CvPage) },
   { path: '**', redirectTo: '' },
 ];
