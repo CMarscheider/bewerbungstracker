@@ -14,6 +14,7 @@ import (
 
 	"bewerbungsmanager/internal/config"
 	"bewerbungsmanager/internal/db"
+	"bewerbungsmanager/internal/documents"
 	"bewerbungsmanager/internal/httpapi"
 	"bewerbungsmanager/internal/service"
 )
@@ -43,7 +44,13 @@ func run(logger *slog.Logger) error {
 	}
 	defer pool.Close()
 
-	handler, err := httpapi.NewRouter(service.New(pool, time.Now), logger)
+	var opts []service.Option
+	if cfg.GotenbergURL != "" {
+		opts = append(opts, service.WithPDFConverter(documents.NewGotenberg(cfg.GotenbergURL)))
+	} else {
+		logger.Warn("GOTENBERG_URL nicht gesetzt – PDF-Erzeugung ist deaktiviert")
+	}
+	handler, err := httpapi.NewRouter(service.New(pool, time.Now, opts...), logger)
 	if err != nil {
 		return err
 	}

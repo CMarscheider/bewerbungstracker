@@ -12,15 +12,31 @@ import (
 	"bewerbungsmanager/internal/store"
 )
 
+// PDFConverter wandelt HTML (mit Zusatzdateien wie Schriften) in ein PDF um.
+type PDFConverter interface {
+	Convert(ctx context.Context, html []byte, assets map[string][]byte) ([]byte, error)
+}
+
 // Service bündelt alle Anwendungsfälle.
 type Service struct {
 	pool *pgxpool.Pool
 	now  func() time.Time
+	pdf  PDFConverter
 }
 
+// Option konfiguriert optionale Abhängigkeiten.
+type Option func(*Service)
+
+// WithPDFConverter aktiviert die PDF-Erzeugung.
+func WithPDFConverter(c PDFConverter) Option { return func(s *Service) { s.pdf = c } }
+
 // New erzeugt einen Service; now ist in Produktion time.Now.
-func New(pool *pgxpool.Pool, now func() time.Time) *Service {
-	return &Service{pool: pool, now: now}
+func New(pool *pgxpool.Pool, now func() time.Time, opts ...Option) *Service {
+	s := &Service{pool: pool, now: now}
+	for _, o := range opts {
+		o(s)
+	}
+	return s
 }
 
 func (s *Service) today() time.Time { return domain.DateOf(s.now().In(time.Local)) }

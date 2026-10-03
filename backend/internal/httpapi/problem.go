@@ -36,11 +36,12 @@ func writeProblem(w http.ResponseWriter, p problem) {
 // problemFor übersetzt Fehler aus Domain und Service an genau einer Stelle in HTTP.
 func problemFor(err error) problem {
 	var (
-		validation *domain.ValidationError
-		transition *domain.TransitionError
-		rule       *domain.RuleError
-		notFound   *service.NotFoundError
-		conflict   *service.ConflictError
+		validation  *domain.ValidationError
+		transition  *domain.TransitionError
+		rule        *domain.RuleError
+		notFound    *service.NotFoundError
+		conflict    *service.ConflictError
+		unavailable *service.UnavailableError
 	)
 	switch {
 	case errors.As(err, &validation):
@@ -60,6 +61,9 @@ func problemFor(err error) problem {
 		return problem{Type: problemBase + "not-found", Title: "Nicht gefunden", Status: http.StatusNotFound, Detail: notFound.Error()}
 	case errors.As(err, &conflict):
 		return problem{Type: problemBase + "conflict", Title: "Konflikt", Status: http.StatusConflict, Detail: conflict.Detail}
+	case errors.As(err, &unavailable):
+		return problem{Type: problemBase + "service-unavailable", Title: "Dienst nicht verfügbar",
+			Status: http.StatusServiceUnavailable, Detail: unavailable.Detail}
 	}
 	return problem{Type: problemBase + "internal", Title: "Interner Fehler", Status: http.StatusInternalServerError}
 }

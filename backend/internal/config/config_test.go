@@ -31,3 +31,13 @@ func TestLoadExplicitPort(t *testing.T) {
 		t.Errorf("Port = %s", c.Port)
 	}
 }
+
+func TestLoadReadsGotenbergURL(t *testing.T) {
+	c, err := Load(env(map[string]string{"DATABASE_URL": "postgres://x", "GOTENBERG_URL": "http://gotenberg:3000"}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.GotenbergURL != "http://gotenberg:3000" {
+		t.Errorf("GotenbergURL = %q", c.GotenbergURL)
+	}
+}

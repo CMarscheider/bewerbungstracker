@@ -17,13 +17,20 @@ services:
       retries: 20
     restart: unless-stopped
 
+  gotenberg:
+    image: gotenberg/gotenberg:8.37.0
+    restart: unless-stopped
+
   backend:
     build: ./backend
     environment:
       DATABASE_URL: postgres://bewerbungen:${POSTGRES_PASSWORD:-bewerbungen}@db:5432/bewerbungen?sslmode=disable
+      GOTENBERG_URL: http://gotenberg:3000
     depends_on:
       db:
         condition: service_healthy
+      gotenberg:
+        condition: service_started
     restart: unless-stopped
 
   frontend:

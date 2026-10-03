@@ -17,8 +17,13 @@ import (
 
 func newTestServer(t *testing.T) *httptest.Server {
 	t.Helper()
+	return newTestServerWith(t)
+}
+
+func newTestServerWith(t *testing.T, opts ...service.Option) *httptest.Server {
+	t.Helper()
 	testdb.Reset(t, testPool)
-	h, err := httpapi.NewRouter(service.New(testPool, time.Now), slog.New(slog.NewTextHandler(io.Discard, nil)))
+	h, err := httpapi.NewRouter(service.New(testPool, time.Now, opts...), slog.New(slog.NewTextHandler(io.Discard, nil)))
 	if err != nil {
 		t.Fatal(err)
 	}

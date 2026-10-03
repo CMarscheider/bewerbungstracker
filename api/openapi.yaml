@@ -331,6 +331,21 @@ paths:
         "204":
           description: Entfernt
         default: { $ref: "#/components/responses/Problem" }
+  /api/v1/cv/pdf:
+    get:
+      operationId: getCvPdf
+      tags: [Cv]
+      summary: Lebenslauf als PDF (404 ohne gespeicherten Lebenslauf, 503 wenn der PDF-Dienst fehlt)
+      responses:
+        "200":
+          description: PDF
+          headers:
+            Content-Disposition:
+              schema: { type: string }
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+        default: { $ref: "#/components/responses/Problem" }
 components:
   parameters:
     Id:
