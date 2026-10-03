@@ -40,4 +40,18 @@ describe('cv-form', () => {
     form.controls.experience.at(0).controls.start.setValue('März 2024');
     expect(form.invalid).toBe(true);
   });
+
+  it('lehnt Pflichtfelder aus Leerzeichen ab', () => {
+    const form = cvForm();
+    form.controls.person.controls.name.setValue('   ');
+    expect(form.controls.person.controls.name.invalid).toBe(true);
+  });
+
+  it('toleriert Leerzeichen um Zeiträume', () => {
+    const form = cvForm(cv);
+    const start = form.controls.experience.at(0).controls.start;
+    start.setValue(' 2024-03 ');
+    expect(start.valid).toBe(true);
+    expect(formToCv(form).experience[0].start).toBe('2024-03');
+  });
 });

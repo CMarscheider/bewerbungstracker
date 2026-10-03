@@ -1,10 +1,10 @@
 import { FormArray, FormControl, FormGroup, Validators } from '@angular/forms';
 import { Cv, CvEducation, CvExperience, CvLanguage, CvLink, CvProject, CvSkillGroup } from '../../api/models';
 
-const PERIOD = /^\d{4}(-(0[1-9]|1[0-2]))?$/;
+const PERIOD = /^\s*\d{4}(-(0[1-9]|1[0-2]))?\s*$/;
 
 const text = (value = '') => new FormControl(value, { nonNullable: true });
-const required = (value = '') => new FormControl(value, { nonNullable: true, validators: [Validators.required] });
+const required = (value = '') => new FormControl(value, { nonNullable: true, validators: [Validators.required, Validators.pattern(/\S/)] });
 const period = (value = '', mandatory = false) =>
   new FormControl(value, { nonNullable: true, validators: mandatory ? [Validators.required, Validators.pattern(PERIOD)] : [Validators.pattern(PERIOD)] });
 
@@ -16,7 +16,7 @@ export function fromLines(value: string): string[] {
     .filter((s) => s !== '');
 }
 
-/** Kommagetrennte Liste; leere Einträge fallen weg. */
+/** Kommagetrennte Liste; leere Einträge fallen weg. Einträge dürfen selbst kein Komma enthalten. */
 export function fromList(value: string): string[] {
   return value
     .split(',')
