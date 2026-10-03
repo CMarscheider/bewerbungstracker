@@ -41,9 +41,10 @@ func NewRouter(svc *service.Service, logger *slog.Logger) (http.Handler, error) 
 	validator := nethttpmiddleware.OapiRequestValidatorWithOptions(spec, &nethttpmiddleware.Options{
 		SilenceServersWarning: true,
 		ErrorHandler: func(w http.ResponseWriter, message string, status int) {
+			// Text von http.MaxBytesReader (limitBody), den der Validator beim Lesen des Bodys weiterreicht.
 			if strings.Contains(message, "request body too large") {
 				writeProblem(w, problem{Type: problemBase + "payload-too-large", Title: "Anfrage zu groß",
-					Status: http.StatusRequestEntityTooLarge, Detail: "Die Datei ist zu groß (max. 1 MB)."})
+					Status: http.StatusRequestEntityTooLarge, Detail: "Die Anfrage ist zu groß (max. 1 MB)."})
 				return
 			}
 			p := badRequest(message)
