@@ -42,6 +42,12 @@ type Company struct {
 	CreatedAt time.Time
 }
 
+type Cv struct {
+	ID        int32
+	Data      []byte
+	UpdatedAt time.Time
+}
+
 type LatestEvent struct {
 	ApplicationID  uuid.UUID
 	EventID        uuid.UUID
