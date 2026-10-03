@@ -35,9 +35,9 @@ export class CvPhoto {
         finalize(() => this.busy.set(false)),
       )
       .subscribe({
-      next: (blob) => this.setUrl(URL.createObjectURL(blob)),
-      error: () => undefined, // 404 = noch kein Foto; andere Fehler meldet der Interceptor.
-    });
+        next: (blob) => this.setUrl(URL.createObjectURL(blob)),
+        error: () => undefined, // 404 = noch kein Foto; andere Fehler meldet der Interceptor.
+      });
   }
 
   protected async choose(event: Event): Promise<void> {
