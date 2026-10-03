@@ -45,10 +45,12 @@ export class CvPage {
 
   protected add<T extends FormGroup>(list: FormArray<T>, create: () => T): void {
     list.push(create());
+    list.markAsDirty();
   }
 
   protected remove(list: FormArray, index: number): void {
     list.removeAt(index);
+    list.markAsDirty();
   }
 
   protected save(): void {

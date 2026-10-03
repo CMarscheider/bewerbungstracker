@@ -94,4 +94,12 @@ describe('CvPage', () => {
     expect(link.getAttribute('tabindex')).toBe('-1');
     expect(el.textContent).toContain('Ungespeicherte Änderungen');
   });
+
+  it('wertet Entfernen eines Eintrags als ungespeicherte Änderung', async () => {
+    const { el, settle } = await render();
+    el.querySelector<HTMLButtonElement>('button[aria-label*="entfernen"], button.remove')!.click();
+    await settle();
+    expect(el.querySelector('a.pdf')!.getAttribute('aria-disabled')).toBe('true');
+    expect(el.textContent).toContain('Ungespeicherte Änderungen');
+  });
 });
