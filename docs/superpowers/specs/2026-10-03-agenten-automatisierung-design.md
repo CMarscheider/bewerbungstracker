@@ -146,6 +146,15 @@ Routinen senden nie selbst Mails.
 5. Tailscale Funnel auf dem Pi
 6. Routinen R1 → R2 → R3, jeweils mit Probelauf
 
+## Offene Punkte aus dem Lebenslauf-Review
+
+Für die Folgepläne festgehalten (Review des Lebenslauf-Branches, 2026-10-03):
+
+- **Agent-API:** Der Server prüft nur `person.name` auf reine Leerzeichen. Da Agenten die Oberfläche umgehen, bekommen Pflicht-Strings im `Cv`-Schema zusätzlich `pattern: '\S'`.
+- **PDF:** `CvLink.url` und `CvProject.url` sind beliebige Strings. Vor dem Rendern als Link auf `^https?://` einschränken (Schema), zusätzlich zur Bereinigung durch `html/template`.
+- **Optimierungs-Ansicht:** Stationen haben keine stabilen IDs; R2 darf sie umsortieren. Der Vorher/Nachher-Vergleich übernimmt daher ganze Abschnitte, nicht einzelne Stationen per Index – oder `CvExperience` bekommt ein optionales `id`.
+- **Oberfläche:** Listen-Grenzen (`maxItems`, Länge je Stichpunkt) prüft nur der Server, mit technischer Meldung; Fehlermeldungen des Validators eindeutschen oder im Formular prüfen.
+
 ## Nicht enthalten
 
 Automatisches Senden, Ausfüllen von Bewerbungsportalen, mehrere Lebenslauf-Varianten, LinkedIn-Scraping, Login für die Oberfläche (bleibt im Heimnetz).

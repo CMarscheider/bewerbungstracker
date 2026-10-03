@@ -17,6 +17,8 @@ entstehen Dashboard, Verlauf und Statistik.
 - **Verlauf:** Timeline je Bewerbung; nur fachlich erlaubte nächste Schritte werden angeboten,
   Fristen nur dort, wo sie Sinn ergeben (Bewerbungsschluss, Challenge-Abgabe, Antwort auf Angebot)
 - **Statistik:** Funnel, Tage bis zur ersten Antwort, Absagen je Phase, Erfolg je Quelle
+- **Lebenslauf:** strukturiert gepflegt (Kontakt, Profil, Stationen, Ausbildung, Kenntnisse, Projekte,
+  Sprachen) als Grundlage für zugeschnittene Bewerbungsunterlagen
 - **Darstellung:** Hell, Dunkel oder nach Systemeinstellung; Status-Farben je Prozessschritt
 - **API-Doku:** Swagger UI unter `/api/docs`
 
