@@ -54,7 +54,7 @@ README.md                          Portfolio-Startseite
 
 **Files:** Create: `docker-compose.yml`, `.env.example`. Modify: `Taskfile.yml`, `.gitignore`.
 
-- [ ] **Step 1: Compose-Datei**
+- [x] **Step 1: Compose-Datei**
 
 `docker-compose.yml`:
 
@@ -109,7 +109,7 @@ APP_PORT=4200
 
 `.gitignore` hat `.env` bereits. Prüfen und ggf. ergänzen.
 
-- [ ] **Step 2: Taskfile**
+- [x] **Step 2: Taskfile**
 
 In `Taskfile.yml` ergänzen:
 
@@ -130,7 +130,7 @@ In `Taskfile.yml` ergänzen:
       - docker compose logs -f
 ```
 
-- [ ] **Step 3: Smoke-Test in eigenem Projekt**
+- [x] **Step 3: Smoke-Test in eigenem Projekt**
 
 Läuft mit eigenem Projektnamen und Port 14200, damit kein späterer Echtbetrieb berührt wird.
 
@@ -147,7 +147,7 @@ Expected: `[]`, `200`, `200`, alle drei Dienste `running`, `db` `healthy`.
 
 Danach aufräumen: `docker compose -p bm-smoke down -v`.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add docker-compose.yml .env.example Taskfile.yml .gitignore
@@ -160,7 +160,7 @@ git commit -m "feat: Docker Compose für den kompletten Stack"
 
 **Files:** Create: `backend/cmd/seed/scenarios.go`, `backend/cmd/seed/scenarios_test.go`, `backend/cmd/seed/main.go`. Modify: `Taskfile.yml`.
 
-- [ ] **Step 1: Failing Test**
+- [x] **Step 1: Failing Test**
 
 `backend/cmd/seed/scenarios_test.go`:
 
@@ -241,11 +241,11 @@ func TestScenariosCoverAllViews(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Test laufen lassen, er muss fehlschlagen**
+- [x] **Step 2: Test laufen lassen, er muss fehlschlagen**
 
 Run: `cd backend && go test ./cmd/seed/ ; cd ..` → FAIL (`undefined: scenarios`).
 
-- [ ] **Step 3: Szenarien**
+- [x] **Step 3: Szenarien**
 
 `backend/cmd/seed/scenarios.go`:
 
@@ -395,12 +395,12 @@ func scenarios() []scenario {
 }
 ```
 
-- [ ] **Step 4: Tests laufen lassen**
+- [x] **Step 4: Tests laufen lassen**
 
 Run: `cd backend && go test ./cmd/seed/ -v ; cd ..` → beide Tests PASS.
 Schlägt `TestScenariosAreValid` fehl, nur das betroffene Szenario anpassen. Die Testlogik bleibt unverändert.
 
-- [ ] **Step 5: HTTP-Seeder**
+- [x] **Step 5: HTTP-Seeder**
 
 `backend/cmd/seed/main.go`:
 
@@ -537,7 +537,7 @@ func (c *apiClient) do(method, path string, body, out any) error {
 }
 ```
 
-- [ ] **Step 6: Taskfile**
+- [x] **Step 6: Taskfile**
 
 ```yaml
   seed:
@@ -547,7 +547,7 @@ func (c *apiClient) do(method, path string, body, out any) error {
       - go run ./cmd/seed -url {{.URL | default "http://localhost:4200"}}
 ```
 
-- [ ] **Step 7: Gegen den echten Stack prüfen**
+- [x] **Step 7: Gegen den echten Stack prüfen**
 
 ```bash
 APP_PORT=14200 docker compose -p bm-smoke up -d --build
@@ -565,7 +565,7 @@ Expected:
 - Der Funnel hat bei „Beworben“ 23 erreichte Bewerbungen (26 minus 3 nur vorgemerkte). Es gibt überfällige und anstehende Fristen sowie Termine.
 - Der zweite Lauf bricht mit dem Hinweis auf vorhandene Daten ab, mit Exit-Code ≠ 0.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add backend/cmd/seed Taskfile.yml
@@ -578,7 +578,7 @@ git commit -m "feat: Demo-Daten über die API mit relativen Datumswerten"
 
 **Files:** Create: `tools/screenshots/package.json`, `tools/screenshots/shoot.mjs`, `docs/screenshots/*.png`. Modify: `Taskfile.yml`, `.gitignore`.
 
-- [ ] **Step 1: Werkzeug**
+- [x] **Step 1: Werkzeug**
 
 `tools/screenshots/package.json`:
 
@@ -654,7 +654,7 @@ try {
 
 In `.gitignore` ergänzen: `tools/screenshots/node_modules/`.
 
-- [ ] **Step 2: Taskfile**
+- [x] **Step 2: Taskfile**
 
 ```yaml
   screenshots:
@@ -666,7 +666,7 @@ In `.gitignore` ergänzen: `tools/screenshots/node_modules/`.
       - BASE_URL={{.URL | default "http://localhost:4200"}} npm run shoot
 ```
 
-- [ ] **Step 3: Screenshots erzeugen**
+- [x] **Step 3: Screenshots erzeugen**
 
 ```bash
 APP_PORT=14200 docker compose -p bm-smoke up -d --build
@@ -683,7 +683,7 @@ Expected: sieben PNGs:
 
 Zur Kontrolle jedes Bild mit dem Read-Tool ansehen. Die Seiten müssen gefüllt sein, also nicht „Lade …“ und kein Fehlertext. Ist eine Seite leer, `waitForTimeout` erhöhen oder auf ein Element warten, z. B. `page.waitForSelector('h1')`.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add tools/screenshots/package.json tools/screenshots/package-lock.json tools/screenshots/shoot.mjs docs/screenshots Taskfile.yml .gitignore
@@ -696,7 +696,7 @@ git commit -m "docs: reproduzierbare Screenshots per Playwright"
 
 **Files:** Create: `backend/.golangci.yml`, `.github/workflows/ci.yml`. Modify: `Taskfile.yml`, ggf. Backend-Code für Linter-Funde.
 
-- [ ] **Step 1: Linter-Konfiguration**
+- [x] **Step 1: Linter-Konfiguration**
 
 `backend/.golangci.yml`:
 
@@ -718,7 +718,7 @@ formatters:
 
 Generierter Code (Header „Code generated … DO NOT EDIT“) wird von golangci-lint automatisch übersprungen.
 
-- [ ] **Step 2: Lokal ausführen und Funde beheben**
+- [x] **Step 2: Lokal ausführen und Funde beheben**
 
 ```bash
 go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
@@ -737,7 +737,7 @@ In `Taskfile.yml` ergänzen:
       - golangci-lint run ./...
 ```
 
-- [ ] **Step 3: CI-Workflow**
+- [x] **Step 3: CI-Workflow**
 
 `.github/workflows/ci.yml`:
 
@@ -823,7 +823,7 @@ jobs:
       - run: docker build -t bewerbungsmanager-frontend ./frontend
 ```
 
-- [ ] **Step 4: Workflow lokal plausibilisieren**
+- [x] **Step 4: Workflow lokal plausibilisieren**
 
 Den Workflow kann man ohne GitHub nicht ausführen. Lokal laufen deshalb die gleichen Befehle:
 
@@ -837,7 +837,7 @@ docker build -t bewerbungsmanager-backend ./backend && docker build -t bewerbung
 
 Expected: alles grün bzw. `codegen ok`. Die YAML-Syntax zusätzlich prüfen mit `npx -y yaml-lint .github/workflows/ci.yml` (oder `npx -y js-yaml .github/workflows/ci.yml > /dev/null`).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend .github Taskfile.yml

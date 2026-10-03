@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend (Lint + Tests)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v8
+        with:
+          version: latest
+          working-directory: backend
+      - name: Tests (mit Postgres per testcontainers)
+        working-directory: backend
+        run: go test ./...
+
+  frontend:
+    name: Frontend (Tests + Build)
+    runs-on: ubuntu-latest
+    env:
+      NG_CLI_ANALYTICS: "false"
+      CI: "true"
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npx ng test --watch=false
+      - run: npx ng build
+
+  codegen:
+    name: Generierter Code aktuell
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+        working-directory: frontend
+      - run: go install github.com/go-task/task/v3/cmd/task@latest
+      - run: task generate
+      - name: Keine Abweichung zum eingecheckten Code
+        run: |
+          git status --porcelain
+          test -z "$(git status --porcelain)"
+
+  images:
+    name: Docker-Images bauen
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t bewerbungsmanager-backend ./backend
+      - run: docker build -t bewerbungsmanager-frontend ./frontend

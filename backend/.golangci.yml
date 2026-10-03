@@ -1,0 +1,27 @@
+version: "2"
+
+linters:
+  default: standard
+  enable:
+    - bodyclose
+    - errorlint
+    - misspell
+    - unconvert
+  settings:
+    errcheck:
+      # Fehler beim Schließen nach dem Lesen tragen keine Information.
+      exclude-functions:
+        - (io.Closer).Close
+        - (*database/sql.DB).Close
+    misspell:
+      # Deutsche Wörter in Kommentaren, die misspell für englische Tippfehler hält.
+      ignore-rules:
+        - konfiguration
+        - produktion
+    staticcheck:
+      # Fehlertexte sind deutsch und beginnen oft mit einem Substantiv.
+      checks: ["all", "-ST1000", "-ST1003", "-ST1005", "-ST1016", "-ST1020", "-ST1021", "-ST1022"]
+
+formatters:
+  enable:
+    - gofmt

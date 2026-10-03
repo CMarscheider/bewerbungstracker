@@ -92,7 +92,7 @@ func recoverPanics(logger *slog.Logger, next http.Handler) http.Handler {
 			if v == nil {
 				return
 			}
-			if v == http.ErrAbortHandler {
+			if v == http.ErrAbortHandler { //nolint:errorlint // Panic-Wert, kein zurückgegebener Fehler; net/http vergleicht ebenso
 				panic(v)
 			}
 			logger.Error("panic", "method", r.Method, "path", r.URL.Path, "panic", v)

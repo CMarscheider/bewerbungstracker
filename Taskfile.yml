@@ -31,6 +31,12 @@ tasks:
     cmds:
       - npm run generate:api
 
+  lint:
+    desc: Linter für das Backend
+    dir: backend
+    cmds:
+      - golangci-lint run ./...
+
   test:frontend:
     desc: Führt die Frontend-Tests aus
     dir: frontend
