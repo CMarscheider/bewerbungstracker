@@ -12,7 +12,7 @@
     --accent: #2a9d8f; --text: #1f2a2e; --muted: #5b6b70; --line: #d9e3e5; --chip: #e6f4f2;
     --side-width: 66mm;
   }
-  @page { size: A4; margin: 12mm 0; }
+  @page { size: A4; margin: 0; }
   * { box-sizing: border-box; }
   html {
     -webkit-print-color-adjust: exact; print-color-adjust: exact;
@@ -20,8 +20,11 @@
   }
   body { margin: 0; font-family: Carlito, Calibri, sans-serif; font-size: 10.5pt; line-height: 1.4; color: var(--text); }
   .page { display: grid; grid-template-columns: var(--side-width) 1fr; }
-  aside { color: var(--side-text); padding: 0 8mm; }
-  main { padding: 0 13mm 0 11mm; }
+  /* Seitenränder als Innenabstand, damit die Seitenleiste bis zum Blattrand reicht;
+     clone wiederholt den Abstand oben/unten auf jeder Folgeseite. */
+  aside, main { -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+  aside { color: var(--side-text); padding: 12mm 8mm; }
+  main { padding: 12mm 13mm 12mm 11mm; }
 
   .photo { display: block; width: 38mm; height: 38mm; margin: 0 auto 7mm; border-radius: 50%; object-fit: cover;
            border: 1.2mm solid rgba(255, 255, 255, .85); }
@@ -54,17 +57,18 @@
   .project .chip { background: var(--chip); color: var(--side); }
 
   .timeline { position: relative; margin: 0; padding: 0 0 0 6mm; list-style: none; }
-  .timeline::before { content: ""; position: absolute; left: 1.2mm; top: 1.5mm; bottom: 1.5mm; width: .4mm; background: var(--line); }
-  .timeline li { position: relative; margin-bottom: 4mm; break-inside: avoid; }
-  .timeline li::before { content: ""; position: absolute; left: -6mm; top: 1.4mm; width: 2.8mm; height: 2.8mm; border-radius: 50%;
+  .timeline > li { position: relative; margin-bottom: 4mm; break-inside: avoid; }
+  /* Linie je Eintrag bis zum nächsten Punkt, damit sie nicht über den Seitenrand läuft. */
+  .timeline > li:not(:last-child)::after { content: ""; position: absolute; left: -4.8mm; top: 2.8mm; bottom: -5.4mm;
+                                           width: .4mm; background: var(--line); }
+  .timeline > li::before { content: ""; position: absolute; z-index: 1; left: -6mm; top: 1.4mm; width: 2.8mm; height: 2.8mm; border-radius: 50%;
                          background: #fff; border: .7mm solid var(--accent); }
   .entry-head { display: flex; justify-content: space-between; gap: 4mm; align-items: baseline; }
   .entry-head h3 { font-size: 11pt; margin: 0; color: var(--side); }
   .when { font-size: 9.5pt; color: var(--muted); white-space: nowrap; }
   .where { color: var(--muted); font-size: 10pt; }
   .timeline ul { margin: 1.2mm 0 0; padding-left: 4mm; }
-  .timeline ul li { margin: 0 0 .6mm; break-inside: auto; }
-  .timeline ul li::before { display: none; }
+  .timeline ul li { margin: 0 0 .6mm; }
   .details { margin: 1mm 0 0; color: var(--muted); font-style: italic; }
 </style>
 </head>
