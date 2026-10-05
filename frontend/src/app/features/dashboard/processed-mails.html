@@ -1,0 +1,34 @@
+<mat-expansion-panel class="panel" (opened)="opened()">
+  <mat-expansion-panel-header>
+    <mat-panel-title>Vom Agenten verarbeitete Mails</mat-panel-title>
+  </mat-expansion-panel-header>
+  <ng-template matExpansionPanelContent>
+    <p class="hint muted">Die letzten 50, neueste zuerst</p>
+    @if (loading()) {
+      <p class="muted state">Lade …</p>
+    } @else if (loadError()) {
+      <p class="muted state">Konnte nicht geladen werden.</p>
+    } @else if (mails()?.length === 0) {
+      <p class="muted state">Noch keine Mails verarbeitet.</p>
+    }
+    <ul class="rows">
+      @for (m of mails(); track m.gmail_message_id) {
+        <li class="mail" tabindex="-1" [attr.data-id]="m.gmail_message_id">
+          <span class="when">{{ m.processed_at | date: 'dd.MM.yyyy, HH:mm' }}</span>
+          <span class="outcome">{{ m.outcome }}</span>
+          @if (m.application_id) {
+            <a class="what" [routerLink]="['/bewerbungen', m.application_id]">
+              <span class="company">{{ m.company_name }}</span>
+              <span class="position">{{ m.position_title }}</span>
+            </a>
+          } @else {
+            <span class="what muted">nicht zugeordnet</span>
+          }
+          <button mat-button type="button" class="recheck" (click)="recheck(m)" [disabled]="busy().has(m.gmail_message_id)">
+            Erneut prüfen lassen
+          </button>
+        </li>
+      }
+    </ul>
+  </ng-template>
+</mat-expansion-panel>

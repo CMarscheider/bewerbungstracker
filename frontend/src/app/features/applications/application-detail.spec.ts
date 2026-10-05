@@ -30,6 +30,7 @@ async function render(allowed: EventType[], app: Application = application) {
     updateApplication: vi.fn((_id: string, body: object) => of({ ...app, ...body })),
     requestDocuments: vi.fn(() => of({ ...app, documents_state: 'angefordert' })),
     getDocuments: vi.fn(() => throwError(() => ({ status: 404 }))),
+    clearGmailThread: vi.fn(() => of(undefined)),
   };
   TestBed.configureTestingModule({ imports: [ApplicationDetail], providers: [provideRouter([]), { provide: Api, useValue: api }] });
   const fixture = TestBed.createComponent(ApplicationDetail);
@@ -153,6 +154,48 @@ describe('ApplicationDetail', () => {
     fixture.detectChanges();
     expect(api.requestDocuments).toHaveBeenCalledWith('a1');
     expect(el.querySelector('app-application-documents [role="status"]')?.textContent).toContain('Claude erstellt die Unterlagen beim nächsten Lauf.');
+  });
+
+  describe('Gmail-Thread', () => {
+    afterEach(() => vi.restoreAllMocks());
+    const threaded: Application = { ...application, gmail_thread_id: '18f2a_B-3' };
+
+    it('zeigt ohne Thread keinen Hinweis', async () => {
+      const { el } = await render([]);
+      expect(el.querySelector('[data-testid="gmail-thread"]')).toBeNull();
+    });
+
+    it('zeigt den verknüpften Thread mit Link in Gmail', async () => {
+      const { el } = await render([], threaded);
+      const line = el.querySelector('[data-testid="gmail-thread"]') as HTMLElement;
+      expect(line.textContent).toContain('Gmail-Thread verknüpft');
+      const link = line.querySelector<HTMLAnchorElement>('a.thread-link')!;
+      expect(link.getAttribute('href')).toBe('https://mail.google.com/mail/u/0/#all/18f2a_B-3');
+      expect(link.getAttribute('target')).toBe('_blank');
+      expect(link.getAttribute('rel')).toBe('noopener');
+      expect(link.getAttribute('aria-label')).toContain('(öffnet in neuem Tab)');
+    });
+
+    it('löst die Verknüpfung nach Bestätigung und lädt neu', async () => {
+      const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
+      const { api, fixture, el } = await render([], threaded);
+      api.getApplication.mockReturnValue(of(application));
+      el.querySelector<HTMLButtonElement>('button.unlink')!.click();
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(confirm).toHaveBeenCalledWith('Falls die Mail falsch zugeordnet wurde: Verknüpfung lösen?');
+      expect(api.clearGmailThread).toHaveBeenCalledWith('a1');
+      expect(api.getApplication).toHaveBeenCalledTimes(2);
+      expect(el.querySelector('[data-testid="gmail-thread"]')).toBeNull();
+    });
+
+    it('lässt die Verknüpfung ohne Bestätigung bestehen', async () => {
+      vi.spyOn(window, 'confirm').mockReturnValue(false);
+      const { api, el } = await render([], threaded);
+      el.querySelector<HTMLButtonElement>('button.unlink')!.click();
+      expect(api.clearGmailThread).not.toHaveBeenCalled();
+    });
   });
 
   it('zeigt eine Fehlermeldung, wenn die Bewerbung nicht geladen werden kann', async () => {

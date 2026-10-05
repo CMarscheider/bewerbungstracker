@@ -27,6 +27,8 @@ export type { UndoLastEvent$Params as UndoLastEvent$Params } from './fn/applicat
 export { undoLastEvent as undoLastEvent } from './fn/applications/undo-last-event';
 export type { ListAllowedEvents$Params as ListAllowedEvents$Params } from './fn/applications/list-allowed-events';
 export { listAllowedEvents as listAllowedEvents } from './fn/applications/list-allowed-events';
+export type { ClearGmailThread$Params as ClearGmailThread$Params } from './fn/applications/clear-gmail-thread';
+export { clearGmailThread as clearGmailThread } from './fn/applications/clear-gmail-thread';
 export type { RequestDocuments$Params as RequestDocuments$Params } from './fn/documents/request-documents';
 export { requestDocuments as requestDocuments } from './fn/documents/request-documents';
 export type { GetDocuments$Params as GetDocuments$Params } from './fn/documents/get-documents';
@@ -69,6 +71,10 @@ export type { AcceptSuggestion$Params as AcceptSuggestion$Params } from './fn/su
 export { acceptSuggestion as acceptSuggestion } from './fn/suggestions/accept-suggestion';
 export type { DismissSuggestion$Params as DismissSuggestion$Params } from './fn/suggestions/dismiss-suggestion';
 export { dismissSuggestion as dismissSuggestion } from './fn/suggestions/dismiss-suggestion';
+export type { ListProcessedMails$Params as ListProcessedMails$Params } from './fn/suggestions/list-processed-mails';
+export { listProcessedMails as listProcessedMails } from './fn/suggestions/list-processed-mails';
+export type { DeleteProcessedMail$Params as DeleteProcessedMail$Params } from './fn/suggestions/delete-processed-mail';
+export { deleteProcessedMail as deleteProcessedMail } from './fn/suggestions/delete-processed-mail';
 export type { AgentGetCv$Params as AgentGetCv$Params } from './fn/agent/agent-get-cv';
 export { agentGetCv as agentGetCv } from './fn/agent/agent-get-cv';
 export type { AgentListCvReviews$Params as AgentListCvReviews$Params } from './fn/agent/agent-list-cv-reviews';

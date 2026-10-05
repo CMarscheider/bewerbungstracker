@@ -3,7 +3,17 @@
 
 export interface ProcessedMail {
   application_id?: string;
+
+  /**
+   * Nur in der Liste der Oberfläche
+   */
+  company_name?: string;
   gmail_message_id: string;
   outcome: string;
+
+  /**
+   * Nur in der Liste der Oberfläche
+   */
+  position_title?: string;
   processed_at: string;
 }

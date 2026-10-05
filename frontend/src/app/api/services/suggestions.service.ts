@@ -13,15 +13,20 @@ import { StrictHttpResponse } from '../strict-http-response';
 import { acceptSuggestion } from '../fn/suggestions/accept-suggestion';
 import { AcceptSuggestion$Params } from '../fn/suggestions/accept-suggestion';
 import { Application } from '../models/application';
+import { deleteProcessedMail } from '../fn/suggestions/delete-processed-mail';
+import { DeleteProcessedMail$Params } from '../fn/suggestions/delete-processed-mail';
 import { dismissSuggestion } from '../fn/suggestions/dismiss-suggestion';
 import { DismissSuggestion$Params } from '../fn/suggestions/dismiss-suggestion';
+import { listProcessedMails } from '../fn/suggestions/list-processed-mails';
+import { ListProcessedMails$Params } from '../fn/suggestions/list-processed-mails';
 import { listSuggestions } from '../fn/suggestions/list-suggestions';
 import { ListSuggestions$Params } from '../fn/suggestions/list-suggestions';
+import { ProcessedMail } from '../models/processed-mail';
 import { Suggestion } from '../models/suggestion';
 
 
 /**
- * Vorschläge des Agenten aus der Postfach-Auswertung
+ * Postfach-Auswertung: Vorschläge des Agenten und ausgewertete Mails
  */
 @Injectable({ providedIn: 'root' })
 export class SuggestionsService extends BaseService {
@@ -129,6 +134,76 @@ export class SuggestionsService extends BaseService {
    */
   dismissSuggestion(params: DismissSuggestion$Params, context?: HttpContext): Observable<void> {
     const resp = this.dismissSuggestion$Response(params, context);
+    return resp.pipe(
+      map((r: StrictHttpResponse<void>): void => r.body)
+    );
+  }
+
+  /** Path part for operation `listProcessedMails()` */
+  static readonly ListProcessedMailsPath = '/api/v1/processed-mails';
+
+  /**
+   * Zuletzt ausgewertete Mails, neueste zuerst.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `listProcessedMails()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  listProcessedMails$Response(params?: ListProcessedMails$Params, context?: HttpContext): Observable<StrictHttpResponse<Array<ProcessedMail>>> {
+    const obs = listProcessedMails(this.http, this.rootUrl, params, context);
+    return obs;
+  }
+
+  /**
+   * Zuletzt ausgewertete Mails, neueste zuerst.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `listProcessedMails$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  listProcessedMails(params?: ListProcessedMails$Params, context?: HttpContext): Observable<Array<ProcessedMail>> {
+    const resp = this.listProcessedMails$Response(params, context);
+    return resp.pipe(
+      map((r: StrictHttpResponse<Array<ProcessedMail>>): Array<ProcessedMail> => r.body)
+    );
+  }
+
+  /** Path part for operation `deleteProcessedMail()` */
+  static readonly DeleteProcessedMailPath = '/api/v1/processed-mails/{messageId}';
+
+  /**
+   * Mail vergessen, damit der Agent sie erneut auswertet (idempotent).
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `deleteProcessedMail()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  deleteProcessedMail$Response(params: DeleteProcessedMail$Params, context?: HttpContext): Observable<StrictHttpResponse<void>> {
+    const obs = deleteProcessedMail(this.http, this.rootUrl, params, context);
+    return obs;
+  }
+
+  /**
+   * Mail vergessen, damit der Agent sie erneut auswertet (idempotent).
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `deleteProcessedMail$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  deleteProcessedMail(params: DeleteProcessedMail$Params, context?: HttpContext): Observable<void> {
+    const resp = this.deleteProcessedMail$Response(params, context);
     return resp.pipe(
       map((r: StrictHttpResponse<void>): void => r.body)
     );

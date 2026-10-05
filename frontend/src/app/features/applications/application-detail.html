@@ -101,6 +101,15 @@
         <dt>Quelle</dt><dd>{{ app.source || '–' }}</dd>
         <dt>Notizen</dt><dd class="pre">{{ app.notes || '–' }}</dd>
       </dl>
+      @if (app.gmail_thread_id) {
+        <p class="thread" data-testid="gmail-thread">
+          <span>Gmail-Thread verknüpft</span>
+          <a class="thread-link" [href]="threadUrl(app.gmail_thread_id)" target="_blank" rel="noopener" aria-label="Thread in Gmail öffnen (öffnet in neuem Tab)"
+            >In Gmail öffnen</a
+          >
+          <button mat-button type="button" class="unlink" (click)="unlinkThread()">Verknüpfung lösen</button>
+        </p>
+      }
       <button mat-button class="flush" (click)="startEdit()">Bearbeiten</button>
     }
   </section>

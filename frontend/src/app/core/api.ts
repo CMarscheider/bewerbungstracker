@@ -20,6 +20,7 @@ import {
   FunnelStep,
   NewEvent,
   Phase,
+  ProcessedMail,
   Suggestion,
   SuggestionAccept,
   Summary,
@@ -81,6 +82,10 @@ export class Api {
   }
   listAllowedEvents(id: string): Observable<EventType[]> {
     return this.applications.listAllowedEvents({ id });
+  }
+  /** Löst die Verknüpfung mit dem Gmail-Thread (falsch zugeordnete Mail). */
+  clearGmailThread(id: string): Observable<void> {
+    return this.applications.clearGmailThread({ id });
   }
 
   listDeadlines(withinDays = 7): Observable<Deadline[]> {
@@ -145,5 +150,13 @@ export class Api {
   }
   dismissSuggestion(id: string): Observable<void> {
     return this.suggestions.dismissSuggestion({ id });
+  }
+  /** Zuletzt vom Agenten ausgewertete Mails, neueste zuerst. */
+  listProcessedMails(limit = 50): Observable<ProcessedMail[]> {
+    return this.suggestions.listProcessedMails({ limit });
+  }
+  /** Vergisst die Mail, damit der Agent sie beim nächsten Lauf erneut auswertet. */
+  deleteProcessedMail(messageId: string): Observable<void> {
+    return this.suggestions.deleteProcessedMail({ messageId });
   }
 }

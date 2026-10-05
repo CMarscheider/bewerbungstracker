@@ -14,6 +14,8 @@ import { addEvent } from '../fn/applications/add-event';
 import { AddEvent$Params } from '../fn/applications/add-event';
 import { Application } from '../models/application';
 import { ApplicationSummary } from '../models/application-summary';
+import { clearGmailThread } from '../fn/applications/clear-gmail-thread';
+import { ClearGmailThread$Params } from '../fn/applications/clear-gmail-thread';
 import { createApplication } from '../fn/applications/create-application';
 import { CreateApplication$Params } from '../fn/applications/create-application';
 import { deleteApplication } from '../fn/applications/delete-application';
@@ -286,6 +288,41 @@ export class ApplicationsService extends BaseService {
     const resp = this.listAllowedEvents$Response(params, context);
     return resp.pipe(
       map((r: StrictHttpResponse<Array<EventType>>): Array<EventType> => r.body)
+    );
+  }
+
+  /** Path part for operation `clearGmailThread()` */
+  static readonly ClearGmailThreadPath = '/api/v1/applications/{id}/gmail-thread';
+
+  /**
+   * Falsche Gmail-Thread-Zuordnung lösen (idempotent).
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `clearGmailThread()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  clearGmailThread$Response(params: ClearGmailThread$Params, context?: HttpContext): Observable<StrictHttpResponse<void>> {
+    const obs = clearGmailThread(this.http, this.rootUrl, params, context);
+    return obs;
+  }
+
+  /**
+   * Falsche Gmail-Thread-Zuordnung lösen (idempotent).
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `clearGmailThread$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  clearGmailThread(params: ClearGmailThread$Params, context?: HttpContext): Observable<void> {
+    const resp = this.clearGmailThread$Response(params, context);
+    return resp.pipe(
+      map((r: StrictHttpResponse<void>): void => r.body)
     );
   }
 

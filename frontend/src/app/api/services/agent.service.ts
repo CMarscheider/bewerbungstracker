@@ -305,7 +305,7 @@ export class AgentService extends BaseService {
   /**
    * Ereignis erfassen; die Notiz bekommt das Präfix „Agent: “ (422 bei unerlaubtem Übergang).
    *
-   *
+   * Direkt erlaubt sind nur Beworben, ScreeningGespraech, ChallengeErhalten, Interview, Kennenlerntag, AngebotErhalten und Absage; andere Typen → 400 (Feld `type`), dafür einen Vorschlag ablegen.
    *
    * This method provides access to the full `HttpResponse`, allowing access to response headers.
    * To access only the response body, use `agentAddEvent()` instead.
@@ -320,7 +320,7 @@ export class AgentService extends BaseService {
   /**
    * Ereignis erfassen; die Notiz bekommt das Präfix „Agent: “ (422 bei unerlaubtem Übergang).
    *
-   *
+   * Direkt erlaubt sind nur Beworben, ScreeningGespraech, ChallengeErhalten, Interview, Kennenlerntag, AngebotErhalten und Absage; andere Typen → 400 (Feld `type`), dafür einen Vorschlag ablegen.
    *
    * This method provides access only to the response body.
    * To access the full response (for headers, for example), `agentAddEvent$Response()` instead.
@@ -410,7 +410,7 @@ export class AgentService extends BaseService {
   /**
    * Mail als ausgewertet merken (201 neu, 200 schon vorhanden – der vorhandene Eintrag bleibt).
    *
-   *
+   * Höchstens 200 neu gemerkte Mails je 24 Stunden, darüber 409.
    *
    * This method provides access to the full `HttpResponse`, allowing access to response headers.
    * To access only the response body, use `agentMarkMailProcessed()` instead.
@@ -425,7 +425,7 @@ export class AgentService extends BaseService {
   /**
    * Mail als ausgewertet merken (201 neu, 200 schon vorhanden – der vorhandene Eintrag bleibt).
    *
-   *
+   * Höchstens 200 neu gemerkte Mails je 24 Stunden, darüber 409.
    *
    * This method provides access only to the response body.
    * To access the full response (for headers, for example), `agentMarkMailProcessed$Response()` instead.

@@ -78,3 +78,10 @@ dd {
   margin: 0;
   overflow-wrap: anywhere;
 }
+.thread {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 8px 0;
+}

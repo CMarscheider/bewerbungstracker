@@ -21,6 +21,7 @@ describe('Dashboard', () => {
       listSuggestions: vi.fn(() =>
         of([{ id: 's1', application_id: 'a1', company_name: 'Acme', position_title: 'Dev', suggested_type: 'Absage', occurred_on: '2026-10-04', reason: 'Absage', state: 'offen', created_at: '2026-10-05T08:00:00+02:00' }]),
       ),
+      listProcessedMails: vi.fn(() => of([])),
     };
     TestBed.configureTestingModule({ imports: [Dashboard], providers: [provideRouter([]), { provide: Api, useValue: api }] });
     const fixture = TestBed.createComponent(Dashboard);
@@ -47,11 +48,16 @@ describe('Dashboard', () => {
     const suggestions = el.querySelector('app-agent-suggestions')!;
     expect(suggestions.textContent).toContain('Vorschläge des Agenten');
     expect(suggestions.compareDocumentPosition(el.querySelector('.deadlines')!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // Verarbeitete Mails folgen zugeklappt direkt auf die Vorschläge und laden noch nichts.
+    const processed = el.querySelector('app-processed-mails')!;
+    expect(processed.textContent).toContain('Vom Agenten verarbeitete Mails');
+    expect(suggestions.nextElementSibling).toBe(processed);
+    expect(api.listProcessedMails).not.toHaveBeenCalled();
   });
 
   it('zeigt Fehlertexte statt Leerzuständen, wenn Fristen und Termine nicht laden', async () => {
     const fail = vi.fn(() => throwError(() => new Error('x')));
-    const api = { listDeadlines: fail, listAppointments: fail, getSummary: fail, listApplications: fail, listSuggestions: fail };
+    const api = { listDeadlines: fail, listAppointments: fail, getSummary: fail, listApplications: fail, listSuggestions: fail, listProcessedMails: fail };
     TestBed.configureTestingModule({ imports: [Dashboard], providers: [provideRouter([]), { provide: Api, useValue: api }] });
     const fixture = TestBed.createComponent(Dashboard);
     fixture.detectChanges();

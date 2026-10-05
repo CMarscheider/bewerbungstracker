@@ -9,10 +9,11 @@ import { formatDayMonth, weekdayShort } from '../../core/dates';
 import { loaded } from '../../core/loaded';
 import { DEADLINE_LABELS, STATUS_TONE, eventLabel } from '../../shared/labels';
 import { AgentSuggestions } from './agent-suggestions';
+import { ProcessedMails } from './processed-mails';
 
 @Component({
   selector: 'app-dashboard',
-  imports: [PercentPipe, RouterLink, MatCardModule, AgentSuggestions],
+  imports: [PercentPipe, RouterLink, MatCardModule, AgentSuggestions, ProcessedMails],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss',
 })

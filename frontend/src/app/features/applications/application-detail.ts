@@ -17,6 +17,8 @@ import { ApplicationDocuments } from './application-documents';
 import { CONTACT_EMAIL_ERROR, contactEmailControl } from './contact-email';
 import { EventDialog, EventDialogData } from './event-dialog';
 
+const GMAIL_THREAD_URL = 'https://mail.google.com/mail/u/0/#all/';
+
 @Component({
   selector: 'app-application-detail',
   imports: [ReactiveFormsModule, RouterLink, MatButtonModule, MatExpansionModule, MatFormFieldModule, MatInputModule, FitScore, StatusBadge, ApplicationDocuments],
@@ -125,6 +127,16 @@ export class ApplicationDetail {
   protected documentsChanged(app: Application): void {
     if (app.id === this.id()) {
       this.application.set(app);
+    }
+  }
+
+  /** Gmail-Link zum verknüpften Thread; die ID ist kodiert, obwohl der Server sie schon prüft. */
+  protected readonly threadUrl = (threadId: string) => GMAIL_THREAD_URL + encodeURIComponent(threadId);
+
+  protected unlinkThread(): void {
+    if (window.confirm('Falls die Mail falsch zugeordnet wurde: Verknüpfung lösen?')) {
+      const id = this.id();
+      this.api.clearGmailThread(id).subscribe({ next: () => this.load(id), error: () => undefined });
     }
   }
 
