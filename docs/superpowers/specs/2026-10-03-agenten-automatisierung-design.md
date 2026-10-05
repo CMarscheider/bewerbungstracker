@@ -161,6 +161,7 @@ Für die Folgepläne festgehalten (Review des Lebenslauf-Branches, 2026-10-03):
 - **Agent-API:** Der Server prüft nur `person.name` auf reine Leerzeichen. Da Agenten die Oberfläche umgehen, bekommen Pflicht-Strings im `Cv`-Schema zusätzlich `pattern: '\S'`.
 - **PDF:** `CvLink.url` und `CvProject.url` sind beliebige Strings. Vor dem Rendern als Link auf `^https?://` einschränken (Schema), zusätzlich zur Bereinigung durch `html/template`.
 - **Optimierungs-Ansicht:** Stationen haben keine stabilen IDs; R2 darf sie umsortieren. Der Vorher/Nachher-Vergleich übernimmt daher ganze Abschnitte, nicht einzelne Stationen per Index – oder `CvExperience` bekommt ein optionales `id`.
+- **Vor dem Freischalten per Tailscale Funnel** (Review Agent-API, 2026-10-05): Rate-Limit vor `/api/agent/` (z. B. Token-Bucket je IP) und gedrosseltes Logging fehlgeschlagener Anmeldungen; im Log zusätzlich `X-Forwarded-For` (als unvertrauenswürdig markiert), da `RemoteAddr` hinter nginx/Funnel nicht der Client ist. Funnel nur für den Pfad `/api/agent/` mit Ziel `http://127.0.0.1:4200/api/agent/` (Präfix bleibt erhalten); `/api/docs` und `/api/openapi.json` nie freigeben.
 - **Oberfläche:** Listen-Grenzen (`maxItems`, Länge je Stichpunkt) prüft nur der Server, mit technischer Meldung; Fehlermeldungen des Validators eindeutschen oder im Formular prüfen.
 
 ## Nicht enthalten
