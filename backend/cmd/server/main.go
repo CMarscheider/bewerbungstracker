@@ -50,7 +50,10 @@ func run(logger *slog.Logger) error {
 	} else {
 		logger.Warn("GOTENBERG_URL nicht gesetzt – PDF-Erzeugung ist deaktiviert")
 	}
-	handler, err := httpapi.NewRouter(service.New(pool, time.Now, opts...), logger)
+	if cfg.AgentToken == "" {
+		logger.Info("AGENT_TOKEN nicht gesetzt – Agent-API ist deaktiviert")
+	}
+	handler, err := httpapi.NewRouter(service.New(pool, time.Now, opts...), logger, httpapi.WithAgentToken(cfg.AgentToken))
 	if err != nil {
 		return err
 	}

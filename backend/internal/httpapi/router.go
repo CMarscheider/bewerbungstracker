@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/getkin/kin-openapi/openapi3filter"
 	nethttpmiddleware "github.com/oapi-codegen/nethttp-middleware"
 
 	"bewerbungsmanager/internal/service"
@@ -26,8 +27,24 @@ const docsPage = `<!doctype html>
 </body>
 </html>`
 
+// RouterOption konfiguriert optionale Teile des Routers.
+type RouterOption func(*routerConfig)
+
+type routerConfig struct {
+	agentToken string
+}
+
+// WithAgentToken aktiviert die Agent-API (/api/agent/*) mit diesem Bearer-Token.
+func WithAgentToken(token string) RouterOption {
+	return func(c *routerConfig) { c.agentToken = token }
+}
+
 // NewRouter baut den kompletten HTTP-Handler: API, Validierung, Doku, Logging.
-func NewRouter(svc *service.Service, logger *slog.Logger) (http.Handler, error) {
+func NewRouter(svc *service.Service, logger *slog.Logger, opts ...RouterOption) (http.Handler, error) {
+	var cfg routerConfig
+	for _, o := range opts {
+		o(&cfg)
+	}
 	spec, err := GetSwagger()
 	if err != nil {
 		return nil, fmt.Errorf("openapi-spec laden: %w", err)
@@ -40,6 +57,8 @@ func NewRouter(svc *service.Service, logger *slog.Logger) (http.Handler, error) 
 
 	validator := nethttpmiddleware.OapiRequestValidatorWithOptions(spec, &nethttpmiddleware.Options{
 		SilenceServersWarning: true,
+		// Authentifizierung übernimmt requireAgentToken.
+		Options: openapi3filter.Options{AuthenticationFunc: openapi3filter.NoopAuthenticationFunc},
 		ErrorHandler: func(w http.ResponseWriter, message string, status int) {
 			// Text von http.MaxBytesReader (limitBody), den der Validator beim Lesen des Bodys weiterreicht.
 			if strings.Contains(message, "request body too large") {
@@ -76,7 +95,7 @@ func NewRouter(svc *service.Service, logger *slog.Logger) (http.Handler, error) 
 		writeProblem(w, problem{Type: problemBase + "not-found", Title: "Nicht gefunden",
 			Status: http.StatusNotFound, Detail: "Unbekannter Endpunkt"})
 	})
-	return logRequests(logger, recoverPanics(logger, limitBody(mux))), nil
+	return logRequests(logger, recoverPanics(logger, limitBody(requireAgentToken(cfg.agentToken, logger, mux)))), nil
 }
 
 // maxBodyBytes begrenzt die Größe von Request-Bodys.

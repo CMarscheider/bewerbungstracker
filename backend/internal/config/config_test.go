@@ -1,6 +1,9 @@
 package config
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func env(m map[string]string) func(string) string {
 	return func(k string) string { return m[k] }
@@ -39,5 +42,19 @@ func TestLoadReadsGotenbergURL(t *testing.T) {
 	}
 	if c.GotenbergURL != "http://gotenberg:3000" {
 		t.Errorf("GotenbergURL = %q", c.GotenbergURL)
+	}
+}
+
+func TestLoadAgentToken(t *testing.T) {
+	c, err := Load(env(map[string]string{"DATABASE_URL": "postgres://x", "AGENT_TOKEN": strings.Repeat("a", 32)}))
+	if err != nil || c.AgentToken != strings.Repeat("a", 32) {
+		t.Fatalf("AgentToken = %q, err %v", c.AgentToken, err)
+	}
+	if _, err := Load(env(map[string]string{"DATABASE_URL": "postgres://x", "AGENT_TOKEN": "zu-kurz"})); err == nil {
+		t.Fatal("zu kurzes AGENT_TOKEN muss abgelehnt werden")
+	}
+	c, err = Load(env(map[string]string{"DATABASE_URL": "postgres://x"}))
+	if err != nil || c.AgentToken != "" {
+		t.Fatalf("ohne AGENT_TOKEN: %q, %v", c.AgentToken, err)
 	}
 }

@@ -41,6 +41,12 @@ type response struct {
 
 func call(t *testing.T, srv *httptest.Server, method, path string, body any) response {
 	t.Helper()
+	return callWith(t, srv, method, path, "", body)
+}
+
+// callWith schickt optional ein Agent-Token als Bearer mit.
+func callWith(t *testing.T, srv *httptest.Server, method, path, token string, body any) response {
+	t.Helper()
 	var reader io.Reader
 	if body != nil {
 		data, err := json.Marshal(body)
@@ -55,6 +61,9 @@ func call(t *testing.T, srv *httptest.Server, method, path string, body any) res
 	}
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
+	}
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
 	}
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -113,4 +122,18 @@ func createCompany(t *testing.T, srv *httptest.Server, name string) string {
 	r := call(t, srv, http.MethodPost, "/api/v1/companies", map[string]any{"name": name})
 	expectStatus(t, r, http.StatusCreated)
 	return r.object(t)["id"].(string)
+}
+
+const agentToken = "test-token-0123456789abcdefghijklmnop"
+
+func newAgentTestServer(t *testing.T, token string) *httptest.Server {
+	t.Helper()
+	testdb.Reset(t, testPool)
+	h, err := httpapi.NewRouter(service.New(testPool, time.Now), slog.New(slog.NewTextHandler(io.Discard, nil)), httpapi.WithAgentToken(token))
+	if err != nil {
+		t.Fatal(err)
+	}
+	srv := httptest.NewServer(h)
+	t.Cleanup(srv.Close)
+	return srv
 }

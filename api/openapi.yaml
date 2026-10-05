@@ -15,6 +15,8 @@ tags:
     description: "Übersicht: Fristen, Termine, Statistik"
   - name: Cv
     description: Lebenslauf
+  - name: Agent
+    description: "Für Claude-Agenten; verlangt Authorization: Bearer <AGENT_TOKEN>"
 paths:
   /api/v1/companies:
     get:
@@ -348,7 +350,24 @@ paths:
             application/pdf:
               schema: { type: string, format: binary }
         default: { $ref: "#/components/responses/Problem" }
+  /api/agent/cv:
+    get:
+      operationId: agentGetCv
+      tags: [Agent]
+      summary: Gespeicherter Lebenslauf (404, solange keiner gespeichert ist)
+      security: [{ agentToken: [] }]
+      responses:
+        "200":
+          description: Lebenslauf
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Cv" }
+        default: { $ref: "#/components/responses/Problem" }
 components:
+  securitySchemes:
+    agentToken:
+      type: http
+      scheme: bearer
   parameters:
     Id:
       name: id
