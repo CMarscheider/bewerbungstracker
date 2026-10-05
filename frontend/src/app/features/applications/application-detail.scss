@@ -1,14 +1,67 @@
+// Kopf: Firma, Titel, Status, Passung und Link zur Anzeige.
+.detail-head {
+  background: var(--app-card-bg);
+  border: var(--card-border);
+  border-radius: var(--card-radius);
+  margin-bottom: var(--space-4);
+  padding: var(--card-padding);
+}
+.detail-head h1 {
+  margin: var(--space-1) 0 var(--space-3);
+}
 .company {
   align-items: center;
+  color: var(--app-muted);
   display: flex;
-  gap: 8px;
+  font-weight: 550;
+  gap: var(--space-2);
   margin: 0;
 }
+.head-meta {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+}
+.head-fit {
+  align-items: center;
+  display: inline-flex;
+  gap: var(--space-2);
+}
+.job-link {
+  margin-left: auto;
+}
+.job-link app-icon {
+  margin-left: var(--space-1);
+}
+@media (max-width: 600px) {
+  .job-link {
+    margin-left: 0;
+  }
+}
+
+// Zwei Spalten ab mittlerer Breite; DOM-Reihenfolge bleibt die Lesereihenfolge.
+.layout {
+  align-items: start;
+  display: grid;
+  gap: 0 var(--space-4);
+  grid-template-columns: minmax(0, 1fr);
+}
+@media (min-width: 1000px) {
+  .layout {
+    grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr);
+  }
+}
+.main-col,
+.side-col {
+  min-width: 0;
+}
+
 .fit-row {
   align-items: baseline;
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: var(--space-3);
   margin: 0;
 }
 .fit-reason {
@@ -16,40 +69,73 @@
   overflow-wrap: anywhere;
 }
 .posting {
-  margin-top: 16px;
+  margin-bottom: var(--space-4);
+}
+.title-icon {
+  color: var(--app-accent-ink);
+  margin-right: var(--space-2);
 }
 .buttons {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--space-2);
 }
+
+// Verlauf: Linie mit Punkten im Statuston, Datum in Ziffern gleicher Breite.
 .timeline ol {
-  border-left: 2px solid var(--mat-sys-outline-variant, #d1d5db);
   list-style: none;
-  margin: 0 0 8px 6px;
-  padding: 0 0 0 16px;
+  margin: 0 0 var(--space-2);
+  padding: 0;
 }
 .timeline li {
-  margin-bottom: 12px;
+  display: grid;
+  gap: 0 var(--space-3);
+  grid-template-columns: 5.75rem minmax(0, 1fr);
+  padding: 0 0 var(--space-4) 20px;
   position: relative;
 }
 .timeline li::before {
-  background: var(--mat-sys-primary, #3b82f6);
+  background: var(--tone-dot);
+  border: 2px solid var(--app-card-bg);
   border-radius: 50%;
+  box-shadow: 0 0 0 1px var(--tone-dot);
   content: '';
-  height: 10px;
-  left: -22px;
+  height: 8px;
+  left: 0;
   position: absolute;
-  top: 5px;
-  width: 10px;
+  top: 6px;
+  width: 8px;
+}
+.timeline li::after {
+  background: var(--app-border);
+  bottom: 0;
+  content: '';
+  left: 5px;
+  position: absolute;
+  top: 20px;
+  width: 2px;
+}
+.timeline li:last-child::after {
+  display: none;
 }
 .date {
-  color: var(--mat-sys-on-surface-variant, #6b7280);
-  margin-right: 8px;
+  color: var(--app-muted);
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+  padding-top: 1px;
+  white-space: nowrap;
+}
+.event {
+  font-weight: 600;
+}
+.due,
+.note {
+  grid-column: 2;
 }
 .due {
-  color: light-dark(#b45309, #fbbf24);
-  margin-left: 8px;
+  color: light-dark(#92400e, #fbbf24);
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
 }
 .note,
 .pre {
@@ -59,8 +145,11 @@
   overflow-wrap: anywhere;
 }
 .note {
-  margin: 4px 0 0;
+  color: var(--app-muted);
+  font-size: 0.875rem;
+  margin: var(--space-1) 0 0;
 }
+
 .form {
   display: flex;
   flex-direction: column;
@@ -68,20 +157,57 @@
 }
 dl {
   display: grid;
-  gap: 4px 16px;
-  grid-template-columns: max-content 1fr;
+  gap: var(--space-2) var(--space-5);
+  grid-template-columns: max-content minmax(0, 1fr);
+  margin: 0 0 var(--space-3);
 }
 dt {
-  color: var(--mat-sys-on-surface-variant, #6b7280);
+  color: var(--app-muted);
+  font-size: 0.875rem;
 }
 dd {
   margin: 0;
   overflow-wrap: anywhere;
 }
+@media (max-width: 480px) {
+  dl {
+    gap: 0;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  dd {
+    margin-bottom: var(--space-3);
+  }
+}
 .thread {
   align-items: center;
   display: flex;
   flex-wrap: wrap;
-  gap: 4px 16px;
-  margin: 8px 0;
+  gap: var(--space-1) var(--space-4);
+  margin: var(--space-2) 0;
+}
+
+// Gefahrenzone: abgesetzt, mit rotem Rand.
+.danger-zone {
+  align-items: center;
+  background: var(--danger-bg);
+  border: 1px solid var(--danger-border);
+  border-radius: var(--card-radius);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-5);
+  justify-content: space-between;
+  margin-top: var(--space-6);
+  padding: var(--space-4) var(--card-padding);
+}
+.danger-zone h2 {
+  align-items: center;
+  color: var(--mat-sys-error);
+  display: flex;
+  font-size: 1rem;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-1);
+}
+.danger-zone p {
+  font-size: 0.875rem;
+  margin: 0;
 }

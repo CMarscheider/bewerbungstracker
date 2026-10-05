@@ -1,27 +1,73 @@
 .tiles {
   display: grid;
-  gap: 12px;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
-  margin-bottom: 16px;
+  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  margin-bottom: var(--space-5);
 }
 .tile {
+  align-items: center;
+  flex-direction: row;
+  gap: var(--space-4);
+  padding: var(--space-5);
+}
+.tile-icon {
+  align-items: center;
+  background: var(--app-accent-soft);
+  border-radius: 50%;
+  color: var(--app-accent-ink);
+  display: inline-flex;
+  flex: none;
+  height: 44px;
+  justify-content: center;
+  width: 44px;
+}
+.tile-text {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 16px;
+  min-width: 0;
 }
 .value {
+  color: var(--app-heading);
   font-size: 2rem;
-  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
 }
 .label {
-  color: var(--mat-sys-on-surface-variant);
+  color: var(--app-muted);
+  font-size: 0.875rem;
+}
+
+@media (max-width: 599px) {
+  .tiles {
+    gap: var(--space-2);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin-bottom: var(--space-4);
+  }
+  .tile {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-3);
+  }
+  .tile-icon {
+    height: 32px;
+    width: 32px;
+  }
+  .value {
+    font-size: 1.5rem;
+  }
+  .label {
+    font-size: 0.75rem;
+    line-height: 1.3;
+  }
 }
 
 .columns {
   align-items: start;
   display: grid;
-  gap: 16px;
+  gap: var(--space-4);
   grid-template-columns: 1fr 1fr;
 }
 @media (max-width: 900px) {
@@ -30,36 +76,53 @@
   }
 }
 .card {
-  padding: 16px 16px 8px;
+  padding: var(--space-5) var(--space-5) var(--space-3);
 }
 .card-title {
-  font-size: 1.1rem;
+  align-items: center;
+  display: flex;
+  font-size: 1.0625rem;
+  gap: var(--space-2);
   margin: 0;
 }
+.title-icon {
+  color: var(--app-accent-ink);
+}
 .count {
-  color: var(--mat-sys-on-surface-variant);
+  color: var(--app-muted);
+  font-variant-numeric: tabular-nums;
   font-weight: 400;
 }
 .hint {
-  font-size: 0.85rem;
-  margin: 2px 0 8px;
+  font-size: 0.8125rem;
+  margin: var(--space-1) 0 var(--space-3);
 }
 .state {
-  margin: 8px 0 12px;
+  margin: var(--space-2) 0 var(--space-3);
 }
 
 .rows {
   list-style: none;
-  margin: 0;
+  margin: 0 calc(var(--space-2) * -1);
   padding: 0;
 }
+// Ganze Zeile klickbar: der Link spannt sich über die Zeile.
 .row {
   align-items: center;
-  border-top: 1px solid var(--mat-sys-outline-variant);
+  border-radius: var(--radius-sm);
+  border-top: 1px solid var(--app-border);
   display: grid;
-  gap: 4px 12px;
+  gap: var(--space-1) var(--space-3);
   grid-template-columns: 4.5rem minmax(0, 1fr) auto;
-  padding: 10px 0;
+  padding: var(--space-3) var(--space-2);
+  position: relative;
+  transition: background-color var(--dur-fast) ease;
+}
+.row:first-child {
+  border-top-color: transparent;
+}
+.row:hover {
+  background: var(--app-hover);
 }
 .when {
   display: flex;
@@ -67,34 +130,47 @@
   line-height: 1.25;
 }
 .day {
+  color: var(--app-heading);
   font-variant-numeric: tabular-nums;
-  font-weight: 600;
+  font-weight: 650;
 }
 .weekday {
-  color: var(--mat-sys-on-surface-variant);
-  font-size: 0.8rem;
+  color: var(--app-muted);
+  font-size: 0.8125rem;
 }
 .what {
   color: inherit;
   display: flex;
   flex-direction: column;
-  line-height: 1.25;
+  line-height: 1.3;
   min-width: 0;
   text-decoration: none;
 }
-.what:hover .company {
-  color: var(--mat-sys-primary);
-  text-decoration: underline;
+.what::after {
+  border-radius: var(--radius-sm);
+  content: '';
+  inset: 0;
+  position: absolute;
+}
+.what:focus-visible {
+  outline: none;
+}
+.what:focus-visible::after {
+  outline: var(--focus-ring);
+  outline-offset: -2px;
+}
+.row:hover .company {
+  color: var(--app-accent-ink);
 }
 .company {
-  font-weight: 500;
+  font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .position {
-  color: var(--mat-sys-on-surface-variant);
-  font-size: 0.85rem;
+  color: var(--app-muted);
+  font-size: 0.875rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -102,7 +178,7 @@
 .kind {
   align-items: center;
   display: inline-flex;
-  font-size: 0.85rem;
+  font-size: 0.8125rem;
   gap: 6px;
   white-space: nowrap;
 }
@@ -117,10 +193,13 @@
 .overdue .weekday {
   color: var(--mat-sys-error);
 }
+.overdue .weekday {
+  font-weight: 600;
+}
 
 @media (max-width: 480px) {
   .row {
-    grid-template-columns: 4rem minmax(0, 1fr);
+    grid-template-columns: 3.75rem minmax(0, 1fr);
   }
   .kind {
     grid-column: 2;

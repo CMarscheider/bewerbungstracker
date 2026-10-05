@@ -8,12 +8,15 @@ import { Api } from '../../core/api';
 import { formatDayMonth, weekdayShort } from '../../core/dates';
 import { loaded } from '../../core/loaded';
 import { DEADLINE_LABELS, STATUS_TONE, eventLabel } from '../../shared/labels';
+import { Icon } from '../../shared/icon';
 import { AgentSuggestions } from './agent-suggestions';
 import { ProcessedMails } from './processed-mails';
+import { OUTLINED_FIELDS } from '../../shared/form-field-defaults';
 
 @Component({
   selector: 'app-dashboard',
-  imports: [PercentPipe, RouterLink, MatCardModule, AgentSuggestions, ProcessedMails],
+  providers: [OUTLINED_FIELDS],
+  imports: [PercentPipe, RouterLink, MatCardModule, AgentSuggestions, ProcessedMails, Icon],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss',
 })

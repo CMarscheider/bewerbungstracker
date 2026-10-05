@@ -13,11 +13,13 @@ import { Company, NewEvent } from '../../api/models';
 import { Api } from '../../core/api';
 import { toIsoDate } from '../../core/dates';
 import { CONTACT_EMAIL_ERROR, contactEmailControl } from './contact-email';
+import { OUTLINED_FIELDS } from '../../shared/form-field-defaults';
 
 type FirstType = 'Beworben' | 'Vorgemerkt';
 
 @Component({
   selector: 'app-application-new',
+  providers: [OUTLINED_FIELDS],
   imports: [ReactiveFormsModule, RouterLink, MatAutocompleteModule, MatButtonModule, MatButtonToggleModule, MatDatepickerModule, MatFormFieldModule, MatInputModule],
   templateUrl: './application-new.html',
   styleUrl: './application-new.scss',

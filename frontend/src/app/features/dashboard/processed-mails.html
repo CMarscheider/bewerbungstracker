@@ -1,6 +1,6 @@
 <mat-expansion-panel class="panel" (opened)="opened()">
   <mat-expansion-panel-header>
-    <mat-panel-title>Vom Agenten verarbeitete Mails</mat-panel-title>
+    <mat-panel-title><app-icon name="inbox" class="title-icon" />Vom Agenten verarbeitete Mails</mat-panel-title>
   </mat-expansion-panel-header>
   <ng-template matExpansionPanelContent>
     <p class="hint muted">Die letzten 50, neueste zuerst</p>
@@ -9,7 +9,7 @@
     } @else if (loadError()) {
       <p class="muted state">Konnte nicht geladen werden.</p>
     } @else if (mails()?.length === 0) {
-      <p class="muted state">Noch keine Mails verarbeitet.</p>
+      <p class="empty state"><span class="empty-icon"><app-icon name="mail" /></span>Noch keine Mails verarbeitet.</p>
     }
     <ul class="rows">
       @for (m of mails(); track m.gmail_message_id) {

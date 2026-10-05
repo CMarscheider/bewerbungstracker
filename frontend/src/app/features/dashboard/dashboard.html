@@ -1,11 +1,22 @@
-<h1>Übersicht</h1>
+<header class="page-head">
+  <h1>Übersicht</h1>
+</header>
 
 <div class="tiles">
-  <mat-card class="tile"><span class="value">{{ activeCount() ?? '–' }}</span><span class="label">aktive Bewerbungen</span></mat-card>
-  <mat-card class="tile"><span class="value">{{ openOffers() ?? '–' }}</span><span class="label">offene Angebote</span></mat-card>
   <mat-card class="tile">
-    <span class="value">{{ summary() ? (summary()!.response_rate | percent: '1.0-0') : '–' }}</span>
-    <span class="label">Antwortquote</span>
+    <span class="tile-icon"><app-icon name="briefcase" /></span>
+    <span class="tile-text"><span class="value">{{ activeCount() ?? '–' }}</span><span class="label">aktive Bewerbungen</span></span>
+  </mat-card>
+  <mat-card class="tile">
+    <span class="tile-icon"><app-icon name="gift" /></span>
+    <span class="tile-text"><span class="value">{{ openOffers() ?? '–' }}</span><span class="label">offene Angebote</span></span>
+  </mat-card>
+  <mat-card class="tile">
+    <span class="tile-icon"><app-icon name="reply" /></span>
+    <span class="tile-text">
+      <span class="value">{{ summary() ? (summary()!.response_rate | percent: '1.0-0') : '–' }}</span>
+      <span class="label">Antwortquote</span>
+    </span>
   </mat-card>
 </div>
 
@@ -14,14 +25,14 @@
 
 <div class="columns">
   <mat-card class="card deadlines">
-    <h2 class="card-title">Fristen <span class="count">· {{ deadlines().length }}</span></h2>
+    <h2 class="card-title"><app-icon name="clock" class="title-icon" />Fristen <span class="count">· {{ deadlines().length }}</span></h2>
     <p class="hint muted">Überfällig und in den nächsten 7 Tagen</p>
     @if (!deadlinesResult()) {
       <p class="muted state">Lade …</p>
     } @else if (deadlinesResult()!.error) {
       <p class="muted state">Konnte nicht geladen werden.</p>
     } @else if (deadlines().length === 0) {
-      <p class="muted state">Keine anstehenden Fristen.</p>
+      <p class="empty state"><span class="empty-icon"><app-icon name="check" /></span>Keine anstehenden Fristen.</p>
     }
     <ul class="rows">
       @for (d of deadlines(); track d.application_id + d.due_on) {
@@ -41,14 +52,14 @@
   </mat-card>
 
   <mat-card class="card appointments">
-    <h2 class="card-title">Termine <span class="count">· {{ appointments().length }}</span></h2>
+    <h2 class="card-title"><app-icon name="calendar" class="title-icon" />Termine <span class="count">· {{ appointments().length }}</span></h2>
     <p class="hint muted">In den nächsten 14 Tagen</p>
     @if (!appointmentsResult()) {
       <p class="muted state">Lade …</p>
     } @else if (appointmentsResult()!.error) {
       <p class="muted state">Konnte nicht geladen werden.</p>
     } @else if (appointments().length === 0) {
-      <p class="muted state">Keine Termine in den nächsten 14 Tagen.</p>
+      <p class="empty state"><span class="empty-icon"><app-icon name="calendar" /></span>Keine Termine in den nächsten 14 Tagen.</p>
     }
     <ul class="rows">
       @for (a of appointments(); track a.application_id + a.date) {

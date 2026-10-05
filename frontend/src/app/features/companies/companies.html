@@ -1,13 +1,20 @@
-<h1>Firmen</h1>
+<header class="page-head">
+  <div class="title">
+    <h1>Firmen</h1>
+    @if (companies()?.length) {
+      <span class="total">{{ companies()!.length }}</span>
+    }
+  </div>
+</header>
 
 @if (loadError()) {
-  <p class="muted">Konnte nicht geladen werden.</p>
+  <p class="empty"><span class="empty-icon"><app-icon name="warning" /></span>Konnte nicht geladen werden.</p>
 } @else if (companies() === null) {
   <p class="muted">Lade …</p>
 } @else if (companies()!.length === 0) {
-  <p class="muted">Noch keine Firmen. Firmen entstehen beim Anlegen einer Bewerbung.</p>
+  <p class="empty"><span class="empty-icon"><app-icon name="building" /></span>Noch keine Firmen. Firmen entstehen beim Anlegen einer Bewerbung.</p>
 }
-<ul class="list">
+<ul class="list" [class.filled]="companies()?.length">
   @for (c of companies() ?? []; track c.id) {
     <li>
       @if (editingId() === c.id) {
@@ -20,8 +27,11 @@
           <button mat-button type="button" (click)="cancelRename()">Abbrechen</button>
         </form>
       } @else {
-        <span class="name">{{ c.name }}</span>
-        <span class="muted">{{ c.application_count }} Bewerbung(en)</span>
+        <span class="avatar" aria-hidden="true">{{ c.name.charAt(0) }}</span>
+        <span class="info">
+          <span class="name">{{ c.name }}</span>
+          <span class="muted count">{{ c.application_count }} Bewerbung(en)</span>
+        </span>
         <span class="actions">
           <button mat-button (click)="startRename(c)">Umbenennen</button>
           <button mat-button class="danger" (click)="remove(c)" [disabled]="c.application_count > 0" disabledInteractive title="Nur Firmen ohne Bewerbungen können gelöscht werden">Löschen</button>

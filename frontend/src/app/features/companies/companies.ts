@@ -6,10 +6,13 @@ import { MatInputModule } from '@angular/material/input';
 import { finalize } from 'rxjs';
 import { Company } from '../../api/models';
 import { Api } from '../../core/api';
+import { Icon } from '../../shared/icon';
+import { OUTLINED_FIELDS } from '../../shared/form-field-defaults';
 
 @Component({
   selector: 'app-companies',
-  imports: [ReactiveFormsModule, MatButtonModule, MatFormFieldModule, MatInputModule],
+  providers: [OUTLINED_FIELDS],
+  imports: [ReactiveFormsModule, MatButtonModule, MatFormFieldModule, MatInputModule, Icon],
   templateUrl: './companies.html',
   styleUrl: './companies.scss',
 })

@@ -1,8 +1,16 @@
-<h1>Lebenslauf</h1>
-<section class="photo-section">
-  <h2>Foto</h2>
-  <app-cv-photo />
-</section>
+<header class="page-head">
+  <h1>Lebenslauf</h1>
+</header>
+
+<div class="top">
+  <section class="photo-section section-card">
+    <h2>Foto</h2>
+    <app-cv-photo />
+  </section>
+  @if (!loadError() && form() !== null) {
+    <app-cv-review class="section-card" [form]="form()!" [savedAt]="updatedAt()" [dirty]="form()!.dirty" />
+  }
+</div>
 
 @if (loadError()) {
   <p class="muted">Konnte nicht geladen werden.</p>
@@ -10,9 +18,8 @@
   <p class="muted">Lade …</p>
 } @else {
   @let f = form()!;
-  <app-cv-review [form]="f" [savedAt]="updatedAt()" [dirty]="f.dirty" />
   <form [formGroup]="f" (ngSubmit)="save()">
-    <section formGroupName="person">
+    <section class="section-card" formGroupName="person">
       <h2>Person</h2>
       <div class="grid">
         <mat-form-field><mat-label>Name</mat-label><input matInput required name="person-name" formControlName="name" maxlength="200" /><mat-error>Pflichtfeld</mat-error></mat-form-field>
@@ -34,7 +41,7 @@
       </div>
     </section>
 
-    <section>
+    <section class="section-card">
       <h2>Profil</h2>
       <mat-form-field class="wide">
         <mat-label>Kurzprofil</mat-label>
@@ -42,7 +49,7 @@
       </mat-form-field>
     </section>
 
-    <section data-section="experience">
+    <section class="section-card" data-section="experience">
       <h2>Berufserfahrung</h2>
       @for (g of f.controls.experience.controls; track g; let i = $index) {
         <div class="entry" [formGroup]="g">
@@ -63,7 +70,7 @@
       <button mat-button type="button" class="add" (click)="add(f.controls.experience, newExperience)">Station hinzufügen</button>
     </section>
 
-    <section data-section="education">
+    <section class="section-card" data-section="education">
       <h2>Ausbildung</h2>
       @for (g of f.controls.education.controls; track g; let i = $index) {
         <div class="entry" [formGroup]="g">
@@ -80,7 +87,7 @@
       <button mat-button type="button" class="add" (click)="add(f.controls.education, newEducation)">Ausbildung hinzufügen</button>
     </section>
 
-    <section data-section="skills">
+    <section class="section-card" data-section="skills">
       <h2>Kenntnisse</h2>
       @for (g of f.controls.skills.controls; track g; let i = $index) {
         <div class="entry grid" [formGroup]="g">
@@ -92,7 +99,7 @@
       <button mat-button type="button" class="add" (click)="add(f.controls.skills, newSkill)">Bereich hinzufügen</button>
     </section>
 
-    <section data-section="projects">
+    <section class="section-card" data-section="projects">
       <h2>Projekte</h2>
       @for (g of f.controls.projects.controls; track g; let i = $index) {
         <div class="entry" [formGroup]="g">
@@ -108,7 +115,7 @@
       <button mat-button type="button" class="add" (click)="add(f.controls.projects, newProject)">Projekt hinzufügen</button>
     </section>
 
-    <section data-section="languages">
+    <section class="section-card" data-section="languages">
       <h2>Sprachen</h2>
       @for (g of f.controls.languages.controls; track g; let i = $index) {
         <div class="entry grid" [formGroup]="g">

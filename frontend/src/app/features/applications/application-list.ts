@@ -14,12 +14,15 @@ import { Api, ApplicationFilter } from '../../core/api';
 import { formatDate } from '../../core/dates';
 import { loaded } from '../../core/loaded';
 import { ALL_EVENT_TYPES, ALL_PHASES, EVENT_LABELS, PHASE_LABELS } from '../../shared/labels';
+import { Icon } from '../../shared/icon';
 import { FitScore } from '../../shared/fit-score';
 import { StatusBadge } from '../../shared/status-badge';
+import { OUTLINED_FIELDS } from '../../shared/form-field-defaults';
 
 @Component({
   selector: 'app-application-list',
-  imports: [ReactiveFormsModule, RouterLink, MatButtonModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatSlideToggleModule, MatTableModule, FitScore, StatusBadge],
+  providers: [OUTLINED_FIELDS],
+  imports: [ReactiveFormsModule, RouterLink, MatButtonModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatSlideToggleModule, MatTableModule, FitScore, StatusBadge, Icon],
   templateUrl: './application-list.html',
   styleUrl: './application-list.scss',
 })

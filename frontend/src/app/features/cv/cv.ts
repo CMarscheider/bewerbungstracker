@@ -10,9 +10,11 @@ import { Api } from '../../core/api';
 import { CvPhoto } from './cv-photo';
 import { CvReviewPanel } from './cv-review';
 import { cvForm, CvForm, educationGroup, experienceGroup, formToCv, languageGroup, linkGroup, projectGroup, skillGroup } from './cv-form';
+import { OUTLINED_FIELDS } from '../../shared/form-field-defaults';
 
 @Component({
   selector: 'app-cv',
+  providers: [OUTLINED_FIELDS],
   imports: [CvPhoto, CvReviewPanel, DatePipe, ReactiveFormsModule, MatButtonModule, MatFormFieldModule, MatInputModule],
   templateUrl: './cv.html',
   styleUrl: './cv.scss',

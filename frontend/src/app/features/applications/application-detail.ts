@@ -10,19 +10,22 @@ import { finalize, forkJoin } from 'rxjs';
 import { Application, EventType, NewEvent } from '../../api/models';
 import { Api } from '../../core/api';
 import { formatDate } from '../../core/dates';
-import { DEADLINE_LABELS, EVENT_LABELS, eventLabel } from '../../shared/labels';
+import { DEADLINE_LABELS, EVENT_LABELS, STATUS_TONE, eventLabel } from '../../shared/labels';
+import { Icon } from '../../shared/icon';
 import { FitScore } from '../../shared/fit-score';
 import { StatusBadge } from '../../shared/status-badge';
 import { ApplicationDocuments } from './application-documents';
 import { CONTACT_EMAIL_ERROR, contactEmailControl } from './contact-email';
 import { EventDialog, EventDialogData } from './event-dialog';
+import { OUTLINED_FIELDS } from '../../shared/form-field-defaults';
 
 // `/u/0/` ist das erste im Browser angemeldete Gmail-Konto; bei mehreren Konten ggf. das falsche.
 const GMAIL_THREAD_URL = 'https://mail.google.com/mail/u/0/#all/';
 
 @Component({
   selector: 'app-application-detail',
-  imports: [ReactiveFormsModule, RouterLink, MatButtonModule, MatExpansionModule, MatFormFieldModule, MatInputModule, FitScore, StatusBadge, ApplicationDocuments],
+  providers: [OUTLINED_FIELDS],
+  imports: [ReactiveFormsModule, RouterLink, MatButtonModule, MatExpansionModule, MatFormFieldModule, MatInputModule, FitScore, StatusBadge, ApplicationDocuments, Icon],
   templateUrl: './application-detail.html',
   styleUrl: './application-detail.scss',
 })
@@ -43,6 +46,7 @@ export class ApplicationDetail {
   protected readonly canUndo = computed(() => (this.application()?.events.length ?? 0) > 1);
 
   protected readonly labels = EVENT_LABELS;
+  protected readonly tones = STATUS_TONE;
   protected readonly deadlineLabels = DEADLINE_LABELS;
   protected readonly eventLabel = eventLabel;
   protected readonly formatDate = formatDate;

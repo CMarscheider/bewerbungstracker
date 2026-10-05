@@ -1,124 +1,151 @@
 @if (application(); as app) {
-  <header>
+  <header class="detail-head">
+    <p class="company"><app-icon name="building" [size]="16" />{{ app.company_name }}</p>
     <h1>{{ app.position_title }}</h1>
-    <p class="company">{{ app.company_name }} <app-status-badge [status]="app.status" /></p>
-  </header>
-
-  @if (app.fit_score != null) {
-    <section class="fit-section" data-testid="fit">
-      <h2>Passung</h2>
-      <p class="fit-row">
-        <app-fit-score [score]="app.fit_score" />
-        @if (app.fit_reason) {
-          <span class="fit-reason">{{ app.fit_reason }}</span>
-        }
-      </p>
-    </section>
-  }
-
-  <app-application-documents [application]="app" (changed)="documentsChanged($event)" />
-
-  @if (app.posting_text) {
-    <mat-expansion-panel class="posting">
-      <mat-expansion-panel-header>
-        <mat-panel-title>Anzeigentext</mat-panel-title>
-      </mat-expansion-panel-header>
-      <p class="pre">{{ app.posting_text }}</p>
-    </mat-expansion-panel>
-  }
-
-  <section>
-    <h2>Nächster Schritt</h2>
-    @if (allowed().length === 0) {
-      <p class="muted">Diese Bewerbung ist abgeschlossen.</p>
-    }
-    <div class="buttons">
-      @for (type of allowed(); track type) {
-        <button mat-stroked-button data-testid="event-button" (click)="openEventDialog(type)">{{ labels[type] }}</button>
+    <div class="head-meta">
+      <app-status-badge [status]="app.status" />
+      @if (app.fit_score != null) {
+        <span class="head-fit"><span class="muted">Passung</span> <app-fit-score [score]="app.fit_score" /></span>
+      }
+      @if (app.location) {
+        <span class="muted">{{ app.location }}</span>
+      }
+      @if (app.job_url) {
+        <a mat-stroked-button class="job-link" [href]="app.job_url" target="_blank" rel="noopener" aria-label="Stellenanzeige öffnen (öffnet in neuem Tab)">
+          Stellenanzeige öffnen <app-icon name="external" [size]="16" />
+        </a>
       }
     </div>
-  </section>
+  </header>
 
-  <section class="timeline">
-    <h2>Verlauf</h2>
-    <ol>
-      @for (e of eventsNewestFirst(); track e.id) {
-        <li>
-          <span class="date">{{ formatDate(e.occurred_on) }}</span>
-          <strong>{{ eventLabel(e.type, e.interview_round) }}</strong>
-          @if (e.due_on) {
-            <span class="due">{{ deadlineLabels[e.type] ?? 'Frist' }}: {{ formatDate(e.due_on) }}</span>
-          }
-          @if (e.note) {
-            <p class="note">{{ e.note }}</p>
-          }
-        </li>
+  <div class="layout">
+    <div class="main-col">
+      @if (app.fit_score != null) {
+        <section class="fit-section section-card" data-testid="fit">
+          <h2>Passung</h2>
+          <p class="fit-row">
+            <app-fit-score [score]="app.fit_score" />
+            @if (app.fit_reason) {
+              <span class="fit-reason">{{ app.fit_reason }}</span>
+            }
+          </p>
+        </section>
       }
-    </ol>
-    @if (canUndo()) {
-      <button mat-button class="flush" (click)="undo()">Letztes Ereignis rückgängig</button>
-    }
-  </section>
 
-  <section>
-    <h2>Stammdaten</h2>
-    @if (editing()) {
-      <form class="form" [formGroup]="form" (ngSubmit)="saveDetails()">
-        <mat-form-field><mat-label>Stelle</mat-label><input matInput formControlName="position_title" maxlength="300" required /></mat-form-field>
-        <mat-form-field><mat-label>Link</mat-label><input matInput formControlName="job_url" type="url" maxlength="1000" /></mat-form-field>
-        <mat-form-field>
-          <mat-label>Bewerbungs-E-Mail</mat-label>
-          <input matInput formControlName="contact_email" type="email" maxlength="200" />
-          <mat-error>{{ contactEmailError }}</mat-error>
-        </mat-form-field>
-        <mat-form-field><mat-label>Ort</mat-label><input matInput formControlName="location" maxlength="200" /></mat-form-field>
-        <mat-form-field><mat-label>Quelle</mat-label><input matInput formControlName="source" maxlength="100" /></mat-form-field>
-        <mat-form-field><mat-label>Notizen</mat-label><textarea matInput formControlName="notes" rows="3" maxlength="5000"></textarea></mat-form-field>
+      <app-application-documents class="section-card" [application]="app" (changed)="documentsChanged($event)" />
+
+      @if (app.posting_text) {
+        <mat-expansion-panel class="posting">
+          <mat-expansion-panel-header>
+            <mat-panel-title><app-icon name="file" class="title-icon" />Anzeigentext</mat-panel-title>
+          </mat-expansion-panel-header>
+          <p class="pre">{{ app.posting_text }}</p>
+        </mat-expansion-panel>
+      }
+
+      <section class="section-card">
+        <h2>Stammdaten</h2>
+        @if (editing()) {
+          <form class="form" [formGroup]="form" (ngSubmit)="saveDetails()">
+            <mat-form-field><mat-label>Stelle</mat-label><input matInput formControlName="position_title" maxlength="300" required /></mat-form-field>
+            <mat-form-field><mat-label>Link</mat-label><input matInput formControlName="job_url" type="url" maxlength="1000" /></mat-form-field>
+            <mat-form-field>
+              <mat-label>Bewerbungs-E-Mail</mat-label>
+              <input matInput formControlName="contact_email" type="email" maxlength="200" />
+              <mat-error>{{ contactEmailError }}</mat-error>
+            </mat-form-field>
+            <mat-form-field><mat-label>Ort</mat-label><input matInput formControlName="location" maxlength="200" /></mat-form-field>
+            <mat-form-field><mat-label>Quelle</mat-label><input matInput formControlName="source" maxlength="100" /></mat-form-field>
+            <mat-form-field><mat-label>Notizen</mat-label><textarea matInput formControlName="notes" rows="3" maxlength="5000"></textarea></mat-form-field>
+            <div class="buttons">
+              <button mat-flat-button type="submit" [disabled]="savingDetails()">Speichern</button>
+              <button mat-button type="button" (click)="editing.set(false)">Abbrechen</button>
+            </div>
+          </form>
+        } @else {
+          <dl>
+            <dt>Link</dt>
+            <dd>
+              @if (app.job_url) {
+                <a [href]="app.job_url" target="_blank" rel="noopener">{{ app.job_url }}</a>
+              } @else {
+                –
+              }
+            </dd>
+            <dt>Bewerbungs-E-Mail</dt>
+            <dd>
+              @if (app.contact_email) {
+                <a [href]="mailto(app.contact_email)">{{ app.contact_email }}</a>
+              } @else {
+                –
+              }
+            </dd>
+            <dt>Ort</dt><dd>{{ app.location || '–' }}</dd>
+            <dt>Quelle</dt><dd>{{ app.source || '–' }}</dd>
+            <dt>Notizen</dt><dd class="pre">{{ app.notes || '–' }}</dd>
+          </dl>
+          @if (app.gmail_thread_id) {
+            <p class="thread" data-testid="gmail-thread">
+              <span>Gmail-Thread verknüpft</span>
+              <a class="thread-link" [href]="threadUrl(app.gmail_thread_id)" target="_blank" rel="noopener" aria-label="Thread in Gmail öffnen (öffnet in neuem Tab)"
+                >In Gmail öffnen</a
+              >
+              <button mat-button type="button" class="unlink" (click)="unlinkThread()">Verknüpfung lösen</button>
+            </p>
+          }
+          <button mat-button class="flush" (click)="startEdit()">Bearbeiten</button>
+        }
+      </section>
+    </div>
+
+    <div class="side-col">
+      <section class="section-card">
+        <h2>Nächster Schritt</h2>
+        @if (allowed().length === 0) {
+          <p class="muted">Diese Bewerbung ist abgeschlossen.</p>
+        }
         <div class="buttons">
-          <button mat-flat-button type="submit" [disabled]="savingDetails()">Speichern</button>
-          <button mat-button type="button" (click)="editing.set(false)">Abbrechen</button>
+          @for (type of allowed(); track type) {
+            <button mat-stroked-button data-testid="event-button" (click)="openEventDialog(type)">{{ labels[type] }}</button>
+          }
         </div>
-      </form>
-    } @else {
-      <dl>
-        <dt>Link</dt>
-        <dd>
-          @if (app.job_url) {
-            <a [href]="app.job_url" target="_blank" rel="noopener">{{ app.job_url }}</a>
-          } @else {
-            –
-          }
-        </dd>
-        <dt>Bewerbungs-E-Mail</dt>
-        <dd>
-          @if (app.contact_email) {
-            <a [href]="mailto(app.contact_email)">{{ app.contact_email }}</a>
-          } @else {
-            –
-          }
-        </dd>
-        <dt>Ort</dt><dd>{{ app.location || '–' }}</dd>
-        <dt>Quelle</dt><dd>{{ app.source || '–' }}</dd>
-        <dt>Notizen</dt><dd class="pre">{{ app.notes || '–' }}</dd>
-      </dl>
-      @if (app.gmail_thread_id) {
-        <p class="thread" data-testid="gmail-thread">
-          <span>Gmail-Thread verknüpft</span>
-          <a class="thread-link" [href]="threadUrl(app.gmail_thread_id)" target="_blank" rel="noopener" aria-label="Thread in Gmail öffnen (öffnet in neuem Tab)"
-            >In Gmail öffnen</a
-          >
-          <button mat-button type="button" class="unlink" (click)="unlinkThread()">Verknüpfung lösen</button>
-        </p>
-      }
-      <button mat-button class="flush" (click)="startEdit()">Bearbeiten</button>
-    }
-  </section>
+      </section>
 
-  <section>
-    <button mat-button class="danger flush" (click)="remove()">Bewerbung löschen</button>
+      <section class="timeline section-card">
+        <h2>Verlauf</h2>
+        <ol>
+          @for (e of eventsNewestFirst(); track e.id) {
+            <li [class]="'tone-' + tones[e.type]">
+              <span class="date">{{ formatDate(e.occurred_on) }}</span>
+              <strong class="event">{{ eventLabel(e.type, e.interview_round) }}</strong>
+              @if (e.due_on) {
+                <span class="due">{{ deadlineLabels[e.type] ?? 'Frist' }}: {{ formatDate(e.due_on) }}</span>
+              }
+              @if (e.note) {
+                <p class="note">{{ e.note }}</p>
+              }
+            </li>
+          }
+        </ol>
+        @if (canUndo()) {
+          <button mat-button class="flush" (click)="undo()">Letztes Ereignis rückgängig</button>
+        }
+      </section>
+    </div>
+  </div>
+
+  <section class="danger-zone" aria-labelledby="danger-heading">
+    <div>
+      <h2 id="danger-heading"><app-icon name="warning" [size]="18" />Löschen</h2>
+      <p class="muted">Entfernt die Bewerbung mit ihrem Verlauf. Das lässt sich nicht rückgängig machen.</p>
+    </div>
+    <button mat-stroked-button class="danger" (click)="remove()">Bewerbung löschen</button>
   </section>
 } @else if (loadError()) {
-  <p>Bewerbung nicht gefunden. <a routerLink="/bewerbungen">Zurück zur Liste</a></p>
+  <p class="empty">
+    <span class="empty-icon"><app-icon name="search" /></span>
+    <span>Bewerbung nicht gefunden. <a routerLink="/bewerbungen">Zurück zur Liste</a></span>
+  </p>
 } @else {
   <p class="muted">Lade …</p>
 }

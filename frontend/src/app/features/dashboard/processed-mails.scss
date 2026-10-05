@@ -1,13 +1,17 @@
 :host {
   display: block;
-  margin-bottom: 16px;
+  margin-bottom: var(--space-4);
+}
+.title-icon {
+  color: var(--app-accent-ink);
+  margin-right: var(--space-2);
 }
 .hint {
-  font-size: 0.85rem;
-  margin: 0 0 8px;
+  font-size: 0.8125rem;
+  margin: 0 0 var(--space-2);
 }
 .state {
-  margin: 8px 0 12px;
+  margin: var(--space-2) 0 var(--space-3);
 }
 .rows {
   list-style: none;
@@ -16,14 +20,15 @@
 }
 .mail {
   align-items: center;
-  border-top: 1px solid var(--mat-sys-outline-variant);
+  border-top: 1px solid var(--app-border);
   display: grid;
-  gap: 4px 12px;
+  gap: var(--space-1) var(--space-3);
   grid-template-columns: 9.5rem minmax(0, 1fr) minmax(0, 1fr) auto;
-  padding: 8px 0;
+  padding: var(--space-2) 0;
 }
 .when {
-  font-size: 0.85rem;
+  color: var(--app-muted);
+  font-size: 0.8125rem;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -35,28 +40,28 @@
   color: inherit;
   display: flex;
   flex-direction: column;
-  line-height: 1.25;
+  line-height: 1.3;
   min-width: 0;
   text-decoration: none;
 }
 a.what:hover .company {
-  color: var(--mat-sys-primary);
+  color: var(--app-accent-ink);
   text-decoration: underline;
 }
 .company {
-  font-weight: 500;
+  font-weight: 600;
   overflow-wrap: anywhere;
 }
 .position {
-  color: var(--mat-sys-on-surface-variant);
-  font-size: 0.85rem;
+  color: var(--app-muted);
+  font-size: 0.875rem;
   overflow-wrap: anywhere;
 }
 .mail:focus {
   outline: none;
 }
 .mail:focus-visible {
-  outline: 2px solid var(--mat-sys-primary);
+  outline: var(--focus-ring);
   outline-offset: 2px;
 }
 

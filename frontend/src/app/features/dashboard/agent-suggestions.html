@@ -2,12 +2,12 @@
   <mat-card class="card">
     <section aria-labelledby="suggestions-heading">
       <h2 id="suggestions-heading" class="card-title" tabindex="-1">
-        Vorschläge des Agenten <span class="count">· {{ suggestions()!.length }}</span>
+        <app-icon name="sparkles" class="title-icon" />Vorschläge des Agenten <span class="count">· {{ suggestions()!.length }}</span>
       </h2>
       <p class="hint muted">Aus der Postfach-Auswertung – bitte prüfen</p>
       <p role="status" class="status">{{ message() }}</p>
       @if (suggestions()!.length === 0) {
-        <p class="muted state">Keine offenen Vorschläge mehr.</p>
+        <p class="empty state"><span class="empty-icon"><app-icon name="check" /></span>Keine offenen Vorschläge mehr.</p>
       }
       <ul class="rows">
         @for (s of suggestions(); track s.id) {
@@ -42,7 +42,7 @@
                   <span class="from">Von: {{ s.mail_from }}</span>
                 }
                 @if (s.mail_url) {
-                  <a class="mail" [href]="s.mail_url" target="_blank" rel="noopener" aria-label="Mail öffnen (öffnet in neuem Tab)">Mail öffnen</a>
+                  <a class="mail" [href]="s.mail_url" target="_blank" rel="noopener" aria-label="Mail öffnen (öffnet in neuem Tab)">Mail öffnen<app-icon name="external" [size]="14" /></a>
                 }
               </p>
             }

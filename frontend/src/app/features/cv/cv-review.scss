@@ -1,35 +1,49 @@
-.review {
-  margin-bottom: 32px;
+.review h2 {
+  margin-top: 0;
 }
 .review-actions,
 .change-head {
   align-items: center;
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 16px;
+  gap: var(--space-2) var(--space-3);
 }
 .change-head {
   justify-content: space-between;
 }
 .change {
-  border-left: 3px solid var(--mat-sys-primary);
-  margin: 16px 0;
-  padding-left: 12px;
+  border: var(--card-border);
+  border-left: 3px solid var(--brand-teal);
+  border-radius: var(--radius-sm);
+  margin: var(--space-4) 0;
+  padding: var(--space-3) var(--space-4);
+}
+.change-head h3 {
+  margin: 0;
 }
 .compare {
   display: grid;
-  gap: 16px;
+  gap: var(--space-4);
   grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
 }
 .compare h4 {
-  margin: 4px 0;
+  color: var(--app-muted);
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  margin: var(--space-2) 0 var(--space-1);
+  text-transform: uppercase;
 }
 .compare p {
   overflow-wrap: anywhere;
   margin: 0 0 4px;
 }
 .before {
-  color: var(--mat-sys-on-surface-variant);
+  color: var(--app-muted);
+}
+.after {
+  background: var(--app-accent-soft);
+  border-radius: var(--radius-sm);
+  padding: 0 var(--space-3) var(--space-2);
 }
 .stale,
 .error {
@@ -39,7 +53,7 @@
   margin-top: 0;
 }
 .dirty-hint {
-  color: var(--mat-sys-on-surface-variant);
+  color: var(--app-muted);
   font-style: italic;
 }
 .review h2:focus,
@@ -48,6 +62,6 @@
 }
 .review h2:focus-visible,
 .change-head h3:focus-visible {
-  outline: 2px solid var(--mat-sys-primary);
+  outline: var(--focus-ring);
   outline-offset: 2px;
 }

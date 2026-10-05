@@ -11,6 +11,7 @@ import { ApplicationSummary, EventType, Suggestion } from '../../api/models';
 import { Api } from '../../core/api';
 import { formatDate } from '../../core/dates';
 import { DEADLINE_LABELS } from '../../shared/labels';
+import { Icon } from '../../shared/icon';
 import { StatusBadge } from '../../shared/status-badge';
 
 /** Abstand zwischen Leeren und Setzen der Live-Region, damit Screenreader die Änderung bemerken. */
@@ -23,7 +24,7 @@ function assignable(a: ApplicationSummary): boolean {
 
 @Component({
   selector: 'app-agent-suggestions',
-  imports: [RouterLink, MatButtonModule, MatCardModule, MatFormFieldModule, MatInputModule, StatusBadge],
+  imports: [RouterLink, MatButtonModule, MatCardModule, MatFormFieldModule, MatInputModule, StatusBadge, Icon],
   templateUrl: './agent-suggestions.html',
   styleUrl: './agent-suggestions.scss',
 })

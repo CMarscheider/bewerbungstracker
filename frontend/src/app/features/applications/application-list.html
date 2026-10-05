@@ -1,10 +1,16 @@
-<header class="head">
-  <h1>Bewerbungen</h1>
-  <a mat-flat-button routerLink="/bewerbungen/neu">Neue Bewerbung</a>
+@let list = applications();
+<header class="page-head">
+  <div class="title">
+    <h1>Bewerbungen</h1>
+    @if (list && !list.error) {
+      <span class="total">{{ list.data.length }}</span>
+    }
+  </div>
+  <a mat-stroked-button routerLink="/bewerbungen/neu">Neue Bewerbung</a>
 </header>
 
-<form class="filters" [formGroup]="filter">
-  <mat-form-field>
+<form class="filters" [formGroup]="filter" aria-label="Filter">
+  <mat-form-field subscriptSizing="dynamic">
     <mat-label>Phase</mat-label>
     <mat-select formControlName="phase">
       <mat-option [value]="null">Alle</mat-option>
@@ -13,7 +19,7 @@
       }
     </mat-select>
   </mat-form-field>
-  <mat-form-field>
+  <mat-form-field subscriptSizing="dynamic">
     <mat-label>Status</mat-label>
     <mat-select formControlName="status">
       <mat-option [value]="null">Alle</mat-option>
@@ -22,11 +28,12 @@
       }
     </mat-select>
   </mat-form-field>
-  <mat-form-field class="search">
+  <mat-form-field class="search" subscriptSizing="dynamic">
     <mat-label>Suche</mat-label>
+    <app-icon matPrefix name="search" class="search-icon" />
     <input matInput formControlName="q" placeholder="Firma oder Stelle" />
   </mat-form-field>
-  <mat-form-field>
+  <mat-form-field subscriptSizing="dynamic">
     <mat-label>Sortierung</mat-label>
     <mat-select formControlName="sort">
       <mat-option value="updated">Zuletzt geändert</mat-option>
@@ -38,15 +45,15 @@
 
 @if (applications(); as result) {
   @if (result.error) {
-    <p class="muted">Konnte nicht geladen werden.</p>
+    <p class="empty"><span class="empty-icon"><app-icon name="warning" /></span>Konnte nicht geladen werden.</p>
   } @else if (result.data.length === 0) {
-    <p class="muted">Keine Bewerbungen gefunden.</p>
+    <p class="empty"><span class="empty-icon"><app-icon name="search" /></span>Keine Bewerbungen gefunden.</p>
   } @else {
-    <div class="table-wrap">
+    <div class="table-card">
       <table mat-table [dataSource]="result.data">
         <ng-container matColumnDef="company">
           <th mat-header-cell *matHeaderCellDef>Firma</th>
-          <td mat-cell *matCellDef="let a"><a [routerLink]="['/bewerbungen', a.id]">{{ a.company_name }}</a></td>
+          <td mat-cell *matCellDef="let a"><a class="company" [routerLink]="['/bewerbungen', a.id]">{{ a.company_name }}</a></td>
         </ng-container>
         <ng-container matColumnDef="position">
           <th mat-header-cell *matHeaderCellDef>Stelle</th>
@@ -68,16 +75,40 @@
         </ng-container>
         <ng-container matColumnDef="last">
           <th mat-header-cell *matHeaderCellDef>Letztes Ereignis</th>
-          <td mat-cell *matCellDef="let a">{{ formatDate(a.last_event_on) }}</td>
+          <td mat-cell *matCellDef="let a" class="date">{{ formatDate(a.last_event_on) }}</td>
         </ng-container>
         <ng-container matColumnDef="due">
           <th mat-header-cell *matHeaderCellDef>Frist</th>
-          <td mat-cell *matCellDef="let a">{{ formatDate(a.open_due_on) }}</td>
+          <td mat-cell *matCellDef="let a" class="date">{{ formatDate(a.open_due_on) }}</td>
         </ng-container>
         <tr mat-header-row *matHeaderRowDef="columns"></tr>
         <tr mat-row *matRowDef="let a; columns: columns" class="row" (click)="open(a)"></tr>
       </table>
     </div>
+
+    <!-- Schmale Fenster: Karten statt Tabelle (die Tabelle ist dann ausgeblendet). -->
+    <ul class="cards">
+      @for (a of result.data; track a.id) {
+        <li class="app-card is-clickable">
+          <div class="card-head">
+            <a class="card-link" [routerLink]="['/bewerbungen', a.id]">
+              <span class="company">{{ a.company_name }}</span>
+              <span class="position">{{ a.position_title }}</span>
+            </a>
+            @if (a.fit_score != null) {
+              <app-fit-score [score]="a.fit_score" />
+            }
+          </div>
+          <div class="card-meta">
+            <app-status-badge [status]="a.status" />
+            <span class="meta">Letztes Ereignis <span class="date">{{ formatDate(a.last_event_on) }}</span></span>
+            @if (a.open_due_on) {
+              <span class="meta">Frist <span class="date">{{ formatDate(a.open_due_on) }}</span></span>
+            }
+          </div>
+        </li>
+      }
+    </ul>
   }
 } @else {
   <p class="muted">Lade …</p>

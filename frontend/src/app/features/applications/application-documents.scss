@@ -1,3 +1,9 @@
+:host {
+  display: block;
+}
+.documents h2 {
+  margin-top: 0;
+}
 .status p {
   margin: 0 0 8px;
   overflow-wrap: anywhere;
@@ -6,7 +12,7 @@
   align-items: center;
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 16px;
+  gap: var(--space-2) var(--space-3);
 }
 .error {
   color: var(--mat-sys-error);
@@ -19,26 +25,27 @@
   color: var(--mat-sys-error);
 }
 .form {
+  border-top: 1px solid var(--app-border);
   display: flex;
   flex-direction: column;
-  margin-top: 16px;
-  max-width: 640px;
+  margin-top: var(--space-5);
+  padding-top: var(--space-5);
 }
 .language {
   align-items: center;
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 16px;
-  margin-bottom: 16px;
+  gap: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-4);
 }
 .highlights {
-  margin: 0 0 16px;
+  margin: 0 0 var(--space-4);
   overflow-wrap: anywhere;
 }
 .documents h2:focus {
   outline: none;
 }
 .documents h2:focus-visible {
-  outline: 2px solid var(--mat-sys-primary);
+  outline: var(--focus-ring);
   outline-offset: 2px;
 }

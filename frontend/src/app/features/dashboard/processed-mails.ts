@@ -6,6 +6,7 @@ import { MatExpansionModule } from '@angular/material/expansion';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
+import { Icon } from '../../shared/icon';
 import { ProcessedMail } from '../../api/models';
 import { Api } from '../../core/api';
 
@@ -13,7 +14,7 @@ const LIMIT = 50;
 
 @Component({
   selector: 'app-processed-mails',
-  imports: [DatePipe, RouterLink, MatButtonModule, MatExpansionModule],
+  imports: [DatePipe, RouterLink, MatButtonModule, MatExpansionModule, Icon],
   templateUrl: './processed-mails.html',
   styleUrl: './processed-mails.scss',
 })

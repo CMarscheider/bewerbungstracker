@@ -1,6 +1,12 @@
-<h1>Neue Bewerbung</h1>
+<header class="page-head">
+  <div>
+    <h1>Neue Bewerbung</h1>
+    <p class="sub">Pflichtfelder sind mit * markiert.</p>
+  </div>
+</header>
 
-<form class="form" [formGroup]="form" (ngSubmit)="submit()">
+<form class="form section-card" [formGroup]="form" (ngSubmit)="submit()">
+  <h2 class="group-title">Stelle</h2>
   <mat-form-field>
     <mat-label>Firma</mat-label>
     <input matInput formControlName="company" maxlength="200" [matAutocomplete]="auto" required />
@@ -41,7 +47,8 @@
     <mat-error>{{ contactEmailError }}</mat-error>
   </mat-form-field>
 
-  <mat-button-toggle-group formControlName="first_type" aria-label="Stand">
+  <h2 class="group-title" id="stand-heading">Stand</h2>
+  <mat-button-toggle-group formControlName="first_type" aria-labelledby="stand-heading">
     <mat-button-toggle value="Beworben">Schon beworben</mat-button-toggle>
     <mat-button-toggle value="Vorgemerkt">Nur vorgemerkt</mat-button-toggle>
   </mat-button-toggle-group>
@@ -63,6 +70,7 @@
     }
   </div>
 
+  <h2 class="group-title">Notizen</h2>
   <mat-form-field>
     <mat-label>Notizen</mat-label>
     <textarea matInput formControlName="notes" rows="3" maxlength="5000"></textarea>

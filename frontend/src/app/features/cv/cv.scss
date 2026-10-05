@@ -1,11 +1,26 @@
-section {
-  margin-bottom: 32px;
+// Foto und Optimierung nebeneinander, darunter die Formular-Abschnitte als Karten.
+.top {
+  align-items: start;
+  display: grid;
+  gap: 0 var(--space-4);
+  grid-template-columns: minmax(0, 1fr);
+}
+@media (min-width: 900px) {
+  .top {
+    grid-template-columns: minmax(260px, 1fr) minmax(0, 2fr);
+  }
+}
+app-cv-review {
+  display: block;
+}
+.section-card h2 {
+  margin-top: 0;
 }
 .grid {
   align-items: start;
   display: grid;
-  gap: 0 16px;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0 var(--space-4);
+  grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr));
 }
 .wide {
   width: 100%;
@@ -13,14 +28,28 @@ section {
 .grid .wide {
   grid-column: 1 / -1;
 }
+// Einträge (Station, Ausbildung, …) als dezente Unterkarten.
 .entry {
-  border-left: 3px solid var(--mat-sys-outline-variant);
-  margin-bottom: 16px;
-  padding-left: 12px;
+  background: var(--app-card-bg-subtle);
+  border: var(--card-border);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--space-3);
+  padding: var(--space-4) var(--space-4) var(--space-2);
+}
+.entry.grid {
+  align-items: center;
+}
+.remove {
+  --mat-button-text-label-text-color: var(--mat-sys-error);
+  justify-self: start;
 }
 .actions {
   align-items: center;
+  background: var(--app-card-bg);
+  border: var(--card-border);
+  border-radius: var(--card-radius);
   display: flex;
   flex-wrap: wrap;
-  gap: 16px;
+  gap: var(--space-3) var(--space-4);
+  padding: var(--space-4) var(--card-padding);
 }

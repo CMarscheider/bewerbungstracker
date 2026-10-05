@@ -1,58 +1,73 @@
-<h1>Statistik</h1>
+<header class="page-head">
+  <h1>Statistik</h1>
+</header>
 
-<h2>Funnel</h2>
-@if (!funnel()) {
-  <p class="muted">Lade …</p>
-} @else if (funnel()!.error) {
-  <p class="muted">Konnte nicht geladen werden.</p>
-}
-<div class="funnel">
-  @for (step of funnel()?.data ?? []; track step.stage) {
-    <span class="stage">{{ step.stage }}</span>
-    <div class="bar"><div class="fill" [style.width.%]="step.rate * 100"></div></div>
-    <span class="num">{{ step.reached }} ({{ step.rate | percent: '1.0-0' }})</span>
+<div class="grid">
+  <section class="section-card funnel-card">
+    <h2>Funnel</h2>
+    @if (!funnel()) {
+      <p class="muted">Lade …</p>
+    } @else if (funnel()!.error) {
+      <p class="muted">Konnte nicht geladen werden.</p>
+    }
+    <div class="funnel">
+      @for (step of funnel()?.data ?? []; track step.stage) {
+        <span class="stage">{{ step.stage }}</span>
+        <div class="bar"><div class="fill" [style.width.%]="step.rate * 100"></div></div>
+        <span class="num">{{ step.reached }} ({{ step.rate | percent: '1.0-0' }})</span>
+      }
+    </div>
+  </section>
+
+  @if (!summary()) {
+    <section class="section-card"><p class="muted">Lade …</p></section>
+  } @else if (summary()!.error) {
+    <section class="section-card">
+      <h2>Antworten</h2>
+      <p class="muted">Konnte nicht geladen werden.</p>
+    </section>
+  } @else {
+    @let s = summary()!.data!;
+    <section class="section-card">
+      <h2>Antworten</h2>
+      <p class="big num">{{ s.response_rate | percent: '1.0-0' }}</p>
+      <p class="answers">
+        {{ s.responded }} von {{ s.applied }} Bewerbungen beantwortet ({{ s.response_rate | percent: '1.0-0' }}).
+        @if (s.median_days_to_response !== undefined && s.median_days_to_response !== null) {
+          Erste Antwort nach {{ s.median_days_to_response | number: '1.0-1' }} Tagen (Median),
+          Ø {{ s.avg_days_to_response | number: '1.0-1' }} Tagen.
+        }
+      </p>
+    </section>
+
+    <section class="section-card">
+      <h2>Absagen nach Phase</h2>
+      @if (s.rejections_after.length === 0) {
+        <p class="muted">Noch keine Absagen.</p>
+      }
+      <ul class="rejections">
+        @for (r of s.rejections_after; track r.event_type) {
+          <li>nach „{{ labels[r.event_type] }}“: <span class="num">{{ r.count }}</span></li>
+        }
+      </ul>
+    </section>
+
+    <section class="section-card sources-card">
+      <h2>Erfolg je Quelle</h2>
+      @if (s.by_source.length === 0) {
+        <p class="muted">Noch keine Bewerbungen mit Quelle.</p>
+      } @else {
+        <div class="table-wrap">
+          <table class="sources">
+            <thead><tr><th scope="col">Quelle</th><th scope="col">Beworben</th><th scope="col">Interview</th><th scope="col">Angebot</th></tr></thead>
+            <tbody>
+              @for (src of s.by_source; track src.source) {
+                <tr><td>{{ src.source }}</td><td>{{ src.applied }}</td><td>{{ src.reached_interview }}</td><td>{{ src.reached_offer }}</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
   }
 </div>
-
-@if (!summary()) {
-  <p class="muted">Lade …</p>
-} @else if (summary()!.error) {
-  <h2>Antworten</h2>
-  <p class="muted">Konnte nicht geladen werden.</p>
-} @else {
-  @let s = summary()!.data!;
-  <h2>Antworten</h2>
-  <p>
-    {{ s.responded }} von {{ s.applied }} Bewerbungen beantwortet ({{ s.response_rate | percent: '1.0-0' }}).
-    @if (s.median_days_to_response !== undefined && s.median_days_to_response !== null) {
-      Erste Antwort nach {{ s.median_days_to_response | number: '1.0-1' }} Tagen (Median),
-      Ø {{ s.avg_days_to_response | number: '1.0-1' }} Tagen.
-    }
-  </p>
-
-  <h2>Absagen nach Phase</h2>
-  @if (s.rejections_after.length === 0) {
-    <p class="muted">Noch keine Absagen.</p>
-  }
-  <ul>
-    @for (r of s.rejections_after; track r.event_type) {
-      <li>nach „{{ labels[r.event_type] }}“: {{ r.count }}</li>
-    }
-  </ul>
-
-  <h2>Erfolg je Quelle</h2>
-  @if (s.by_source.length === 0) {
-    <p class="muted">Noch keine Bewerbungen mit Quelle.</p>
-  } @else {
-  <div class="table-wrap">
-    <table class="sources">
-      <thead><tr><th scope="col">Quelle</th><th scope="col">Beworben</th><th scope="col">Interview</th><th scope="col">Angebot</th></tr></thead>
-      <tbody>
-        @for (src of s.by_source; track src.source) {
-          <tr><td>{{ src.source }}</td><td>{{ src.applied }}</td><td>{{ src.reached_interview }}</td><td>{{ src.reached_offer }}</td></tr>
-        }
-      </tbody>
-    </table>
-  </div>
-  }
-}

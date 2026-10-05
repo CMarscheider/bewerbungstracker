@@ -8,6 +8,7 @@ import { MatInputModule } from '@angular/material/input';
 import { EventType, NewEvent } from '../../api/models';
 import { toIsoDate } from '../../core/dates';
 import { DEADLINE_LABELS, DEADLINE_TYPES, EVENT_LABELS, FUTURE_DATE_TYPES } from '../../shared/labels';
+import { OUTLINED_FIELDS } from '../../shared/form-field-defaults';
 
 export interface EventDialogData {
   type: EventType;
@@ -15,6 +16,7 @@ export interface EventDialogData {
 
 @Component({
   selector: 'app-event-dialog',
+  providers: [OUTLINED_FIELDS],
   imports: [ReactiveFormsModule, MatButtonModule, MatDatepickerModule, MatDialogModule, MatFormFieldModule, MatInputModule],
   templateUrl: './event-dialog.html',
   styles: `.fields { display: flex; flex-direction: column; min-width: min(360px, 80vw); padding-top: 8px; }`,
