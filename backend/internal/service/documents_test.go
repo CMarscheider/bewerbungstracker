@@ -600,3 +600,38 @@ func TestSaveAgentDocumentsWithoutCV(t *testing.T) {
 	}
 	mustState(t, svc, a.ID, service.DocsRequested)
 }
+
+func TestSaveAgentDocumentsRejectsNUL(t *testing.T) {
+	svc, id := docsSetup(t, sampleJob(), service.WithPDFConverter(&fakeConverter{}))
+	cases := map[string]func(*service.DocumentsInput){
+		"cover_letter": func(in *service.DocumentsInput) { in.CoverLetter = "Hallo\x00Welt" },
+		"mail_subject": func(in *service.DocumentsInput) { in.MailSubject = "Bewerbung\x00" },
+		"mail_body":    func(in *service.DocumentsInput) { in.MailBody = "Text\x00" },
+		"profile_line": func(in *service.DocumentsInput) { in.ProfileLine = ptr("Profil\x00") },
+		"highlights":   func(in *service.DocumentsInput) { in.Highlights = []string{"Type\x00Script"} },
+	}
+	for field, mutate := range cases {
+		in := sampleDocs()
+		mutate(&in)
+		var ve *domain.ValidationError
+		if _, err := svc.SaveAgentDocuments(ctx, id, in); !errors.As(err, &ve) || ve.Field != field {
+			t.Errorf("%s: erwartet ValidationError, bekommen %v", field, err)
+		}
+	}
+	mustState(t, svc, id, service.DocsRequested)
+}
+
+func TestSaveAgentDocumentsProfileLine(t *testing.T) {
+	svc, id := docsSetup(t, sampleJob(), service.WithPDFConverter(&fakeConverter{}))
+	in := sampleDocs()
+	in.ProfileLine = ptr("Zeile 1\nZeile 2")
+	var ve *domain.ValidationError
+	if _, err := svc.SaveAgentDocuments(ctx, id, in); !errors.As(err, &ve) || ve.Field != "profile_line" {
+		t.Fatalf("Zeilenumbruch: erwartet ValidationError profile_line, bekommen %v", err)
+	}
+	in.ProfileLine = ptr("  Junior Frontend-Entwickler.  ")
+	d, err := svc.SaveAgentDocuments(ctx, id, in)
+	if err != nil || d.ProfileLine == nil || *d.ProfileLine != "Junior Frontend-Entwickler." {
+		t.Fatalf("getrimmt: %v %v", err, d.ProfileLine)
+	}
+}

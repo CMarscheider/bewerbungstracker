@@ -123,9 +123,14 @@ Jeder Aufruf braucht `Authorization: Bearer <token>`, sonst 401.
   `language` (`de`/`en`), `cover_letter`, optional `profile_line` und `highlights` (höchstens 8, nur
   vorhandene Kenntnisse), `mail_subject`, `mail_body`. Der Server rendert Anschreiben + Lebenslauf als ein
   PDF und legt mit Bewerbungsadresse einen Gmail-Entwurf an. Idempotent: dieselbe Version mit gleichem
-  Inhalt erneut → 200 ohne Wirkung. 409, wenn keine Unterlagen angefordert sind, kein Lebenslauf
-  gespeichert ist oder die Version veraltet ist; 503, wenn der PDF-Dienst nicht erreichbar ist (später
-  erneut liefern, nichts wurde gespeichert).
+  Inhalt erneut → 200 ohne Wirkung. Antworten:
+  - 400 – ungültige Eingabe (siehe `detail`/`field`): korrigieren, nicht unverändert wiederholen.
+  - 404 – unbekannte ID.
+  - 409 – nicht (mehr) angefordert, kein Lebenslauf gespeichert oder Version veraltet: Liste neu lesen.
+  - 503 – PDF-Dienst nicht erreichbar: später erneut liefern; nichts wurde gespeichert, der Zustand
+    bleibt `angefordert`.
+  - 500 – Renderfehler: der Zustand wird `fehler`; nicht erneut liefern, bis die Unterlagen in der
+    Oberfläche wieder angefordert werden.
 
 Die Agent-API ist gedrosselt: mit gültigem Token 2 Anfragen/s (Burst 20), ohne gültiges Token 1/s
 (Burst 10), darüber 429 mit `Retry-After`. Abgewiesene Anfragen landen höchstens einmal pro Minute

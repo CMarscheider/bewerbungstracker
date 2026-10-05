@@ -462,6 +462,9 @@ func normalizeDocuments(in DocumentsInput, agent bool) (DocumentsInput, error) {
 	if agent && in.Version < 1 {
 		return in, &domain.ValidationError{Field: "version", Detail: "muss mindestens 1 sein"}
 	}
+	if err := rejectNUL(in); err != nil {
+		return in, err
+	}
 	in.Language = strings.TrimSpace(in.Language)
 	if in.Language != "de" && in.Language != "en" {
 		return in, &domain.ValidationError{Field: "language", Detail: "muss de oder en sein"}
@@ -480,6 +483,9 @@ func normalizeDocuments(in DocumentsInput, agent bool) (DocumentsInput, error) {
 		return in, err
 	}
 	in.ProfileLine = cleanOptional(in.ProfileLine)
+	if in.ProfileLine != nil && strings.ContainsAny(*in.ProfileLine, "\r\n") {
+		return in, &domain.ValidationError{Field: "profile_line", Detail: "muss eine Zeile sein"}
+	}
 	highlights := make([]string, 0, len(in.Highlights))
 	for _, h := range in.Highlights {
 		if h = strings.TrimSpace(h); h != "" {
@@ -515,4 +521,24 @@ func toDocuments(d store.ApplicationDocument) (Documents, error) {
 		Highlights: highlights, MailSubject: d.MailSubject, MailBody: d.MailBody,
 		FileName: d.FileName, RenderedAt: d.RenderedAt, UpdatedAt: d.UpdatedAt,
 	}, nil
+}
+
+// rejectNUL weist NUL-Zeichen ab; PostgreSQL kann sie in text/jsonb nicht speichern.
+func rejectNUL(in DocumentsInput) error {
+	fields := []struct{ name, value string }{
+		{"language", in.Language}, {"cover_letter", in.CoverLetter},
+		{"mail_subject", in.MailSubject}, {"mail_body", in.MailBody},
+	}
+	if in.ProfileLine != nil {
+		fields = append(fields, struct{ name, value string }{"profile_line", *in.ProfileLine})
+	}
+	for _, h := range in.Highlights {
+		fields = append(fields, struct{ name, value string }{"highlights", h})
+	}
+	for _, f := range fields {
+		if strings.ContainsRune(f.value, 0) {
+			return &domain.ValidationError{Field: f.name, Detail: "darf kein NUL-Zeichen enthalten"}
+		}
+	}
+	return nil
 }

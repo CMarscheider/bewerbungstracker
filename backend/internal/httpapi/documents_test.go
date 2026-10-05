@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"bewerbungsmanager/internal/documents"
 	"bewerbungsmanager/internal/httpapi"
 	"bewerbungsmanager/internal/service"
 	"bewerbungsmanager/internal/testdb"
@@ -39,17 +40,42 @@ func (d *fakeDrafter) count() int {
 // newDocumentsTestServer startet einen Server mit Agent-Token, Fake-PDF-Dienst und Fake-Drafter.
 func newDocumentsTestServer(t *testing.T) (*httptest.Server, *fakeDrafter) {
 	t.Helper()
-	testdb.Reset(t, testPool)
 	drafter := &fakeDrafter{}
-	svc := service.New(testPool, time.Now,
-		service.WithPDFConverter(fakeConverter{}), service.WithDrafter(drafter, "erika@example.com"))
+	return newDocumentsTestServerWith(t,
+		service.WithPDFConverter(fakeConverter{}), service.WithDrafter(drafter, "erika@example.com")), drafter
+}
+
+// newDocumentsTestServerWith startet einen Server mit Agent-Token und den angegebenen Diensten.
+func newDocumentsTestServerWith(t *testing.T, opts ...service.Option) *httptest.Server {
+	t.Helper()
+	testdb.Reset(t, testPool)
+	svc := service.New(testPool, time.Now, opts...)
 	h, err := httpapi.NewRouter(svc, slog.New(slog.NewTextHandler(io.Discard, nil)), httpapi.WithAgentToken(agentToken))
 	if err != nil {
 		t.Fatal(err)
 	}
 	srv := httptest.NewServer(h)
 	t.Cleanup(srv.Close)
-	return srv, drafter
+	return srv
+}
+
+// unavailableConverter simuliert einen nicht erreichbaren PDF-Dienst.
+type unavailableConverter struct{}
+
+func (unavailableConverter) Convert(context.Context, []byte, map[string][]byte) ([]byte, error) {
+	return nil, documents.ErrUnavailable
+}
+
+// requestedApplication legt Lebenslauf und eine Stelle an (job: JSON wie agentJobBody) und fordert
+// Unterlagen an; liefert den Pfad der Agent-Unterlagen und die ID.
+func requestedApplication(t *testing.T, srv *httptest.Server, job string) (string, string) {
+	t.Helper()
+	expectStatus(t, call(t, srv, http.MethodPut, "/api/v1/cv", sampleCV()), http.StatusOK)
+	created := callWith(t, srv, http.MethodPost, "/api/agent/applications", agentToken, json.RawMessage(job))
+	expectStatus(t, created, http.StatusCreated)
+	id := created.object(t)["id"].(string)
+	expectStatus(t, call(t, srv, http.MethodPost, "/api/v1/applications/"+id+"/documents/request", nil), http.StatusOK)
+	return "/api/agent/applications/" + id + "/documents", id
 }
 
 func documentsBody(version int) map[string]any {
@@ -108,7 +134,8 @@ func TestDocumentsFlow(t *testing.T) {
 	put := callWith(t, srv, http.MethodPut, "/api/agent/applications/"+id+"/documents", agentToken, documentsBody(1))
 	expectStatus(t, put, http.StatusOK)
 	docs := put.object(t)
-	if docs["version"] != float64(1) || docs["language"] != "de" || !strings.HasPrefix(docs["file_name"].(string), "Bewerbung_") {
+	fileName, ok := docs["file_name"].(string)
+	if docs["version"] != float64(1) || docs["language"] != "de" || !ok || !strings.HasPrefix(fileName, "Bewerbung_") {
 		t.Fatalf("Unterlagen: %v", docs)
 	}
 	if drafter.count() != 1 {
@@ -160,21 +187,35 @@ func TestAgentPutDocumentsValidatesAndNeedsToken(t *testing.T) {
 	expectStatus(t, created, http.StatusCreated)
 	path := "/api/agent/applications/" + created.object(t)["id"].(string) + "/documents"
 
-	cases := map[string]func(map[string]any){
-		"Betreff mit Zeilenumbruch": func(b map[string]any) { b["mail_subject"] = "Bewerbung\nBcc: x@y.de" },
-		"Anschreiben zu lang":       func(b map[string]any) { b["cover_letter"] = strings.Repeat("a", 3001) },
-		"Anschreiben leer":          func(b map[string]any) { b["cover_letter"] = "   " },
-		"Sprache":                   func(b map[string]any) { b["language"] = "fr" },
-		"ohne Version":              func(b map[string]any) { delete(b, "version") },
-		"Version 0":                 func(b map[string]any) { b["version"] = 0 },
-		"zu viele Schwerpunkte":     func(b map[string]any) { b["highlights"] = strings.Split("a,b,c,d,e,f,g,h,i", ",") },
-		"ohne Mailtext":             func(b map[string]any) { delete(b, "mail_body") },
+	const (
+		byValidator = "/problems/bad-request"      // OpenAPI-Validator
+		byService   = "/problems/validation-error" // erst der Service erkennt es
+	)
+	cases := map[string]struct {
+		mutate  func(map[string]any)
+		problem string
+	}{
+		"Betreff mit Zeilenumbruch": {func(b map[string]any) { b["mail_subject"] = "Bewerbung\nBcc: x@y.de" }, byValidator},
+		"Anschreiben zu lang":       {func(b map[string]any) { b["cover_letter"] = strings.Repeat("a", 3001) }, byValidator},
+		"Anschreiben leer":          {func(b map[string]any) { b["cover_letter"] = "   " }, byValidator},
+		"Sprache":                   {func(b map[string]any) { b["language"] = "fr" }, byValidator},
+		"ohne Version":              {func(b map[string]any) { delete(b, "version") }, byValidator},
+		"Version 0":                 {func(b map[string]any) { b["version"] = 0 }, byValidator},
+		"zu viele Schwerpunkte":     {func(b map[string]any) { b["highlights"] = strings.Split("a,b,c,d,e,f,g,h,i", ",") }, byValidator},
+		"ohne Mailtext":             {func(b map[string]any) { delete(b, "mail_body") }, byValidator},
+		"Profil mit Zeilenumbruch":  {func(b map[string]any) { b["profile_line"] = "Zeile 1\nZeile 2" }, byValidator},
+		"NUL im Anschreiben":        {func(b map[string]any) { b["cover_letter"] = "Hallo\x00Welt" }, byService},
 	}
-	for name, mutate := range cases {
+	for name, c := range cases {
 		b := documentsBody(1)
-		mutate(b)
-		if res := callWith(t, srv, http.MethodPut, path, agentToken, b); res.Status != http.StatusBadRequest {
+		c.mutate(b)
+		res := callWith(t, srv, http.MethodPut, path, agentToken, b)
+		if res.Status != http.StatusBadRequest {
 			t.Errorf("%s: Status %d; Body: %s", name, res.Status, res.Body)
+			continue
+		}
+		if typ := res.object(t)["type"]; typ != c.problem {
+			t.Errorf("%s: Problem-Typ %v, erwartet %s", name, typ, c.problem)
 		}
 	}
 
@@ -184,4 +225,47 @@ func TestAgentPutDocumentsValidatesAndNeedsToken(t *testing.T) {
 
 	// Nicht angefordert → 409.
 	expectProblem(t, callWith(t, srv, http.MethodPut, path, agentToken, documentsBody(1)), http.StatusConflict, "/problems/conflict")
+}
+
+func TestAgentPutDocumentsPDFUnavailable(t *testing.T) {
+	srv := newDocumentsTestServerWith(t, service.WithPDFConverter(unavailableConverter{}))
+	path, id := requestedApplication(t, srv, agentJobBody)
+	expectProblem(t, callWith(t, srv, http.MethodPut, path, agentToken, documentsBody(1)),
+		http.StatusServiceUnavailable, "/problems/service-unavailable")
+	if s := call(t, srv, http.MethodGet, "/api/v1/applications/"+id, nil).object(t)["documents_state"]; s != "angefordert" {
+		t.Errorf("documents_state = %v, erwartet angefordert", s)
+	}
+}
+
+func TestAgentPutDocumentsStaleVersion(t *testing.T) {
+	srv, _ := newDocumentsTestServer(t)
+	path, id := requestedApplication(t, srv, agentJobBody)
+	expectStatus(t, callWith(t, srv, http.MethodPut, path, agentToken, documentsBody(1)), http.StatusOK)
+	expectStatus(t, call(t, srv, http.MethodPost, "/api/v1/applications/"+id+"/documents/request", nil), http.StatusOK)
+	changed := documentsBody(1)
+	changed["cover_letter"] = "Anders formuliert."
+	p := expectProblem(t, callWith(t, srv, http.MethodPut, path, agentToken, changed), http.StatusConflict, "/problems/conflict")
+	if p["detail"] != "Version ist veraltet" {
+		t.Errorf("detail = %v", p["detail"])
+	}
+}
+
+func TestCreateDraftWithoutAddress(t *testing.T) {
+	srv, drafter := newDocumentsTestServer(t)
+	job := strings.Replace(agentJobBody, `"contact_email":"jobs@acme.example",`, "", 1)
+	path, id := requestedApplication(t, srv, job)
+	expectStatus(t, callWith(t, srv, http.MethodPut, path, agentToken, documentsBody(1)), http.StatusOK)
+	expectProblem(t, call(t, srv, http.MethodPost, "/api/v1/applications/"+id+"/documents/draft", nil),
+		http.StatusBadRequest, "/problems/validation-error")
+	if drafter.count() != 0 {
+		t.Errorf("Entwürfe: %d", drafter.count())
+	}
+}
+
+func TestCreateDraftWithoutDrafter(t *testing.T) {
+	srv := newDocumentsTestServerWith(t, service.WithPDFConverter(fakeConverter{}))
+	path, id := requestedApplication(t, srv, agentJobBody)
+	expectStatus(t, callWith(t, srv, http.MethodPut, path, agentToken, documentsBody(1)), http.StatusOK)
+	expectProblem(t, call(t, srv, http.MethodPost, "/api/v1/applications/"+id+"/documents/draft", nil),
+		http.StatusServiceUnavailable, "/problems/service-unavailable")
 }
