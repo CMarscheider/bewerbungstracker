@@ -13,16 +13,34 @@ const pdfTimeout = 45 * time.Second
 
 // CVPDF erzeugt den gespeicherten Lebenslauf als PDF und liefert dazu den Dateinamen.
 func (s *Service) CVPDF(ctx context.Context) ([]byte, string, error) {
-	cv, err := s.GetCV(ctx)
+	doc, photo, err := s.loadCV(ctx)
 	if err != nil {
 		return nil, "", err
 	}
+	html, err := documents.RenderCV(doc, photo)
+	if err != nil {
+		return nil, "", err
+	}
+	pdf, err := s.convertPDF(ctx, html)
+	if err != nil {
+		return nil, "", err
+	}
+	return pdf, documents.CVFileName(doc), nil
+}
+
+// loadCV liest Lebenslauf und Foto (nil, wenn keins gespeichert ist).
+// Ohne Lebenslauf: NotFoundError{Resource: "Lebenslauf"}.
+func (s *Service) loadCV(ctx context.Context) (documents.CV, []byte, error) {
+	cv, err := s.GetCV(ctx)
+	if err != nil {
+		return documents.CV{}, nil, err
+	}
 	if cv.Data == nil {
-		return nil, "", &NotFoundError{Resource: "Lebenslauf"}
+		return documents.CV{}, nil, &NotFoundError{Resource: "Lebenslauf"}
 	}
 	doc, err := documents.ParseCV(cv.Data)
 	if err != nil {
-		return nil, "", err
+		return documents.CV{}, nil, err
 	}
 	var photo []byte
 	p, err := s.GetCVPhoto(ctx)
@@ -31,23 +49,21 @@ func (s *Service) CVPDF(ctx context.Context) ([]byte, string, error) {
 	case err == nil:
 		photo = p.Data
 	case !errors.As(err, &nf):
-		return nil, "", err
+		return documents.CV{}, nil, err
 	}
-	html, err := documents.RenderCV(doc, photo)
-	if err != nil {
-		return nil, "", err
-	}
+	return doc, photo, nil
+}
+
+// convertPDF wandelt HTML über den PDF-Dienst um; fehlt er oder ist er nicht erreichbar: UnavailableError.
+func (s *Service) convertPDF(ctx context.Context, html []byte) ([]byte, error) {
 	if s.pdf == nil {
-		return nil, "", &UnavailableError{Detail: "PDF-Erzeugung ist nicht eingerichtet (GOTENBERG_URL fehlt)"}
+		return nil, &UnavailableError{Detail: "PDF-Erzeugung ist nicht eingerichtet (GOTENBERG_URL fehlt)"}
 	}
 	ctx, cancel := context.WithTimeout(ctx, pdfTimeout)
 	defer cancel()
 	pdf, err := s.pdf.Convert(ctx, html, documents.Fonts())
 	if errors.Is(err, documents.ErrUnavailable) {
-		return nil, "", &UnavailableError{Detail: "PDF-Dienst ist gerade nicht erreichbar", Err: err}
+		return nil, &UnavailableError{Detail: "PDF-Dienst ist gerade nicht erreichbar", Err: err}
 	}
-	if err != nil {
-		return nil, "", err
-	}
-	return pdf, documents.CVFileName(doc), nil
+	return pdf, err
 }

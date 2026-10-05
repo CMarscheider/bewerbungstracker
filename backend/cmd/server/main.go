@@ -16,6 +16,7 @@ import (
 	"bewerbungsmanager/internal/db"
 	"bewerbungsmanager/internal/documents"
 	"bewerbungsmanager/internal/httpapi"
+	"bewerbungsmanager/internal/mail"
 	"bewerbungsmanager/internal/service"
 )
 
@@ -49,6 +50,14 @@ func run(logger *slog.Logger) error {
 		opts = append(opts, service.WithPDFConverter(documents.NewGotenberg(cfg.GotenbergURL)))
 	} else {
 		logger.Warn("GOTENBERG_URL nicht gesetzt – PDF-Erzeugung ist deaktiviert")
+	}
+	if cfg.GmailAddress != "" {
+		drafter := mail.NewIMAPDrafter(mail.IMAPConfig{
+			Addr: "imap.gmail.com:993", Username: cfg.GmailAddress, Password: cfg.GmailAppPassword,
+		})
+		opts = append(opts, service.WithDrafter(drafter, cfg.GmailAddress))
+	} else {
+		logger.Info("GMAIL_ADDRESS nicht gesetzt – Gmail-Entwürfe sind deaktiviert")
 	}
 	if cfg.AgentToken == "" {
 		logger.Info("AGENT_TOKEN nicht gesetzt – Agent-API ist deaktiviert")

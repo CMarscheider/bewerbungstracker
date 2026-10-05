@@ -17,11 +17,18 @@ type PDFConverter interface {
 	Convert(ctx context.Context, html []byte, assets map[string][]byte) ([]byte, error)
 }
 
+// Drafter legt eine fertige Nachricht als Entwurf ab (Produktion: mail.IMAPDrafter).
+type Drafter interface {
+	Save(ctx context.Context, msg []byte) error
+}
+
 // Service bündelt alle Anwendungsfälle.
 type Service struct {
-	pool *pgxpool.Pool
-	now  func() time.Time
-	pdf  PDFConverter
+	pool      *pgxpool.Pool
+	now       func() time.Time
+	pdf       PDFConverter
+	drafter   Drafter
+	draftFrom string // Absenderadresse der Entwürfe; den Namen liefert der Lebenslauf
 }
 
 // Option konfiguriert optionale Abhängigkeiten.
@@ -29,6 +36,12 @@ type Option func(*Service)
 
 // WithPDFConverter aktiviert die PDF-Erzeugung.
 func WithPDFConverter(c PDFConverter) Option { return func(s *Service) { s.pdf = c } }
+
+// WithDrafter aktiviert das Anlegen von Mail-Entwürfen; from ist die reine Absenderadresse,
+// der Anzeigename kommt aus dem gespeicherten Lebenslauf.
+func WithDrafter(d Drafter, from string) Option {
+	return func(s *Service) { s.drafter, s.draftFrom = d, from }
+}
 
 // New erzeugt einen Service; now ist in Produktion time.Now.
 func New(pool *pgxpool.Pool, now func() time.Time, opts ...Option) *Service {
