@@ -13,12 +13,13 @@ import { formatDate } from '../../core/dates';
 import { DEADLINE_LABELS, EVENT_LABELS, eventLabel } from '../../shared/labels';
 import { FitScore } from '../../shared/fit-score';
 import { StatusBadge } from '../../shared/status-badge';
+import { ApplicationDocuments } from './application-documents';
 import { CONTACT_EMAIL_ERROR, contactEmailControl } from './contact-email';
 import { EventDialog, EventDialogData } from './event-dialog';
 
 @Component({
   selector: 'app-application-detail',
-  imports: [ReactiveFormsModule, RouterLink, MatButtonModule, MatExpansionModule, MatFormFieldModule, MatInputModule, FitScore, StatusBadge],
+  imports: [ReactiveFormsModule, RouterLink, MatButtonModule, MatExpansionModule, MatFormFieldModule, MatInputModule, FitScore, StatusBadge, ApplicationDocuments],
   templateUrl: './application-detail.html',
   styleUrl: './application-detail.scss',
 })
@@ -118,6 +119,13 @@ export class ApplicationDetail {
           this.api.addEvent(this.id(), event).subscribe({ next: () => this.load(this.id()), error: () => undefined });
         }
       });
+  }
+
+  /** Neu geladene Bewerbung aus dem Bereich Unterlagen; veraltete Antworten verwerfen. */
+  protected documentsChanged(app: Application): void {
+    if (app.id === this.id()) {
+      this.application.set(app);
+    }
   }
 
   protected undo(): void {

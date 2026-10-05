@@ -1,0 +1,117 @@
+@let app = application();
+<section class="documents" aria-labelledby="documents-heading">
+  <h2 id="documents-heading" tabindex="-1">Unterlagen</h2>
+
+  <div role="status" class="status">
+    @switch (state()) {
+      @case ('angefordert') {
+        <p>Claude erstellt die Unterlagen beim nächsten Lauf.</p>
+      }
+      @case ('erstellt') {
+        <p>Anschreiben und Lebenslauf sind erstellt.</p>
+      }
+      @case ('entwurf_angelegt') {
+        <p>
+          Entwurf liegt in Gmail
+          @if (app.gmail_draft_at) {
+            (angelegt am {{ app.gmail_draft_at | date: 'dd.MM.yyyy, HH:mm' }} Uhr)
+          }
+          – <a class="gmail" [href]="gmailUrl" target="_blank" rel="noopener">Entwürfe in Gmail öffnen</a>
+        </p>
+        @if (draftStale()) {
+          <p class="stale">Der Gmail-Entwurf enthält noch die alte Fassung.</p>
+        }
+      }
+      @case ('portal') {
+        <p>
+          Keine Bewerbungsadresse – über das Portal bewerben
+          @if (app.job_url) {
+            – <a class="portal" [href]="app.job_url" target="_blank" rel="noopener">Stellenanzeige öffnen</a>
+          }
+        </p>
+      }
+    }
+    @if (loading()) {
+      <p class="muted">Lade Unterlagen …</p>
+    } @else if (loadError()) {
+      <p class="error">Die Unterlagen konnten nicht geladen werden.</p>
+    }
+  </div>
+
+  @if (state() === 'fehler' || app.documents_error) {
+    <p role="alert" class="error message">{{ app.documents_error || 'Die Unterlagen konnten nicht erstellt werden.' }}</p>
+  }
+
+  @if (state() === 'keine') {
+    <p class="muted">Claude schreibt Anschreiben und Mailtext passend zur Stelle; dein Lebenslauf wird angehängt. Gesendet wird nie automatisch.</p>
+  }
+
+  <div class="actions">
+    @switch (state()) {
+      @case ('keine') {
+        <button mat-flat-button type="button" class="request" (click)="request()" [disabled]="busy()">Unterlagen erstellen</button>
+      }
+      @case ('angefordert') {
+        <button mat-stroked-button type="button" class="refresh" (click)="refresh()" [disabled]="busy()">Status aktualisieren</button>
+      }
+      @default {
+        @if (loadError()) {
+          <button mat-stroked-button type="button" class="retry" (click)="loadDocuments()">Erneut versuchen</button>
+        }
+        @if (docs()) {
+          <a mat-stroked-button class="pdf" [href]="pdfUrl()" target="_blank" rel="noopener" aria-label="PDF ansehen (öffnet in neuem Tab)">PDF ansehen</a>
+        }
+        @if (canDraft()) {
+          <button mat-flat-button type="button" class="draft" (click)="createDraft()" [disabled]="busy() || form.dirty">
+            {{ state() === 'entwurf_angelegt' ? 'Gmail-Entwurf neu anlegen' : 'Gmail-Entwurf anlegen' }}
+          </button>
+          @if (form.dirty) {
+            <span class="muted">Erst speichern.</span>
+          }
+        }
+        @if (!loading()) {
+          <button mat-button type="button" class="request" (click)="request()" [disabled]="busy()">Erneut anfordern</button>
+        }
+      }
+    }
+  </div>
+
+  @if (docs()) {
+    <form class="form" [formGroup]="form" (ngSubmit)="save()" aria-label="Unterlagen bearbeiten">
+      <div class="language">
+        <span id="documents-language">Sprache</span>
+        <mat-button-toggle-group formControlName="language" aria-labelledby="documents-language">
+          <mat-button-toggle value="de">Deutsch</mat-button-toggle>
+          <mat-button-toggle value="en">Englisch</mat-button-toggle>
+        </mat-button-toggle-group>
+      </div>
+      <mat-form-field>
+        <mat-label>Anschreiben</mat-label>
+        <textarea matInput formControlName="cover_letter" rows="12" maxlength="3000" required></textarea>
+        <mat-hint align="end">{{ form.controls.cover_letter.value.length }} / 3000</mat-hint>
+        <mat-error>Bitte ein Anschreiben eingeben.</mat-error>
+      </mat-form-field>
+      <mat-form-field>
+        <mat-label>Profil-Satz im Lebenslauf</mat-label>
+        <input matInput formControlName="profile_line" maxlength="400" />
+        <mat-hint>Leer lassen, um das Profil aus dem Lebenslauf zu verwenden.</mat-hint>
+      </mat-form-field>
+      <mat-form-field>
+        <mat-label>Betreff der Mail</mat-label>
+        <input matInput formControlName="mail_subject" maxlength="200" required />
+        <mat-error>Bitte einen Betreff eingeben.</mat-error>
+      </mat-form-field>
+      <mat-form-field>
+        <mat-label>Mailtext</mat-label>
+        <textarea matInput formControlName="mail_body" rows="6" maxlength="3000" required></textarea>
+        <mat-error>Bitte einen Mailtext eingeben.</mat-error>
+      </mat-form-field>
+      @if (docs()!.highlights.length) {
+        <p class="highlights muted">Schwerpunkte: {{ docs()!.highlights.join(', ') }}</p>
+      }
+      <div class="actions">
+        <button mat-flat-button type="submit" class="save" [disabled]="busy() || form.invalid">Speichern und neu rendern</button>
+      </div>
+    </form>
+  }
+</section>

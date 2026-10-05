@@ -16,6 +16,7 @@ const application: Application = {
   created_by_agent: false,
   created_at: '2026-09-01T10:00:00+02:00',
   updated_at: '2026-09-10T10:00:00+02:00',
+  documents_state: 'keine',
   events: [
     { id: 'e1', type: 'Beworben', occurred_on: '2026-09-01', created_at: '2026-09-01T10:00:00+02:00' },
     { id: 'e2', type: 'Interview', occurred_on: '2026-09-10', interview_round: 1, note: 'Mit CTO', created_at: '2026-09-05T10:00:00+02:00' },
@@ -27,6 +28,8 @@ async function render(allowed: EventType[], app: Application = application) {
     getApplication: vi.fn(() => of(app)),
     listAllowedEvents: vi.fn(() => of(allowed)),
     updateApplication: vi.fn((_id: string, body: object) => of({ ...app, ...body })),
+    requestDocuments: vi.fn(() => of({ ...app, documents_state: 'angefordert' })),
+    getDocuments: vi.fn(() => throwError(() => ({ status: 404 }))),
   };
   TestBed.configureTestingModule({ imports: [ApplicationDetail], providers: [provideRouter([]), { provide: Api, useValue: api }] });
   const fixture = TestBed.createComponent(ApplicationDetail);
@@ -133,6 +136,23 @@ describe('ApplicationDetail', () => {
     component.saveDetails();
     expect(api.updateApplication).not.toHaveBeenCalled();
     expect(el.textContent).toContain('Bitte eine gültige E-Mail-Adresse eingeben');
+  });
+
+  it('zeigt den Bereich Unterlagen unter der Passung', async () => {
+    const { el } = await render([], agentJob);
+    const sections = [...el.querySelectorAll('[data-testid="fit"], app-application-documents')];
+    expect(sections.map((s) => s.tagName.toLowerCase())).toEqual(['section', 'app-application-documents']);
+    expect(el.querySelector('app-application-documents')?.textContent).toContain('Unterlagen');
+  });
+
+  it('übernimmt die geänderte Bewerbung aus dem Bereich Unterlagen', async () => {
+    const { api, fixture, el } = await render([], agentJob);
+    el.querySelector<HTMLButtonElement>('app-application-documents button.request')!.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(api.requestDocuments).toHaveBeenCalledWith('a1');
+    expect(el.querySelector('app-application-documents [role="status"]')?.textContent).toContain('Claude erstellt die Unterlagen beim nächsten Lauf.');
   });
 
   it('zeigt eine Fehlermeldung, wenn die Bewerbung nicht geladen werden kann', async () => {

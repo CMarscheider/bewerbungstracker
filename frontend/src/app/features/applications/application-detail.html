@@ -16,6 +16,8 @@
     </section>
   }
 
+  <app-application-documents [application]="app" (changed)="documentsChanged($event)" />
+
   @if (app.posting_text) {
     <mat-expansion-panel class="posting">
       <mat-expansion-panel-header>

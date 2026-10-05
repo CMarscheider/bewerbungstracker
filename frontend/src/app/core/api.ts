@@ -13,6 +13,8 @@ import {
   Cv,
   CvReview,
   Deadline,
+  Documents,
+  DocumentsInput,
   Event,
   EventType,
   FunnelStep,
@@ -21,7 +23,7 @@ import {
   Summary,
 } from '../api/models';
 import { SILENT_NOT_FOUND } from './error.interceptor';
-import { ApplicationsService, CompaniesService, CvService, DashboardService } from '../api/services';
+import { ApplicationsService, CompaniesService, CvService, DashboardService, DocumentsService } from '../api/services';
 
 export interface ApplicationFilter {
   phase?: Phase;
@@ -38,6 +40,7 @@ export class Api {
   private readonly applications = inject(ApplicationsService);
   private readonly dashboard = inject(DashboardService);
   private readonly cv = inject(CvService);
+  private readonly documents = inject(DocumentsService);
 
   listCompanies(): Observable<Company[]> {
     return this.companies.listCompanies();
@@ -115,5 +118,19 @@ export class Api {
   }
   closeCvReview(): Observable<void> {
     return this.cv.closeCvReview();
+  }
+
+  requestDocuments(id: string): Observable<Application> {
+    return this.documents.requestDocuments({ id });
+  }
+  /** 404 heißt „noch keine Unterlagen“ und wird nicht als Fehler gemeldet. */
+  getDocuments(id: string): Observable<Documents> {
+    return this.documents.getDocuments({ id }, new HttpContext().set(SILENT_NOT_FOUND, true));
+  }
+  updateDocuments(id: string, body: DocumentsInput): Observable<Documents> {
+    return this.documents.updateDocuments({ id, body });
+  }
+  createDraft(id: string): Observable<Application> {
+    return this.documents.createDraft({ id });
   }
 }
