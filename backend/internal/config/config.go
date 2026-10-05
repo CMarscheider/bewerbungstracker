@@ -4,6 +4,8 @@ package config
 import (
 	"errors"
 	"fmt"
+	"strings"
+	"unicode"
 )
 
 // minAgentTokenLen schützt vor schwachen Tokens; z. B. `openssl rand -hex 32` erzeugt 64 Zeichen.
@@ -29,6 +31,9 @@ func Load(getenv func(string) string) (Config, error) {
 	}
 	if c.AgentToken != "" && len(c.AgentToken) < minAgentTokenLen {
 		return Config{}, fmt.Errorf("AGENT_TOKEN muss mindestens %d Zeichen haben", minAgentTokenLen)
+	}
+	if strings.ContainsFunc(c.AgentToken, unicode.IsSpace) {
+		return Config{}, errors.New("AGENT_TOKEN darf keine Leerzeichen oder Zeilenumbrüche enthalten")
 	}
 	return c, nil
 }

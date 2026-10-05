@@ -58,3 +58,12 @@ func TestLoadAgentToken(t *testing.T) {
 		t.Fatalf("ohne AGENT_TOKEN: %q, %v", c.AgentToken, err)
 	}
 }
+
+func TestLoadRejectsWhitespaceInAgentToken(t *testing.T) {
+	a, b := strings.Repeat("a", 32), strings.Repeat("b", 16)
+	for _, tok := range []string{a + "\r", a + "\n", b + " " + b} {
+		if _, err := Load(env(map[string]string{"DATABASE_URL": "postgres://x", "AGENT_TOKEN": tok})); err == nil {
+			t.Errorf("AGENT_TOKEN %q mit Whitespace muss abgelehnt werden", tok)
+		}
+	}
+}
