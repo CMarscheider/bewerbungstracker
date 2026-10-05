@@ -113,10 +113,13 @@ Jeder Aufruf braucht `Authorization: Bearer <token>`, sonst 401.
   (in der Oberfläche abgeschlossen oder schon abgeliefert); nach einer verlorenen Antwort vor einem
   erneuten Versuch die Liste neu lesen.
 
+Die Agent-API ist gedrosselt: mit gültigem Token 2 Anfragen/s (Burst 20), ohne gültiges Token 1/s
+(Burst 10), darüber 429 mit `Retry-After`. Abgewiesene Anfragen landen höchstens einmal pro Minute
+zusammengefasst im Log; die Container-Logs rotieren (3 × 10 MB).
+
 > **Achtung:** `/api/v1` hat keine Anmeldung. Bei einer Freigabe nach außen (z. B. Tailscale Funnel)
 > nur den Pfad `/api/agent/` weiterleiten (Ziel `http://127.0.0.1:4200/api/agent/`), nie `/`, `/api/v1`,
-> `/api/docs` oder `/api/openapi.json`. Rate-Limit und Logging der echten Client-IP sind Voraussetzung,
-> siehe „Offene Punkte“ in der [Design-Spec](docs/superpowers/specs/2026-10-03-agenten-automatisierung-design.md).
+> `/api/docs` oder `/api/openapi.json`.
 
 ## Projektstruktur
 
