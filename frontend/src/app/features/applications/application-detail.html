@@ -4,6 +4,27 @@
     <p class="company">{{ app.company_name }} <app-status-badge [status]="app.status" /></p>
   </header>
 
+  @if (app.fit_score != null) {
+    <section class="fit" data-testid="fit">
+      <h2>Passung</h2>
+      <p class="fit-row">
+        <app-fit-score [score]="app.fit_score" />
+        @if (app.fit_reason) {
+          <span>{{ app.fit_reason }}</span>
+        }
+      </p>
+    </section>
+  }
+
+  @if (app.posting_text) {
+    <mat-expansion-panel class="posting">
+      <mat-expansion-panel-header>
+        <mat-panel-title>Anzeigentext</mat-panel-title>
+      </mat-expansion-panel-header>
+      <p class="pre">{{ app.posting_text }}</p>
+    </mat-expansion-panel>
+  }
+
   <section>
     <h2>Nächster Schritt</h2>
     @if (allowed().length === 0) {
@@ -43,6 +64,11 @@
       <form class="form" [formGroup]="form" (ngSubmit)="saveDetails()">
         <mat-form-field><mat-label>Stelle</mat-label><input matInput formControlName="position_title" maxlength="300" required /></mat-form-field>
         <mat-form-field><mat-label>Link</mat-label><input matInput formControlName="job_url" type="url" maxlength="1000" /></mat-form-field>
+        <mat-form-field>
+          <mat-label>Bewerbungs-E-Mail</mat-label>
+          <input matInput formControlName="contact_email" type="email" maxlength="200" />
+          <mat-error>{{ contactEmailError }}</mat-error>
+        </mat-form-field>
         <mat-form-field><mat-label>Ort</mat-label><input matInput formControlName="location" maxlength="200" /></mat-form-field>
         <mat-form-field><mat-label>Quelle</mat-label><input matInput formControlName="source" maxlength="100" /></mat-form-field>
         <mat-form-field><mat-label>Notizen</mat-label><textarea matInput formControlName="notes" rows="3" maxlength="5000"></textarea></mat-form-field>
@@ -57,6 +83,14 @@
         <dd>
           @if (app.job_url) {
             <a [href]="app.job_url" target="_blank" rel="noopener">{{ app.job_url }}</a>
+          } @else {
+            –
+          }
+        </dd>
+        <dt>Bewerbungs-E-Mail</dt>
+        <dd>
+          @if (app.contact_email) {
+            <a [href]="'mailto:' + app.contact_email">{{ app.contact_email }}</a>
           } @else {
             –
           }

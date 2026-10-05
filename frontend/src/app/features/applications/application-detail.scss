@@ -4,6 +4,15 @@
   gap: 8px;
   margin: 0;
 }
+.fit-row {
+  align-items: baseline;
+  display: flex;
+  gap: 12px;
+  margin: 0;
+}
+.posting {
+  margin-top: 16px;
+}
 .buttons {
   display: flex;
   flex-wrap: wrap;

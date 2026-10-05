@@ -554,7 +554,7 @@ components:
         location: { type: string, maxLength: 200 }
         source: { type: string, maxLength: 100 }
         notes: { type: string, maxLength: 5000 }
-        contact_email: { type: string, maxLength: 200 }
+        contact_email: { type: string, maxLength: 200, pattern: '^$|^[^@\s]+@[^@\s]+\.[^@\s]+$' }
         first_event: { $ref: "#/components/schemas/NewEvent" }
     ApplicationPatch:
       type: object
@@ -566,7 +566,7 @@ components:
         location: { type: string, maxLength: 200 }
         source: { type: string, maxLength: 100 }
         notes: { type: string, maxLength: 5000 }
-        contact_email: { type: string, maxLength: 200 }
+        contact_email: { type: string, maxLength: 200, pattern: '^$|^[^@\s]+@[^@\s]+\.[^@\s]+$' }
     ApplicationSummary:
       type: object
       required: [id, company_id, company_name, position_title, status, phase, updated_at, last_event_on, created_by_agent]

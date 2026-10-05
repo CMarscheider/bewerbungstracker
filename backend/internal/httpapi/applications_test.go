@@ -123,3 +123,28 @@ func TestMalformedCompanyIDInBodyIsBadRequest(t *testing.T) {
 	})
 	expectProblem(t, r, http.StatusBadRequest, "")
 }
+
+func TestContactEmailIsValidatedAndClearable(t *testing.T) {
+	srv := newTestServer(t)
+	companyID := createCompany(t, srv, "Acme")
+	invalid := call(t, srv, http.MethodPost, "/api/v1/applications", map[string]any{
+		"company_id": companyID, "position_title": "Go-Entwickler", "contact_email": "keine-mail",
+		"first_event": map[string]any{"type": "Beworben", "occurred_on": today()},
+	})
+	expectProblem(t, invalid, http.StatusBadRequest, "")
+
+	created := call(t, srv, http.MethodPost, "/api/v1/applications", map[string]any{
+		"company_id": companyID, "position_title": "Go-Entwickler", "contact_email": "jobs@acme.de",
+		"first_event": map[string]any{"type": "Beworben", "occurred_on": today()},
+	})
+	expectStatus(t, created, http.StatusCreated)
+	base := "/api/v1/applications/" + created.object(t)["id"].(string)
+
+	expectProblem(t, call(t, srv, http.MethodPatch, base, map[string]any{"contact_email": "a@b"}), http.StatusBadRequest, "")
+
+	cleared := call(t, srv, http.MethodPatch, base, map[string]any{"contact_email": ""})
+	expectStatus(t, cleared, http.StatusOK)
+	if v, ok := cleared.object(t)["contact_email"]; ok {
+		t.Errorf("contact_email = %v, erwartet gelöscht", v)
+	}
+}

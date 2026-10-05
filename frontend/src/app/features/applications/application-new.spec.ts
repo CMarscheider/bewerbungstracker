@@ -24,7 +24,7 @@ function setup(createApplication: () => unknown = () => of({ id: 'a9' })) {
   const component = fixture.componentInstance as unknown as { form: FormGroup; submit(): void };
   const form = component.form;
   const submit = () => component.submit();
-  return { api, navigate, form, submit };
+  return { api, navigate, form, submit, fixture };
 }
 
 describe('ApplicationNew', () => {
@@ -55,6 +55,34 @@ describe('ApplicationNew', () => {
     expect(api.createApplication).toHaveBeenCalledWith(
       expect.objectContaining({ company_id: 'c2', first_event: { type: 'Vorgemerkt', occurred_on: '2026-10-01', due_on: '2026-10-15' } }),
     );
+  });
+
+  it('sendet die Bewerbungs-E-Mail als contact_email, leer wird weggelassen', () => {
+    const { api, form, submit } = setup();
+    form.patchValue({ company: 'Acme', position_title: 'Go', contact_email: ' jobs@acme.de ' });
+    submit();
+    expect(api.createApplication).toHaveBeenLastCalledWith(expect.objectContaining({ contact_email: 'jobs@acme.de' }));
+
+    form.patchValue({ contact_email: '' });
+    submit();
+    expect(api.createApplication).toHaveBeenLastCalledWith(expect.objectContaining({ contact_email: undefined }));
+  });
+
+  it('prüft das Format der Bewerbungs-E-Mail', () => {
+    const { api, form, submit } = setup();
+    form.patchValue({ company: 'Acme', position_title: 'Go', contact_email: 'keine-mail' });
+    submit();
+    expect(api.createApplication).not.toHaveBeenCalled();
+    expect(form.get('contact_email')?.invalid).toBe(true);
+  });
+
+  it('zeigt den Formatfehler der Bewerbungs-E-Mail an', async () => {
+    const { form, submit, fixture } = setup();
+    form.patchValue({ contact_email: 'keine-mail' });
+    submit();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Bitte eine gültige E-Mail-Adresse eingeben');
   });
 
   it('sendet nichts, solange Pflichtfelder fehlen', () => {

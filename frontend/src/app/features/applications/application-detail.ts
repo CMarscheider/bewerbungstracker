@@ -2,6 +2,7 @@ import { Component, computed, effect, inject, input, signal, untracked } from '@
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
+import { MatExpansionModule } from '@angular/material/expansion';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { Router, RouterLink } from '@angular/router';
@@ -10,12 +11,14 @@ import { Application, EventType, NewEvent } from '../../api/models';
 import { Api } from '../../core/api';
 import { formatDate } from '../../core/dates';
 import { DEADLINE_LABELS, EVENT_LABELS, eventLabel } from '../../shared/labels';
+import { FitScore } from '../../shared/fit-score';
 import { StatusBadge } from '../../shared/status-badge';
+import { CONTACT_EMAIL_ERROR, contactEmailControl } from './contact-email';
 import { EventDialog, EventDialogData } from './event-dialog';
 
 @Component({
   selector: 'app-application-detail',
-  imports: [ReactiveFormsModule, RouterLink, MatButtonModule, MatFormFieldModule, MatInputModule, StatusBadge],
+  imports: [ReactiveFormsModule, RouterLink, MatButtonModule, MatExpansionModule, MatFormFieldModule, MatInputModule, FitScore, StatusBadge],
   templateUrl: './application-detail.html',
   styleUrl: './application-detail.scss',
 })
@@ -39,10 +42,12 @@ export class ApplicationDetail {
   protected readonly deadlineLabels = DEADLINE_LABELS;
   protected readonly eventLabel = eventLabel;
   protected readonly formatDate = formatDate;
+  protected readonly contactEmailError = CONTACT_EMAIL_ERROR;
 
   protected readonly form = new FormGroup({
     position_title: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.pattern(/\S/)] }),
     job_url: new FormControl('', { nonNullable: true }),
+    contact_email: contactEmailControl(),
     location: new FormControl('', { nonNullable: true }),
     source: new FormControl('', { nonNullable: true }),
     notes: new FormControl('', { nonNullable: true }),
@@ -67,6 +72,7 @@ export class ApplicationDetail {
     this.form.setValue({
       position_title: a.position_title,
       job_url: a.job_url ?? '',
+      contact_email: a.contact_email ?? '',
       location: a.location ?? '',
       source: a.source ?? '',
       notes: a.notes ?? '',
@@ -83,6 +89,7 @@ export class ApplicationDetail {
     const body = {
       position_title: v.position_title.trim(),
       job_url: v.job_url.trim(),
+      contact_email: v.contact_email.trim(),
       location: v.location.trim(),
       source: v.source.trim(),
       notes: v.notes.trim(),

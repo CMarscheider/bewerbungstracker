@@ -51,6 +51,13 @@ html[data-theme='dark'] { color-scheme: dark; }
 .tone-success { --tone-bg: light-dark(#15803d, #22c55e); --tone-fg: light-dark(#ffffff, #052e16); --tone-dot: light-dark(#15803d, #22c55e); }
 .tone-red     { --tone-bg: light-dark(#fee2e2, #4c1d1d); --tone-fg: light-dark(#991b1b, #fecaca); --tone-dot: light-dark(#dc2626, #f87171); }
 
+// Passungs-Score (shared/fit-score.ts): hoch/mittel/niedrig, hell und dunkel, Kontrast >= 4,5:1.
+:root {
+  --fit-high-bg: light-dark(#d8f3e6, #163d27); --fit-high-fg: light-dark(#0b5b35, #bbf7d0);
+  --fit-mid-bg: light-dark(#fff1cc, #4a3410);  --fit-mid-fg: light-dark(#6b4a00, #fde68a);
+  --fit-low-bg: light-dark(#eef0f3, #2f343c);  --fit-low-fg: light-dark(#4b5563, #d1d5db);
+}
+
 
 h1 { font-size: 1.6rem; margin: 8px 0 16px; }
 h2 { font-size: 1.15rem; margin: 24px 0 8px; }

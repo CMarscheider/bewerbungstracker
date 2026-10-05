@@ -35,6 +35,12 @@
     <input matInput formControlName="job_url" maxlength="1000" type="url" />
   </mat-form-field>
 
+  <mat-form-field>
+    <mat-label>Bewerbungs-E-Mail</mat-label>
+    <input matInput formControlName="contact_email" maxlength="200" type="email" />
+    <mat-error>{{ contactEmailError }}</mat-error>
+  </mat-form-field>
+
   <mat-button-toggle-group formControlName="first_type" aria-label="Stand">
     <mat-button-toggle value="Beworben">Schon beworben</mat-button-toggle>
     <mat-button-toggle value="Vorgemerkt">Nur vorgemerkt</mat-button-toggle>

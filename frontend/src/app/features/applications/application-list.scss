@@ -6,6 +6,10 @@
 .search {
   flex: 1 1 220px;
 }
+.agent {
+  align-self: center;
+  margin-bottom: 22px; // auf Höhe der Felder (Platz für Hinweiszeile)
+}
 table {
   width: 100%;
 }

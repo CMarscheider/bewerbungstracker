@@ -5,6 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatTableModule } from '@angular/material/table';
 import { Router, RouterLink } from '@angular/router';
 import { debounceTime, distinctUntilChanged, map, startWith, switchMap } from 'rxjs';
@@ -13,11 +14,12 @@ import { Api, ApplicationFilter } from '../../core/api';
 import { formatDate } from '../../core/dates';
 import { loaded } from '../../core/loaded';
 import { ALL_EVENT_TYPES, ALL_PHASES, EVENT_LABELS, PHASE_LABELS } from '../../shared/labels';
+import { FitScore } from '../../shared/fit-score';
 import { StatusBadge } from '../../shared/status-badge';
 
 @Component({
   selector: 'app-application-list',
-  imports: [ReactiveFormsModule, RouterLink, MatButtonModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatTableModule, StatusBadge],
+  imports: [ReactiveFormsModule, RouterLink, MatButtonModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatSlideToggleModule, MatTableModule, FitScore, StatusBadge],
   templateUrl: './application-list.html',
   styleUrl: './application-list.scss',
 })
@@ -30,12 +32,14 @@ export class ApplicationList {
   protected readonly phaseLabels = PHASE_LABELS;
   protected readonly eventLabels = EVENT_LABELS;
   protected readonly formatDate = formatDate;
-  protected readonly columns = ['company', 'position', 'status', 'last', 'due'];
+  protected readonly columns = ['company', 'position', 'fit', 'status', 'last', 'due'];
 
   protected readonly filter = new FormGroup({
     phase: new FormControl<Phase | null>(null),
     status: new FormControl<EventType | null>(null),
     q: new FormControl('', { nonNullable: true }),
+    fromAgent: new FormControl(false, { nonNullable: true }),
+    sort: new FormControl<'updated' | 'score'>('updated', { nonNullable: true }),
   });
 
   /** undefined, bis die erste Antwort da ist; sonst Daten oder `error: true`. */
@@ -55,6 +59,12 @@ export class ApplicationList {
 
   private currentFilter(): ApplicationFilter {
     const v = this.filter.getRawValue();
-    return { phase: v.phase ?? undefined, status: v.status ?? undefined, q: v.q.trim() || undefined };
+    return {
+      phase: v.phase ?? undefined,
+      status: v.status ?? undefined,
+      q: v.q.trim() || undefined,
+      from_agent: v.fromAgent ? true : undefined,
+      sort: v.sort === 'score' ? 'score' : undefined,
+    };
   }
 }

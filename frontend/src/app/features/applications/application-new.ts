@@ -12,6 +12,7 @@ import { finalize, map, of, switchMap, tap } from 'rxjs';
 import { Company, NewEvent } from '../../api/models';
 import { Api } from '../../core/api';
 import { toIsoDate } from '../../core/dates';
+import { CONTACT_EMAIL_ERROR, contactEmailControl } from './contact-email';
 
 type FirstType = 'Beworben' | 'Vorgemerkt';
 
@@ -27,12 +28,14 @@ export class ApplicationNew {
 
   protected readonly today = new Date();
   protected readonly saving = signal(false);
+  protected readonly contactEmailError = CONTACT_EMAIL_ERROR;
   protected readonly companies = signal<Company[]>([]);
 
   protected readonly form = new FormGroup({
     company: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
     position_title: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
     job_url: new FormControl('', { nonNullable: true }),
+    contact_email: contactEmailControl(),
     location: new FormControl('', { nonNullable: true }),
     source: new FormControl('', { nonNullable: true }),
     notes: new FormControl('', { nonNullable: true }),
@@ -86,6 +89,7 @@ export class ApplicationNew {
             company_id,
             position_title: v.position_title.trim(),
             job_url: optional(v.job_url),
+            contact_email: optional(v.contact_email),
             location: optional(v.location),
             source: optional(v.source),
             notes: optional(v.notes),

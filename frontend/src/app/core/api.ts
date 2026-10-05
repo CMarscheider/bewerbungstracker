@@ -27,6 +27,8 @@ export interface ApplicationFilter {
   phase?: Phase;
   status?: EventType;
   q?: string;
+  from_agent?: boolean;
+  sort?: 'updated' | 'score';
 }
 
 /** Einzige Stelle, an der Komponenten die API sehen – leicht zu mocken. */

@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { FormGroup } from '@angular/forms';
 import { provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { Application, EventType } from '../../api/models';
@@ -21,16 +22,29 @@ const application: Application = {
   ],
 };
 
-async function render(allowed: EventType[]) {
-  const api = { getApplication: vi.fn(() => of(application)), listAllowedEvents: vi.fn(() => of(allowed)) };
+async function render(allowed: EventType[], app: Application = application) {
+  const api = {
+    getApplication: vi.fn(() => of(app)),
+    listAllowedEvents: vi.fn(() => of(allowed)),
+    updateApplication: vi.fn((_id: string, body: object) => of({ ...app, ...body })),
+  };
   TestBed.configureTestingModule({ imports: [ApplicationDetail], providers: [provideRouter([]), { provide: Api, useValue: api }] });
   const fixture = TestBed.createComponent(ApplicationDetail);
   fixture.componentRef.setInput('id', 'a1');
   fixture.detectChanges();
   await fixture.whenStable();
   fixture.detectChanges();
-  return { api, el: fixture.nativeElement as HTMLElement };
+  return { api, fixture, el: fixture.nativeElement as HTMLElement };
 }
+
+const agentJob: Application = {
+  ...application,
+  fit_score: 82,
+  fit_reason: 'Passt gut zu Angular und Go.',
+  posting_text: 'Wir suchen\nAngular-Entwickler',
+  contact_email: 'jobs@acme.de',
+  created_by_agent: true,
+};
 
 describe('ApplicationDetail', () => {
   it('zeigt nur die erlaubten Ereignisse als Buttons', async () => {
@@ -51,6 +65,57 @@ describe('ApplicationDetail', () => {
   it('meldet abgeschlossene Bewerbungen', async () => {
     const { el } = await render([]);
     expect(el.textContent).toContain('Diese Bewerbung ist abgeschlossen.');
+  });
+
+  it('zeigt die Passung mit Score und Begründung', async () => {
+    const { el } = await render([], agentJob);
+    const fit = el.querySelector('[data-testid="fit"]') as HTMLElement;
+    expect(fit.textContent).toContain('Passung');
+    expect(fit.querySelector('.fit')?.textContent?.trim()).toBe('82');
+    expect(fit.textContent).toContain('Passt gut zu Angular und Go.');
+  });
+
+  it('zeigt ohne Score keinen Bereich Passung', async () => {
+    const { el } = await render([]);
+    expect(el.querySelector('[data-testid="fit"]')).toBeNull();
+    expect(el.querySelector('mat-expansion-panel')).toBeNull();
+  });
+
+  it('zeigt den Anzeigentext in einem zugeklappten Bereich', async () => {
+    const { el } = await render([], agentJob);
+    const panel = el.querySelector('mat-expansion-panel') as HTMLElement;
+    expect(panel.textContent).toContain('Anzeigentext');
+    expect(panel.classList).not.toContain('mat-expanded');
+  });
+
+  it('zeigt die Bewerbungs-E-Mail als mailto-Link', async () => {
+    const { el } = await render([], agentJob);
+    const link = el.querySelector('a[href^="mailto:"]');
+    expect(link?.getAttribute('href')).toBe('mailto:jobs@acme.de');
+    expect(el.querySelector('dl')?.textContent).toContain('Bewerbungs-E-Mail');
+  });
+
+  it('sendet die Bewerbungs-E-Mail beim Speichern mit (leer löscht)', async () => {
+    const { api, fixture } = await render([], agentJob);
+    const component = fixture.componentInstance as unknown as { form: FormGroup; startEdit(): void; saveDetails(): void };
+    component.startEdit();
+    expect(component.form.value.contact_email).toBe('jobs@acme.de');
+    component.form.patchValue({ contact_email: ' ' });
+    component.saveDetails();
+    expect(api.updateApplication).toHaveBeenCalledWith('a1', expect.objectContaining({ contact_email: '' }));
+  });
+
+  it('prüft das Format der Bewerbungs-E-Mail', async () => {
+    const { api, fixture, el } = await render([], agentJob);
+    const component = fixture.componentInstance as unknown as { form: FormGroup; startEdit(): void; saveDetails(): void };
+    component.startEdit();
+    component.form.patchValue({ contact_email: 'keine-mail' });
+    component.form.markAllAsTouched();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    component.saveDetails();
+    expect(api.updateApplication).not.toHaveBeenCalled();
+    expect(el.textContent).toContain('Bitte eine gültige E-Mail-Adresse eingeben');
   });
 
   it('zeigt eine Fehlermeldung, wenn die Bewerbung nicht geladen werden kann', async () => {
