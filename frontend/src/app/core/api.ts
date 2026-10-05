@@ -11,6 +11,7 @@ import {
   CompanyInput,
   CompanyPatch,
   Cv,
+  CvReview,
   Deadline,
   Event,
   EventType,
@@ -102,5 +103,15 @@ export class Api {
   }
   deleteCvPhoto(): Observable<void> {
     return this.cv.deleteCvPhoto();
+  }
+  /** Offene Optimierung; 404 (keine offen) zeigt keine Fehlermeldung. */
+  getCvReview(): Observable<CvReview> {
+    return this.cv.getCvReview(undefined, new HttpContext().set(SILENT_NOT_FOUND, true));
+  }
+  requestCvReview(): Observable<CvReview> {
+    return this.cv.requestCvReview();
+  }
+  closeCvReview(): Observable<void> {
+    return this.cv.closeCvReview();
   }
 }

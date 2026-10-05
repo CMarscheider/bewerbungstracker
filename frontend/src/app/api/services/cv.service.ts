@@ -10,7 +10,10 @@ import { BaseService } from '../base-service';
 import { ApiConfiguration } from '../api-configuration';
 import { StrictHttpResponse } from '../strict-http-response';
 
+import { closeCvReview } from '../fn/cv/close-cv-review';
+import { CloseCvReview$Params } from '../fn/cv/close-cv-review';
 import { Cv } from '../models/cv';
+import { CvReview } from '../models/cv-review';
 import { deleteCvPhoto } from '../fn/cv/delete-cv-photo';
 import { DeleteCvPhoto$Params } from '../fn/cv/delete-cv-photo';
 import { getCv } from '../fn/cv/get-cv';
@@ -19,6 +22,10 @@ import { getCvPdf } from '../fn/cv/get-cv-pdf';
 import { GetCvPdf$Params } from '../fn/cv/get-cv-pdf';
 import { getCvPhoto } from '../fn/cv/get-cv-photo';
 import { GetCvPhoto$Params } from '../fn/cv/get-cv-photo';
+import { getCvReview } from '../fn/cv/get-cv-review';
+import { GetCvReview$Params } from '../fn/cv/get-cv-review';
+import { requestCvReview } from '../fn/cv/request-cv-review';
+import { RequestCvReview$Params } from '../fn/cv/request-cv-review';
 import { saveCv } from '../fn/cv/save-cv';
 import { SaveCv$Params } from '../fn/cv/save-cv';
 import { saveCvPhoto } from '../fn/cv/save-cv-photo';
@@ -241,6 +248,111 @@ export class CvService extends BaseService {
     const resp = this.getCvPdf$Response(params, context);
     return resp.pipe(
       map((r: StrictHttpResponse<Blob>): Blob => r.body)
+    );
+  }
+
+  /** Path part for operation `getCvReview()` */
+  static readonly GetCvReviewPath = '/api/v1/cv/review';
+
+  /**
+   * Offene Optimierung (angefordert oder fertig); 404, wenn keine offen ist.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `getCvReview()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  getCvReview$Response(params?: GetCvReview$Params, context?: HttpContext): Observable<StrictHttpResponse<CvReview>> {
+    const obs = getCvReview(this.http, this.rootUrl, params, context);
+    return obs;
+  }
+
+  /**
+   * Offene Optimierung (angefordert oder fertig); 404, wenn keine offen ist.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `getCvReview$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  getCvReview(params?: GetCvReview$Params, context?: HttpContext): Observable<CvReview> {
+    const resp = this.getCvReview$Response(params, context);
+    return resp.pipe(
+      map((r: StrictHttpResponse<CvReview>): CvReview => r.body)
+    );
+  }
+
+  /** Path part for operation `requestCvReview()` */
+  static readonly RequestCvReviewPath = '/api/v1/cv/review';
+
+  /**
+   * Optimierung anfordern (409 ohne gespeicherten Lebenslauf oder bei offener Optimierung).
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `requestCvReview()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  requestCvReview$Response(params?: RequestCvReview$Params, context?: HttpContext): Observable<StrictHttpResponse<CvReview>> {
+    const obs = requestCvReview(this.http, this.rootUrl, params, context);
+    return obs;
+  }
+
+  /**
+   * Optimierung anfordern (409 ohne gespeicherten Lebenslauf oder bei offener Optimierung).
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `requestCvReview$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  requestCvReview(params?: RequestCvReview$Params, context?: HttpContext): Observable<CvReview> {
+    const resp = this.requestCvReview$Response(params, context);
+    return resp.pipe(
+      map((r: StrictHttpResponse<CvReview>): CvReview => r.body)
+    );
+  }
+
+  /** Path part for operation `closeCvReview()` */
+  static readonly CloseCvReviewPath = '/api/v1/cv/review';
+
+  /**
+   * Offene Optimierung abschließen bzw. Anfrage zurückziehen.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `closeCvReview()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  closeCvReview$Response(params?: CloseCvReview$Params, context?: HttpContext): Observable<StrictHttpResponse<void>> {
+    const obs = closeCvReview(this.http, this.rootUrl, params, context);
+    return obs;
+  }
+
+  /**
+   * Offene Optimierung abschließen bzw. Anfrage zurückziehen.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `closeCvReview$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  closeCvReview(params?: CloseCvReview$Params, context?: HttpContext): Observable<void> {
+    const resp = this.closeCvReview$Response(params, context);
+    return resp.pipe(
+      map((r: StrictHttpResponse<void>): void => r.body)
     );
   }
 

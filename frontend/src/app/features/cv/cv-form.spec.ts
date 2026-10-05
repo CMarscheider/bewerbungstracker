@@ -1,5 +1,5 @@
 import { Cv } from '../../api/models';
-import { cvForm, formToCv, fromLines, fromList } from './cv-form';
+import { applySection, cvForm, formToCv, fromLines, fromList } from './cv-form';
 
 const cv: Cv = {
   person: { name: 'Erika Muster', email: 'erika@example.com', links: [{ label: 'GitHub', url: 'https://github.com/erika' }] },
@@ -53,5 +53,17 @@ describe('cv-form', () => {
     start.setValue(' 2024-03 ');
     expect(start.valid).toBe(true);
     expect(formToCv(form).experience[0].start).toBe('2024-03');
+  });
+
+  it('übernimmt einen Abschnitt aus einem Vorschlag und markiert das Formular als geändert', () => {
+    const form = cvForm(cv);
+    const proposal = { ...cv, summary: 'Neues Profil', experience: [{ role: 'Entwickler', organization: 'Neu GmbH', start: '2025', highlights: ['A', 'B'] }] };
+    applySection(form, 'experience', proposal);
+    applySection(form, 'summary', proposal);
+    const out = formToCv(form);
+    expect(out.experience).toEqual(proposal.experience);
+    expect(out.summary).toBe('Neues Profil');
+    expect(out.education).toEqual(cv.education);
+    expect(form.dirty).toBe(true);
   });
 });

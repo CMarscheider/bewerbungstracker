@@ -47,3 +47,15 @@ export type { DeleteCvPhoto$Params as DeleteCvPhoto$Params } from './fn/cv/delet
 export { deleteCvPhoto as deleteCvPhoto } from './fn/cv/delete-cv-photo';
 export type { GetCvPdf$Params as GetCvPdf$Params } from './fn/cv/get-cv-pdf';
 export { getCvPdf as getCvPdf } from './fn/cv/get-cv-pdf';
+export type { GetCvReview$Params as GetCvReview$Params } from './fn/cv/get-cv-review';
+export { getCvReview as getCvReview } from './fn/cv/get-cv-review';
+export type { RequestCvReview$Params as RequestCvReview$Params } from './fn/cv/request-cv-review';
+export { requestCvReview as requestCvReview } from './fn/cv/request-cv-review';
+export type { CloseCvReview$Params as CloseCvReview$Params } from './fn/cv/close-cv-review';
+export { closeCvReview as closeCvReview } from './fn/cv/close-cv-review';
+export type { AgentGetCv$Params as AgentGetCv$Params } from './fn/agent/agent-get-cv';
+export { agentGetCv as agentGetCv } from './fn/agent/agent-get-cv';
+export type { AgentListCvReviews$Params as AgentListCvReviews$Params } from './fn/agent/agent-list-cv-reviews';
+export { agentListCvReviews as agentListCvReviews } from './fn/agent/agent-list-cv-reviews';
+export type { AgentCompleteCvReview$Params as AgentCompleteCvReview$Params } from './fn/agent/agent-complete-cv-review';
+export { agentCompleteCvReview as agentCompleteCvReview } from './fn/agent/agent-complete-cv-review';

@@ -1,5 +1,6 @@
-import { FormArray, FormControl, FormGroup, Validators } from '@angular/forms';
+import { AbstractControl, FormArray, FormControl, FormGroup, Validators } from '@angular/forms';
 import { Cv, CvEducation, CvExperience, CvLanguage, CvLink, CvProject, CvSkillGroup } from '../../api/models';
+import { CvSection } from './cv-review-model';
 
 const PERIOD = /^\s*\d{4}(-(0[1-9]|1[0-2]))?\s*$/;
 
@@ -120,4 +121,38 @@ export function formToCv(form: CvForm): Cv {
     ),
     languages: v.languages.map((l) => ({ language: l.language.trim(), level: l.level.trim() })),
   });
+}
+
+function replaceAll<T extends AbstractControl>(list: FormArray<T>, items: T[]): void {
+  list.clear();
+  items.forEach((item) => list.push(item));
+}
+
+/** Übernimmt einen Abschnitt eines Vorschlags ins Formular; gespeichert wird erst mit „Speichern“. */
+export function applySection(form: CvForm, section: CvSection, cv: Cv): void {
+  const c = form.controls;
+  switch (section) {
+    case 'headline':
+      c.person.controls.headline.setValue(cv.person.headline ?? '');
+      break;
+    case 'summary':
+      c.summary.setValue(cv.summary ?? '');
+      break;
+    case 'projects':
+      replaceAll(c.projects, cv.projects.map(projectGroup));
+      break;
+    case 'experience':
+      replaceAll(c.experience, cv.experience.map(experienceGroup));
+      break;
+    case 'education':
+      replaceAll(c.education, cv.education.map(educationGroup));
+      break;
+    case 'skills':
+      replaceAll(c.skills, cv.skills.map(skillGroup));
+      break;
+    case 'languages':
+      replaceAll(c.languages, cv.languages.map(languageGroup));
+      break;
+  }
+  form.markAsDirty();
 }
