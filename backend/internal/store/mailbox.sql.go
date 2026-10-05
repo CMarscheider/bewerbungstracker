@@ -191,7 +191,7 @@ type ListOpenAgentApplicationsRow struct {
 	UpdatedAt      time.Time
 }
 
-// Laufende Bewerbungen für die Postfach-Auswertung; statuses = alle Status außerhalb der Phase Abgeschlossen.
+// Bewerbungen für die Postfach-Auswertung; statuses = Status der Phasen Vorbereitung und Aktiv plus KeineRueckmeldung.
 func (q *Queries) ListOpenAgentApplications(ctx context.Context, statuses []string) ([]ListOpenAgentApplicationsRow, error) {
 	rows, err := q.db.Query(ctx, listOpenAgentApplications, statuses)
 	if err != nil {

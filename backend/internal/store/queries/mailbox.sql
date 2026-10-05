@@ -1,5 +1,5 @@
 -- name: ListOpenAgentApplications :many
--- Laufende Bewerbungen für die Postfach-Auswertung; statuses = alle Status außerhalb der Phase Abgeschlossen.
+-- Bewerbungen für die Postfach-Auswertung; statuses = Status der Phasen Vorbereitung und Aktiv plus KeineRueckmeldung.
 SELECT a.id, c.name AS company_name, c.website AS company_website, a.position_title, a.current_status,
        a.contact_email, a.gmail_thread_id, a.documents_state, a.gmail_draft_at, d.mail_subject, a.updated_at
 FROM applications a

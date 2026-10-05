@@ -84,32 +84,55 @@ type ProcessedMail struct {
 	ProcessedAt    time.Time
 }
 
-// ListOpenAgentApplications liefert alle nicht abgeschlossenen Bewerbungen, sortiert nach Firma.
+// ListOpenAgentApplications liefert alle nicht abgeschlossenen Bewerbungen sowie solche mit
+// "Keine Rückmeldung" (späte Antworten nach Ghosting), sortiert nach Firma.
 func (s *Service) ListOpenAgentApplications(ctx context.Context) ([]OpenApplication, error) {
-	var statuses []string
+	statuses := []string{string(domain.KeineRueckmeldung)}
 	for _, p := range []domain.Phase{domain.PhaseVorbereitung, domain.PhaseAktiv} {
 		for _, t := range domain.StatusesInPhase(p) {
 			statuses = append(statuses, string(t))
 		}
 	}
-	rows, err := s.queries().ListOpenAgentApplications(ctx, statuses)
+	var out []OpenApplication
+	err := s.inReadTx(ctx, func(q *store.Queries) error {
+		rows, err := q.ListOpenAgentApplications(ctx, statuses)
+		if err != nil {
+			return err
+		}
+		out = make([]OpenApplication, 0, len(rows))
+		for _, r := range rows {
+			status := domain.EventType(r.CurrentStatus)
+			allowed, err := openAllowedEvents(ctx, q, r.ID, status)
+			if err != nil {
+				return err
+			}
+			out = append(out, OpenApplication{
+				ID: r.ID, CompanyName: r.CompanyName, CompanyWebsite: r.CompanyWebsite, PositionTitle: r.PositionTitle,
+				Status: status, ContactEmail: r.ContactEmail, GmailThreadID: r.GmailThreadID,
+				DocumentsState: r.DocumentsState, GmailDraftAt: r.GmailDraftAt, MailSubject: r.MailSubject,
+				UpdatedAt: r.UpdatedAt, AllowedEvents: allowed,
+			})
+		}
+		return nil
+	})
 	if err != nil {
 		return nil, err
 	}
-	out := make([]OpenApplication, 0, len(rows))
-	for _, r := range rows {
-		status := domain.EventType(r.CurrentStatus)
-		out = append(out, OpenApplication{
-			ID: r.ID, CompanyName: r.CompanyName, CompanyWebsite: r.CompanyWebsite, PositionTitle: r.PositionTitle,
-			Status: status, ContactEmail: r.ContactEmail, GmailThreadID: r.GmailThreadID,
-			DocumentsState: r.DocumentsState, GmailDraftAt: r.GmailDraftAt, MailSubject: r.MailSubject,
-			UpdatedAt: r.UpdatedAt,
-			// Außerhalb der Phase Abgeschlossen hängen die erlaubten Ereignisse nur vom letzten ab
-			// (die Sonderregel für KeineRueckmeldung betrifft abgeschlossene Bewerbungen).
-			AllowedEvents: domain.AllowedNext([]domain.EventType{status}),
-		})
-	}
 	return out, nil
+}
+
+// openAllowedEvents liefert die erlaubten nächsten Ereignisse. Nach KeineRueckmeldung hängen sie vom
+// Verlauf davor ab und werden wie in AllowedEvents aus der ganzen Historie bestimmt; in den Phasen
+// Vorbereitung und Aktiv genügt der letzte Status.
+func openAllowedEvents(ctx context.Context, q *store.Queries, appID uuid.UUID, status domain.EventType) ([]domain.EventType, error) {
+	if status != domain.KeineRueckmeldung {
+		return domain.AllowedNext([]domain.EventType{status}), nil
+	}
+	rows, err := q.ListEvents(ctx, appID)
+	if err != nil {
+		return nil, err
+	}
+	return domain.AllowedNext(domain.Types(toHistory(rows))), nil
 }
 
 // AgentAddEvent legt ein Ereignis wie AddEvent an und kennzeichnet die Notiz mit "Agent: ".

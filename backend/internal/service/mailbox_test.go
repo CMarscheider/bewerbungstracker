@@ -56,6 +56,27 @@ func TestListOpenAgentApplications(t *testing.T) {
 	}
 }
 
+func TestListOpenAgentApplicationsIncludesKeineRueckmeldung(t *testing.T) {
+	svc := newService(t)
+	app := appliedApp(t, svc)
+	mustAdd(t, svc, app.ID, domain.NewEvent{Type: domain.KeineRueckmeldung, OccurredOn: day(-1)})
+
+	list, err := svc.ListOpenAgentApplications(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(list) != 1 || list[0].ID != app.ID || list[0].Status != domain.KeineRueckmeldung {
+		t.Fatalf("Liste = %+v", list)
+	}
+	want, err := svc.AllowedEvents(ctx, app.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(list[0].AllowedEvents, want) || !slices.Contains(want, domain.Absage) {
+		t.Errorf("AllowedEvents = %v, erwartet %v", list[0].AllowedEvents, want)
+	}
+}
+
 func TestAgentAddEventPrefixesNote(t *testing.T) {
 	svc := newService(t)
 	app := agentApp(t, svc)
