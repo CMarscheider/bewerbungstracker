@@ -145,11 +145,26 @@ func TestApplicationFileName(t *testing.T) {
 	if got := documents.ApplicationFileName(cv, "Müller & Söhne GmbH"); got != "Bewerbung_Mustermann_Mueller_Soehne_GmbH.pdf" {
 		t.Errorf("got %q", got)
 	}
+	if got := documents.ApplicationFileName(cv, "Acme GmbH (m/w/d)"); got != "Bewerbung_Mustermann_Acme_GmbH.pdf" {
+		t.Errorf("mit Geschlechterangabe: got %q", got)
+	}
 	if got := documents.ApplicationFileName(cv, " !! "); got != "Bewerbung_Mustermann.pdf" {
 		t.Errorf("ohne Firma: got %q", got)
 	}
 	cv.Person.Name = ""
 	if got := documents.ApplicationFileName(cv, ""); got != "Bewerbung.pdf" {
 		t.Errorf("leer: got %q", got)
+	}
+}
+
+func TestRenderApplicationStripsGenderTags(t *testing.T) {
+	l := sampleLetter()
+	l.PositionTitle = "Junior Frontend-Entwickler (m/w/d)"
+	html, _ := renderApp(t, sample(t), nil, l)
+	if !strings.Contains(html, "Bewerbung als Junior Frontend-Entwickler</p>") {
+		t.Error("Betreff ohne Geschlechterangabe fehlt")
+	}
+	if strings.Contains(html, "m/w/d") {
+		t.Error("Geschlechterangabe im Anschreiben")
 	}
 }

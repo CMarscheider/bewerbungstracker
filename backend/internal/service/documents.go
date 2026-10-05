@@ -457,7 +457,8 @@ func findDocuments(ctx context.Context, q *store.Queries, id uuid.UUID) (store.A
 	return d, err == nil, err
 }
 
-// normalizeDocuments prüft und bereinigt die Eingabe; agent verlangt eine Version ≥ 1.
+// normalizeDocuments prüft und bereinigt die Eingabe (auch um Geschlechterangaben); agent verlangt
+// eine Version ≥ 1.
 func normalizeDocuments(in DocumentsInput, agent bool) (DocumentsInput, error) {
 	if agent && in.Version < 1 {
 		return in, &domain.ValidationError{Field: "version", Detail: "muss mindestens 1 sein"}
@@ -468,6 +469,14 @@ func normalizeDocuments(in DocumentsInput, agent bool) (DocumentsInput, error) {
 	in.Language = strings.TrimSpace(in.Language)
 	if in.Language != "de" && in.Language != "en" {
 		return in, &domain.ValidationError{Field: "language", Detail: "muss de oder en sein"}
+	}
+	// Keine Geschlechterangaben wie "(m/w/d)" in Anschreiben, Mail und Profil-Satz.
+	in.CoverLetter = documents.StripGenderTags(in.CoverLetter)
+	in.MailSubject = documents.StripGenderTags(in.MailSubject)
+	in.MailBody = documents.StripGenderTags(in.MailBody)
+	if in.ProfileLine != nil {
+		line := documents.StripGenderTags(*in.ProfileLine)
+		in.ProfileLine = &line
 	}
 	var err error
 	if in.CoverLetter, err = requireText("cover_letter", in.CoverLetter); err != nil {

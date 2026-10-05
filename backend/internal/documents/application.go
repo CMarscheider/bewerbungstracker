@@ -38,6 +38,7 @@ type ApplicationHTML struct {
 
 // RenderApplication erzeugt Anschreiben und angepassten Lebenslauf als zwei HTML-Dokumente.
 // photo ist ein JPEG oder nil. Die Anschreiben-Seite bricht nie um; zu langer Text wird abgeschnitten.
+// Geschlechterangaben wie "(m/w/d)" fallen aus dem Betreff weg.
 func RenderApplication(cv CV, photo []byte, l Letter) (ApplicationHTML, error) {
 	if _, ok := labels[l.Language]; !ok {
 		return ApplicationHTML{}, fmt.Errorf("bewerbung: unbekannte sprache %q", l.Language)
@@ -46,6 +47,7 @@ func RenderApplication(cv CV, photo []byte, l Letter) (ApplicationHTML, error) {
 		cv.Summary = l.ProfileLine
 	}
 	cv.Skills = orderSkills(cv.Skills, l.Highlights)
+	l.PositionTitle = StripGenderTags(l.PositionTitle)
 	view := letterView{
 		cvView:     newCVView(cv, photo, l.Language),
 		Letter:     l,
@@ -144,13 +146,13 @@ func fileNamePart(s string) string {
 }
 
 // ApplicationFileName liefert z. B. "Bewerbung_Marscheider_Acme_GmbH.pdf" (nur ASCII, für
-// Content-Disposition und Mail-Anhang); fehlende Teile entfallen.
+// Content-Disposition und Mail-Anhang); fehlende Teile und Geschlechterangaben entfallen.
 func ApplicationFileName(cv CV, company string) string {
 	parts := []string{"Bewerbung"}
 	if names := strings.Fields(cv.Person.Name); len(names) > 0 {
 		parts = append(parts, fileNamePart(names[len(names)-1]))
 	}
-	parts = append(parts, fileNamePart(company))
+	parts = append(parts, fileNamePart(StripGenderTags(company)))
 	parts = slices.DeleteFunc(parts, func(p string) bool { return p == "" })
 	return strings.Join(parts, "_") + ".pdf"
 }

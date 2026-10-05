@@ -1,9 +1,12 @@
 package service_test
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"mime"
+	netmail "net/mail"
 	"strings"
 	"testing"
 
@@ -644,5 +647,93 @@ func TestSaveAgentDocumentsProfileLine(t *testing.T) {
 	d, err := svc.SaveAgentDocuments(ctx, id, in)
 	if err != nil || d.ProfileLine == nil || *d.ProfileLine != "Junior Frontend-Entwickler." {
 		t.Fatalf("getrimmt: %v %v", err, d.ProfileLine)
+	}
+}
+
+// genderDocs enthält Geschlechterangaben in allen Textfeldern.
+func genderDocs() service.DocumentsInput {
+	in := sampleDocs()
+	in.CoverLetter = "Sehr geehrte Damen und Herren,\n\nich bewerbe mich als Junior Frontend-Entwickler (m/w/d) bei Ihnen."
+	in.MailSubject = "Bewerbung als Junior Frontend-Entwickler (w/m/d) – Erika Mustermann"
+	in.MailBody = "Guten Tag,\n\nanbei meine Unterlagen zur Stelle Entwickler m/w/d."
+	in.ProfileLine = ptr("Junior-Entwicklerin (all genders) mit Angular-Projekten.")
+	return in
+}
+
+func assertNoGenderTags(t *testing.T, d service.Documents) {
+	t.Helper()
+	for name, v := range map[string]string{
+		"cover_letter": d.CoverLetter, "mail_subject": d.MailSubject, "mail_body": d.MailBody, "profile_line": *d.ProfileLine,
+	} {
+		if strings.Contains(v, "m/d") || strings.Contains(v, "genders") || strings.Contains(v, "  ") {
+			t.Errorf("%s = %q enthält eine Geschlechterangabe oder Doppel-Leerzeichen", name, v)
+		}
+	}
+	if d.MailSubject != "Bewerbung als Junior Frontend-Entwickler – Erika Mustermann" {
+		t.Errorf("mail_subject = %q", d.MailSubject)
+	}
+	if !strings.Contains(d.CoverLetter, "als Junior Frontend-Entwickler bei Ihnen.") || !strings.Contains(d.CoverLetter, "Herren,\n\nich") {
+		t.Errorf("cover_letter = %q", d.CoverLetter)
+	}
+}
+
+func TestSaveAgentDocumentsStripsGenderTags(t *testing.T) {
+	conv, dr := &fakeConverter{}, &fakeDrafter{}
+	svc, id := docsSetup(t, sampleJob(), service.WithPDFConverter(conv), service.WithDrafter(dr, "erika@example.com"))
+	if _, err := svc.SaveAgentDocuments(ctx, id, genderDocs()); err != nil {
+		t.Fatal(err)
+	}
+	d, err := svc.GetDocuments(ctx, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertNoGenderTags(t, d)
+
+	// Gleiche Lieferung erneut ist weiterhin ein No-op.
+	if again, err := svc.SaveAgentDocuments(ctx, id, genderDocs()); err != nil || again.Version != 1 {
+		t.Fatalf("erneute Lieferung: %v %+v", err, again)
+	}
+
+	// Betreff im Anschreiben (aus dem Stellentitel "… (m/w/d)") und Betreff der Mail.
+	if letter := string(conv.htmls[0]); strings.Contains(letter, "m/w/d") || !strings.Contains(letter, "Bewerbung als Junior Frontend-Entwickler</p>") {
+		t.Error("Betreff im Anschreiben enthält eine Geschlechterangabe")
+	}
+	msg, err := netmail.ReadMessage(bytes.NewReader(dr.last))
+	if err != nil {
+		t.Fatal(err)
+	}
+	subject, err := new(mime.WordDecoder).DecodeHeader(msg.Header.Get("Subject"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if subject != "Bewerbung als Junior Frontend-Entwickler – Erika Mustermann" {
+		t.Errorf("Betreff der Mail = %q", subject)
+	}
+}
+
+func TestUpdateDocumentsStripsGenderTags(t *testing.T) {
+	svc, id := docsSetup(t, sampleJob(), service.WithPDFConverter(&fakeConverter{}))
+	if _, err := svc.SaveAgentDocuments(ctx, id, sampleDocs()); err != nil {
+		t.Fatal(err)
+	}
+	in := genderDocs()
+	in.Version = 0
+	if _, err := svc.UpdateDocuments(ctx, id, in); err != nil {
+		t.Fatal(err)
+	}
+	d, err := svc.GetDocuments(ctx, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertNoGenderTags(t, d)
+}
+
+func TestSaveAgentDocumentsSubjectOnlyGenderTagIsRequired(t *testing.T) {
+	svc, id := docsSetup(t, sampleJob(), service.WithPDFConverter(&fakeConverter{}))
+	in := sampleDocs()
+	in.MailSubject = " (m/w/d) "
+	var ve *domain.ValidationError
+	if _, err := svc.SaveAgentDocuments(ctx, id, in); !errors.As(err, &ve) || ve.Field != "mail_subject" {
+		t.Fatalf("erwartet ValidationError mail_subject, bekommen %v", err)
 	}
 }
