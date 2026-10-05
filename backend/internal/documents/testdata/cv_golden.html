@@ -14,10 +14,10 @@
   }
   @page { size: A4; margin: 0; }
   * { box-sizing: border-box; }
-  html {
-    -webkit-print-color-adjust: exact; print-color-adjust: exact;
-    background: linear-gradient(90deg, var(--side) 0 var(--side-width), #fff var(--side-width) 100%);
-  }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; background: #fff; }
+   
+  html::before { content: ""; position: fixed; z-index: -1; top: -1mm; bottom: -1mm; left: 0;
+                 width: var(--side-width); background: var(--side); }
   body { margin: 0; font-family: Carlito, Calibri, sans-serif; font-size: 10.5pt; line-height: 1.35; color: var(--text); }
   .page { display: grid; grid-template-columns: var(--side-width) 1fr; }
    
