@@ -107,3 +107,21 @@ func TestCompleteCVReviewValidates(t *testing.T) {
 		t.Fatalf("unbekannte ID: erwartet NotFoundError, bekommen %v", err)
 	}
 }
+
+func TestCloseCVReviewLeavesCompletedAtEmpty(t *testing.T) {
+	svc := newService(t)
+	saveSampleCV(t, svc)
+	if _, err := svc.RequestCVReview(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.CloseCVReview(ctx); err != nil {
+		t.Fatal(err)
+	}
+	runs, err := svc.ListCVReviews(ctx, service.CVReviewClosed)
+	if err != nil || len(runs) != 1 {
+		t.Fatalf("ListCVReviews = %+v, %v", runs, err)
+	}
+	if runs[0].CompletedAt != nil {
+		t.Errorf("CompletedAt = %v, erwartet nil (nie abgeliefert)", runs[0].CompletedAt)
+	}
+}

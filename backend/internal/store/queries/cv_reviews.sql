@@ -20,5 +20,5 @@ RETURNING *;
 
 -- name: CloseOpenCVReviews :exec
 UPDATE cv_reviews
-SET state = 'abgeschlossen', completed_at = coalesce(completed_at, now())
+SET state = 'abgeschlossen'
 WHERE state IN ('angefordert', 'fertig');
