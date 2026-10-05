@@ -54,6 +54,16 @@ type CvPhoto struct {
 	UpdatedAt time.Time
 }
 
+type CvReview struct {
+	ID               uuid.UUID
+	State            string
+	BasedOnUpdatedAt time.Time
+	Proposal         []byte
+	Notes            []byte
+	RequestedAt      time.Time
+	CompletedAt      *time.Time
+}
+
 type LatestEvent struct {
 	ApplicationID  uuid.UUID
 	EventID        uuid.UUID

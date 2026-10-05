@@ -30,15 +30,7 @@ func (s *Service) GetCV(ctx context.Context) (CV, error) {
 
 // SaveCV ersetzt den Lebenslauf. Die Struktur prüft der OpenAPI-Validator; hier nur der Name.
 func (s *Service) SaveCV(ctx context.Context, data json.RawMessage) (CV, error) {
-	var head struct {
-		Person struct {
-			Name string `json:"name"`
-		} `json:"person"`
-	}
-	if err := json.Unmarshal(data, &head); err != nil {
-		return CV{}, &domain.ValidationError{Field: "person", Detail: "kein gültiges JSON-Objekt"}
-	}
-	if _, err := requireText("person.name", head.Person.Name); err != nil {
+	if err := validateCVData(data); err != nil {
 		return CV{}, err
 	}
 	r, err := s.queries().UpsertCV(ctx, data)
@@ -46,4 +38,18 @@ func (s *Service) SaveCV(ctx context.Context, data json.RawMessage) (CV, error) 
 		return CV{}, err
 	}
 	return CV{Data: r.Data, UpdatedAt: r.UpdatedAt}, nil
+}
+
+// validateCVData prüft gespeicherte oder vorgeschlagene Lebenslauf-Daten; die Struktur prüft der OpenAPI-Validator.
+func validateCVData(data json.RawMessage) error {
+	var head struct {
+		Person struct {
+			Name string `json:"name"`
+		} `json:"person"`
+	}
+	if err := json.Unmarshal(data, &head); err != nil {
+		return &domain.ValidationError{Field: "person", Detail: "kein gültiges JSON-Objekt"}
+	}
+	_, err := requireText("person.name", head.Person.Name)
+	return err
 }
