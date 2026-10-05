@@ -16,7 +16,9 @@
           @if (app.gmail_draft_at) {
             (angelegt am {{ app.gmail_draft_at | date: 'dd.MM.yyyy, HH:mm' }} Uhr)
           }
-          – <a class="gmail" [href]="gmailUrl" target="_blank" rel="noopener">Entwürfe in Gmail öffnen</a>
+          – <a class="gmail" [href]="gmailUrl" target="_blank" rel="noopener" aria-label="Entwürfe in Gmail öffnen (öffnet in neuem Tab)"
+            >Entwürfe in Gmail öffnen</a
+          >
         </p>
         @if (draftStale()) {
           <p class="stale">Der Gmail-Entwurf enthält noch die alte Fassung.</p>
@@ -26,7 +28,9 @@
         <p>
           Keine Bewerbungsadresse – über das Portal bewerben
           @if (app.job_url) {
-            – <a class="portal" [href]="app.job_url" target="_blank" rel="noopener">Stellenanzeige öffnen</a>
+            – <a class="portal" [href]="app.job_url" target="_blank" rel="noopener" aria-label="Stellenanzeige öffnen (öffnet in neuem Tab)"
+              >Stellenanzeige öffnen</a
+            >
           }
         </p>
       }
@@ -59,14 +63,31 @@
           <button mat-stroked-button type="button" class="retry" (click)="loadDocuments()">Erneut versuchen</button>
         }
         @if (docs()) {
-          <a mat-stroked-button class="pdf" [href]="pdfUrl()" target="_blank" rel="noopener" aria-label="PDF ansehen (öffnet in neuem Tab)">PDF ansehen</a>
+          <a
+            mat-stroked-button
+            class="pdf"
+            [href]="pdfUrl()"
+            target="_blank"
+            rel="noopener"
+            aria-label="PDF ansehen (öffnet in neuem Tab)"
+            [disabled]="form.dirty"
+            >PDF ansehen</a
+          >
         }
         @if (canDraft()) {
-          <button mat-flat-button type="button" class="draft" (click)="createDraft()" [disabled]="busy() || form.dirty">
+          <!-- Ohne Änderung nur Nebenaktion, z. B. wenn der Entwurf in Gmail gelöscht wurde. -->
+          <button
+            [matButton]="state() === 'entwurf_angelegt' && !draftStale() ? 'outlined' : 'filled'"
+            type="button"
+            class="draft"
+            (click)="createDraft()"
+            [disabled]="busy() || form.dirty"
+            [attr.aria-describedby]="form.dirty ? 'documents-save-first' : null"
+          >
             {{ state() === 'entwurf_angelegt' ? 'Gmail-Entwurf neu anlegen' : 'Gmail-Entwurf anlegen' }}
           </button>
           @if (form.dirty) {
-            <span class="muted">Erst speichern.</span>
+            <span id="documents-save-first" class="muted">Erst speichern.</span>
           }
         }
         @if (!loading()) {

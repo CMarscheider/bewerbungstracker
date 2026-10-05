@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { Observable, of, throwError } from 'rxjs';
+import { Observable, Subject, of, throwError } from 'rxjs';
 import { Application, Documents, DocumentsState } from '../../api/models';
 import { Api } from '../../core/api';
 import { ApplicationDocuments } from './application-documents';
@@ -48,8 +48,8 @@ async function render(application: Application, overrides: Partial<ApiMock> = {}
   const api: ApiMock = {
     requestDocuments: vi.fn(() => of(app('angefordert'))),
     getDocuments: vi.fn(() => of(docs)),
-    updateDocuments: vi.fn((_id: string, body: object) => of({ ...docs, ...body, version: 2 })),
-    createDraft: vi.fn(() => of(app('entwurf_angelegt', { gmail_draft_at: '2026-10-05T12:00:00+02:00' }))),
+    updateDocuments: vi.fn((_id: string, body: object) => of({ ...docs, ...body, version: 2, updated_at: '2026-10-05T13:00:00+02:00' })),
+    createDraft: vi.fn(() => of(app('entwurf_angelegt', { gmail_draft_at: '2026-10-05T14:00:00+02:00' }))),
     getApplication: vi.fn(() => of(application)),
     ...overrides,
   };
@@ -106,6 +106,7 @@ describe('ApplicationDocuments', () => {
     expect(changed.map((a) => a.documents_state)).toEqual(['erstellt']);
     expect(api.getDocuments).toHaveBeenCalledWith('a1');
     expect(el.querySelector('a.pdf')).not.toBeNull();
+    expect(document.activeElement).toBe(el.querySelector('h2'));
   });
 
   for (const state of ['erstellt', 'entwurf_angelegt', 'portal'] as const) {
@@ -159,23 +160,34 @@ describe('ApplicationDocuments', () => {
     expect(gmail.getAttribute('href')).toBe('https://mail.google.com/mail/u/0/#drafts');
     expect(gmail.getAttribute('target')).toBe('_blank');
     expect(gmail.getAttribute('rel')).toBe('noopener');
+    expect(gmail.getAttribute('aria-label')).toContain('(öffnet in neuem Tab)');
     expect(el.textContent).toContain('05.10.2026');
   });
 
   it('entwurf_angelegt: nach dem Speichern veraltet der Entwurf und lässt sich neu anlegen', async () => {
     const { api, el, button, settle, changed } = await render(app('entwurf_angelegt', { gmail_draft_at: '2026-10-05T12:00:00+02:00' }));
     expect(el.textContent).not.toContain('Der Gmail-Entwurf enthält noch die alte Fassung');
-    expect(button('draft')).toBeNull();
+    // Auch ohne Änderung neu anlegbar (z. B. Entwurf in Gmail gelöscht) – dann nur als Nebenaktion.
+    expect(button('draft')!.textContent).toContain('Gmail-Entwurf neu anlegen');
+    expect(button('draft')!.classList).toContain('mat-mdc-outlined-button');
     button('save')!.click();
     await settle();
     expect(el.textContent).toContain('Der Gmail-Entwurf enthält noch die alte Fassung');
     const draft = button('draft')!;
-    expect(draft.textContent).toContain('Gmail-Entwurf neu anlegen');
+    expect(draft.classList).toContain('mat-mdc-unelevated-button');
     draft.click();
     await settle();
     expect(api.createDraft).toHaveBeenCalledWith('a1');
     expect(changed.at(-1)?.documents_state).toBe('entwurf_angelegt');
     expect(el.textContent).not.toContain('Der Gmail-Entwurf enthält noch die alte Fassung');
+    expect(document.activeElement).toBe(el.querySelector('h2'));
+  });
+
+  it('erkennt einen veralteten Entwurf an den Zeitstempeln (auch nach Neuladen)', async () => {
+    const { button, status } = await render(app('entwurf_angelegt', { gmail_draft_at: '2026-10-05T10:00:00+02:00' }));
+    // docs.updated_at (11:00) liegt nach dem Entwurf (10:00).
+    expect(status()).toContain('Der Gmail-Entwurf enthält noch die alte Fassung');
+    expect(button('draft')!.classList).toContain('mat-mdc-unelevated-button');
   });
 
   it('erstellt mit Bewerbungsadresse: legt einen Gmail-Entwurf an', async () => {
@@ -193,8 +205,11 @@ describe('ApplicationDocuments', () => {
     const { el, field, button, settle } = await render(app('erstellt'));
     type(field<HTMLInputElement>('mail_subject')!, 'Geändert');
     await settle();
-    expect(button('draft')!.disabled).toBe(true);
-    expect(el.textContent).toContain('Erst speichern.');
+    const draft = button('draft')!;
+    expect(draft.disabled).toBe(true);
+    const hint = el.querySelector(`#${draft.getAttribute('aria-describedby')}`);
+    expect(hint?.textContent).toContain('Erst speichern.');
+    expect(el.querySelector('a.pdf')!.getAttribute('aria-disabled')).toBe('true');
   });
 
   it('erstellt ohne Bewerbungsadresse: kein Entwurfsknopf', async () => {
@@ -209,6 +224,7 @@ describe('ApplicationDocuments', () => {
     expect(link.getAttribute('href')).toBe('https://acme.de/jobs/1');
     expect(link.getAttribute('target')).toBe('_blank');
     expect(link.getAttribute('rel')).toBe('noopener');
+    expect(link.getAttribute('aria-label')).toContain('(öffnet in neuem Tab)');
   });
 
   it('fehler: zeigt die Meldung als Alert und fordert erneut an', async () => {
@@ -264,5 +280,86 @@ describe('ApplicationDocuments', () => {
     button('retry')!.click();
     await settle();
     expect(el.querySelector('a.pdf')).not.toBeNull();
+  });
+
+  it('weist beim erneuten Anfordern auf einen vorhandenen Gmail-Entwurf hin', async () => {
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    const { button, settle } = await render(app('entwurf_angelegt', { gmail_draft_at: '2026-10-05T12:00:00+02:00' }));
+    button('request')!.click();
+    await settle();
+    expect(confirm).toHaveBeenCalledWith(
+      'Claude schreibt die Unterlagen neu. Ein vorhandener Gmail-Entwurf bleibt bestehen; lösche ihn ggf. in Gmail. Fortfahren?',
+    );
+  });
+
+  it('löst bei schnellem Doppelklick nur eine Anfrage aus', async () => {
+    const pending = new Subject<Application>();
+    const { api, button } = await render(app('keine'), { requestDocuments: vi.fn(() => pending) });
+    // Zweiter Klick, bevor die Ansicht den Knopf sperrt.
+    button('request')!.click();
+    button('request')!.click();
+    expect(api.requestDocuments).toHaveBeenCalledTimes(1);
+    pending.next(app('angefordert'));
+    pending.complete();
+  });
+
+  it('sperrt das Formular während des Speicherns', async () => {
+    const pending = new Subject<Documents>();
+    const { field, button, settle } = await render(app('erstellt'), { updateDocuments: vi.fn(() => pending) });
+    button('save')!.click();
+    await settle();
+    expect(field<HTMLTextAreaElement>('cover_letter')!.disabled).toBe(true);
+    pending.next({ ...docs, version: 2 });
+    pending.complete();
+    await settle();
+    expect(field<HTMLTextAreaElement>('cover_letter')!.disabled).toBe(false);
+  });
+
+  it('fehler: Speichern lädt die Bewerbung neu und meldet sie', async () => {
+    const getApplication = vi.fn(() => of(app('erstellt')));
+    const { api, button, settle, changed } = await render(app('fehler', { documents_error: 'kaputt' }), { getApplication });
+    button('save')!.click();
+    await settle();
+    expect(api.updateDocuments).toHaveBeenCalled();
+    expect(getApplication).toHaveBeenCalledWith('a1');
+    expect(changed.map((a) => a.documents_state)).toEqual(['erstellt']);
+  });
+
+  it('verwirft Antworten, wenn inzwischen eine andere Bewerbung angezeigt wird', async () => {
+    const pending = new Subject<Application>();
+    const { fixture, button, settle, changed, snack } = await render(app('erstellt'), { createDraft: vi.fn(() => pending) });
+    button('draft')!.click();
+    await settle();
+    fixture.componentRef.setInput('application', app('keine', { id: 'a2' }));
+    await settle();
+    pending.next(app('entwurf_angelegt', { gmail_draft_at: '2026-10-05T14:00:00+02:00' }));
+    pending.complete();
+    await settle();
+    expect(changed).toEqual([]);
+    expect(snack).not.toHaveBeenCalledWith('Gmail-Entwurf angelegt', undefined, expect.anything());
+    expect(button('request')!.disabled).toBe(false);
+  });
+
+  it('sendet die gewählte Sprache mit', async () => {
+    const { api, el, button, settle } = await render(app('erstellt'));
+    const english = [...el.querySelectorAll<HTMLButtonElement>('mat-button-toggle button')].find((b) => b.textContent?.includes('Englisch'))!;
+    english.click();
+    await settle();
+    button('save')!.click();
+    await settle();
+    expect(api.updateDocuments).toHaveBeenCalledWith('a1', expect.objectContaining({ language: 'en' }));
+  });
+
+  it('zeigt einen Ladezustand, solange die Unterlagen laden', async () => {
+    const pending = new Subject<Documents>();
+    const { el, status, settle } = await render(app('erstellt'), { getDocuments: vi.fn(() => pending) });
+    expect(status()).toContain('Lade Unterlagen …');
+    expect(el.querySelector('form')).toBeNull();
+    expect(el.querySelector('button.request')).toBeNull();
+    pending.next(docs);
+    pending.complete();
+    await settle();
+    expect(status()).not.toContain('Lade Unterlagen …');
+    expect(el.querySelector('form')).not.toBeNull();
   });
 });

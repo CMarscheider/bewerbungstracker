@@ -38,23 +38,27 @@ export class ApplicationDocuments {
   protected readonly loading = signal(false);
   protected readonly loadError = signal(false);
   protected readonly busy = signal(false);
-  /** Nach dem Speichern enthält ein bereits angelegter Gmail-Entwurf noch die alte Fassung. */
-  protected readonly draftStale = signal(false);
 
   protected readonly state = computed(() => this.application().documents_state);
   protected readonly pdfUrl = computed(() => `/api/v1/applications/${encodeURIComponent(this.application().id)}/documents/pdf`);
   protected readonly gmailUrl = GMAIL_DRAFTS_URL;
+
+  /** Unterlagen wurden nach dem Anlegen des Gmail-Entwurfs geändert – aus Serverdaten, übersteht Neuladen. */
+  protected readonly draftStale = computed(() => {
+    const drafted = this.application().gmail_draft_at;
+    const updated = this.docs()?.updated_at;
+    return this.state() === 'entwurf_angelegt' && !!drafted && !!updated && Date.parse(updated) > Date.parse(drafted);
+  });
+
   protected readonly canDraft = computed(() => {
     const state = this.state();
-    if (!this.application().contact_email || !this.docs()) {
-      return false;
-    }
-    return state === 'erstellt' || state === 'portal' || (state === 'entwurf_angelegt' && this.draftStale());
+    return !!this.application().contact_email && !!this.docs() && (state === 'erstellt' || state === 'portal' || state === 'entwurf_angelegt');
   });
 
   /** Bewerbung, deren Unterlagen gezeigt werden; null = Zustand ohne Unterlagen. */
   private readonly docsKey = computed(() => (WITH_DOCUMENTS.has(this.state()) ? this.application().id : null));
   private docsLoad?: Subscription;
+  private action?: Subscription;
 
   protected readonly form = new FormGroup({
     language: new FormControl<'de' | 'en'>('de', { nonNullable: true }),
@@ -71,7 +75,6 @@ export class ApplicationDocuments {
     effect(() => {
       const id = this.docsKey();
       untracked(() => {
-        this.draftStale.set(false);
         if (id) {
           this.loadDocuments();
         } else {
@@ -81,6 +84,26 @@ export class ApplicationDocuments {
           this.docs.set(null);
         }
       });
+    });
+    // Andere Bewerbung: laufende Aktion der vorigen verwerfen und die Sperre aufheben.
+    let shownId: string | undefined;
+    effect(() => {
+      const id = this.application().id;
+      untracked(() => {
+        if (shownId !== undefined && shownId !== id) {
+          this.action?.unsubscribe();
+          this.busy.set(false);
+        }
+        shownId = id;
+      });
+    });
+    // Während einer Aktion keine Eingaben – sie gingen beim Zurücksetzen des Formulars verloren.
+    effect(() => {
+      if (this.busy()) {
+        this.form.disable({ emitEvent: false });
+      } else {
+        this.form.enable({ emitEvent: false });
+      }
     });
   }
 
@@ -103,23 +126,36 @@ export class ApplicationDocuments {
   }
 
   protected request(): void {
-    if (this.busy() || (this.docs() && !window.confirm('Claude schreibt die Unterlagen neu. Fortfahren?'))) {
+    if (this.busy()) {
       return;
     }
-    this.run(this.api.requestDocuments(this.application().id), (app) => {
-      this.changed.emit(app);
-      this.snackBar.open('Unterlagen angefordert', undefined, { duration: 3000 });
-      this.focus('h2');
-    });
+    if (this.docs()) {
+      const draftHint = this.application().gmail_draft_at ? ' Ein vorhandener Gmail-Entwurf bleibt bestehen; lösche ihn ggf. in Gmail.' : '';
+      if (!window.confirm(`Claude schreibt die Unterlagen neu.${draftHint} Fortfahren?`)) {
+        return;
+      }
+    }
+    this.run(
+      (id) => this.api.requestDocuments(id),
+      (app) => {
+        this.changed.emit(app);
+        this.snackBar.open('Unterlagen angefordert', undefined, { duration: 3000 });
+        this.focusHeading();
+      },
+    );
   }
 
   protected refresh(): void {
-    this.run(this.api.getApplication(this.application().id), (app) => {
-      this.changed.emit(app);
-      if (app.documents_state === 'angefordert') {
-        this.snackBar.open('Die Unterlagen sind noch nicht fertig', undefined, { duration: 3000 });
-      }
-    });
+    this.run(
+      (id) => this.api.getApplication(id),
+      (app) => {
+        this.changed.emit(app);
+        if (app.documents_state === 'angefordert') {
+          this.snackBar.open('Die Unterlagen sind noch nicht fertig', undefined, { duration: 3000 });
+        }
+        this.focusHeading();
+      },
+    );
   }
 
   protected save(): void {
@@ -136,47 +172,57 @@ export class ApplicationDocuments {
       mail_subject: v.mail_subject.trim(),
       mail_body: v.mail_body.trim(),
     };
-    const id = this.application().id;
     const wasFailed = this.state() === 'fehler';
-    this.run(this.api.updateDocuments(id, body), (d) => {
-      this.show(d);
-      if (this.state() === 'entwurf_angelegt') {
-        this.draftStale.set(true);
-      }
-      this.snackBar.open('Gespeichert und neu gerendert', undefined, { duration: 3000 });
-      if (wasFailed) {
-        // Aus „fehler“ wird wieder „erstellt“ bzw. „portal“.
-        this.api
-          .getApplication(id)
-          .pipe(takeUntilDestroyed(this.destroyRef))
-          .subscribe({ next: (app) => this.changed.emit(app), error: () => undefined });
-      }
-    });
+    this.run(
+      (id) => this.api.updateDocuments(id, body),
+      (d, id) => {
+        this.show(d);
+        this.snackBar.open('Gespeichert und neu gerendert', undefined, { duration: 3000 });
+        if (wasFailed) {
+          // Aus „fehler“ wird wieder „erstellt“ bzw. „portal“.
+          this.api
+            .getApplication(id)
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe({ next: (app) => this.isShown(id) && this.changed.emit(app), error: () => undefined });
+        }
+      },
+    );
   }
 
   protected createDraft(): void {
     if (this.form.dirty) {
       return;
     }
-    this.run(this.api.createDraft(this.application().id), (app) => {
-      this.changed.emit(app);
-      this.draftStale.set(false);
-      this.snackBar.open('Gmail-Entwurf angelegt', undefined, { duration: 3000 });
-    });
+    this.run(
+      (id) => this.api.createDraft(id),
+      (app) => {
+        this.changed.emit(app);
+        this.snackBar.open('Gmail-Entwurf angelegt', undefined, { duration: 3000 });
+        this.focusHeading();
+      },
+    );
   }
 
-  /** Führt eine Aktion mit busy-Sperre aus; Fehlermeldungen zeigt der Interceptor. */
-  private run<T>(call: Observable<T>, next: (value: T) => void): void {
+  /**
+   * Führt eine Aktion für die aktuelle Bewerbung mit busy-Sperre aus. Wechselt die Bewerbung
+   * zwischendurch, wird die Antwort verworfen. Fehlermeldungen zeigt der Interceptor.
+   */
+  private run<T>(call: (id: string) => Observable<T>, next: (value: T, id: string) => void): void {
     if (this.busy()) {
       return;
     }
+    const id = this.application().id;
     this.busy.set(true);
-    call
+    this.action = call(id)
       .pipe(
-        finalize(() => this.busy.set(false)),
+        finalize(() => this.isShown(id) && this.busy.set(false)),
         takeUntilDestroyed(this.destroyRef),
       )
-      .subscribe({ next, error: () => undefined });
+      .subscribe({ next: (value) => this.isShown(id) && next(value, id), error: () => undefined });
+  }
+
+  private isShown(id: string): boolean {
+    return this.application().id === id;
   }
 
   private show(d: Documents | null): void {
@@ -190,7 +236,7 @@ export class ApplicationDocuments {
     });
   }
 
-  private focus(selector: string): void {
-    this.host.nativeElement.querySelector<HTMLElement>(selector)?.focus();
+  private focusHeading(): void {
+    this.host.nativeElement.querySelector<HTMLElement>('h2')?.focus();
   }
 }
