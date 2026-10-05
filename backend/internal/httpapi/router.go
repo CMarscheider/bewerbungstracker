@@ -32,9 +32,11 @@ const docsPage = `<!doctype html>
 type RouterOption func(*routerConfig)
 
 type routerConfig struct {
-	agentToken string
-	agentRate  rate.Limit
-	agentBurst int
+	agentToken     string
+	agentRate      rate.Limit
+	agentBurst     int
+	agentAnonRate  rate.Limit
+	agentAnonBurst int
 }
 
 // WithAgentToken aktiviert die Agent-API (/api/agent/*) mit diesem Bearer-Token.
@@ -42,14 +44,19 @@ func WithAgentToken(token string) RouterOption {
 	return func(c *routerConfig) { c.agentToken = token }
 }
 
-// WithAgentRateLimit überschreibt die Drossel der Agent-API (für Tests).
+// WithAgentRateLimit überschreibt die Drossel der Agent-API für Anfragen mit gültigem Token (für Tests).
 func WithAgentRateLimit(r rate.Limit, burst int) RouterOption {
 	return func(c *routerConfig) { c.agentRate, c.agentBurst = r, burst }
 }
 
+// WithAgentAnonRateLimit überschreibt die Drossel der Agent-API für Anfragen ohne gültiges Token (für Tests).
+func WithAgentAnonRateLimit(r rate.Limit, burst int) RouterOption {
+	return func(c *routerConfig) { c.agentAnonRate, c.agentAnonBurst = r, burst }
+}
+
 // NewRouter baut den kompletten HTTP-Handler: API, Validierung, Doku, Logging.
 func NewRouter(svc *service.Service, logger *slog.Logger, opts ...RouterOption) (http.Handler, error) {
-	cfg := routerConfig{agentRate: agentRate, agentBurst: agentBurst}
+	cfg := routerConfig{agentRate: agentRate, agentBurst: agentBurst, agentAnonRate: agentAnonRate, agentAnonBurst: agentAnonBurst}
 	for _, o := range opts {
 		o(&cfg)
 	}
@@ -103,10 +110,13 @@ func NewRouter(svc *service.Service, logger *slog.Logger, opts ...RouterOption) 
 		writeProblem(w, problem{Type: problemBase + "not-found", Title: "Nicht gefunden",
 			Status: http.StatusNotFound, Detail: "Unbekannter Endpunkt"})
 	})
-	limiter := newAgentLimiter(cfg.agentRate, cfg.agentBurst)
+	limits := agentLimits{
+		auth: newAgentLimiter(cfg.agentRate, cfg.agentBurst),
+		anon: newAgentLimiter(cfg.agentAnonRate, cfg.agentAnonBurst),
+	}
 	warner := newWarnThrottle(logger, authWarnInterval)
 	return logRequests(logger, recoverPanics(logger, limitBody(
-		limitAgent(limiter, requireAgentToken(cfg.agentToken, warner, mux))))), nil
+		requireAgentToken(cfg.agentToken, limits, warner, mux)))), nil
 }
 
 // maxBodyBytes begrenzt die Größe von Request-Bodys.

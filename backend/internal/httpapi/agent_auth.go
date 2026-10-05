@@ -13,13 +13,24 @@ import (
 // agentPrefix ist der Pfadpräfix der Agent-API.
 const agentPrefix = "/api/agent/"
 
-// requireAgentToken schützt die Agent-API: Ohne konfiguriertes Token gibt es sie nicht (404),
-// sonst ist "Authorization: Bearer <token>" Pflicht (401, Warnung gedrosselt). Andere Pfade bleiben unberührt.
-func requireAgentToken(token string, warner *warnThrottle, next http.Handler) http.Handler {
+// requireAgentToken schützt und drosselt die Agent-API: Ohne konfiguriertes Token gibt es sie nicht (404),
+// sonst ist "Authorization: Bearer <token>" Pflicht (401, Warnung gedrosselt). Anfragen mit gültigem
+// Token zählen gegen limits.auth, alle anderen gegen limits.anon; über dem Limit gibt es 429 ohne
+// Warnung. Andere Pfade bleiben unberührt.
+func requireAgentToken(token string, limits agentLimits, warner *warnThrottle, next http.Handler) http.Handler {
 	want := sha256.Sum256([]byte(token))
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !strings.HasPrefix(r.URL.Path, agentPrefix) {
 			next.ServeHTTP(w, r)
+			return
+		}
+		valid := token != "" && validBearer(r.Header.Get("Authorization"), want)
+		limiter := limits.anon
+		if valid {
+			limiter = limits.auth
+		}
+		if !limiter.Allow() {
+			writeTooManyRequests(w)
 			return
 		}
 		if token == "" {
@@ -27,7 +38,7 @@ func requireAgentToken(token string, warner *warnThrottle, next http.Handler) ht
 				Status: http.StatusNotFound, Detail: "Die Agent-API ist nicht eingerichtet"})
 			return
 		}
-		if !validBearer(r.Header.Get("Authorization"), want) {
+		if !valid {
 			warner.warn("agent-api: ungültiges oder fehlendes token",
 				append([]any{"method", r.Method, "path", r.URL.Path, "remote", r.RemoteAddr}, xffArgs(r)...)...)
 			w.Header().Set("WWW-Authenticate", `Bearer realm="agent"`)

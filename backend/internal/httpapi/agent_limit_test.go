@@ -34,17 +34,29 @@ func okHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) })
 }
 
-func TestLimitAgentRejectsAfterBurst(t *testing.T) {
-	h := limitAgent(newAgentLimiter(rate.Every(time.Hour), 3), okHandler())
-	for i := range 3 {
-		rec := httptest.NewRecorder()
-		h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/agent/cv", nil))
-		if rec.Code != http.StatusOK {
-			t.Fatalf("Anfrage %d: Status %d, erwartet 200", i+1, rec.Code)
-		}
+const testToken = "richtiges-token"
+
+// agentReq schickt eine Anfrage an h, optional mit Authorization-Header.
+func agentReq(h http.Handler, path, auth string) *httptest.ResponseRecorder {
+	req := httptest.NewRequest(http.MethodGet, path, nil)
+	if auth != "" {
+		req.Header.Set("Authorization", auth)
 	}
 	rec := httptest.NewRecorder()
-	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/agent/cv", nil))
+	h.ServeHTTP(rec, req)
+	return rec
+}
+
+func limitedAgent(authBurst, anonBurst int) http.Handler {
+	limits := agentLimits{
+		auth: newAgentLimiter(rate.Every(time.Hour), authBurst),
+		anon: newAgentLimiter(rate.Every(time.Hour), anonBurst),
+	}
+	return requireAgentToken(testToken, limits, newWarnThrottle(slog.New(slog.DiscardHandler), authWarnInterval), okHandler())
+}
+
+func expectTooMany(t *testing.T, rec *httptest.ResponseRecorder) {
+	t.Helper()
 	if rec.Code != http.StatusTooManyRequests {
 		t.Fatalf("Status %d, erwartet 429", rec.Code)
 	}
@@ -63,12 +75,39 @@ func TestLimitAgentRejectsAfterBurst(t *testing.T) {
 	}
 }
 
-func TestLimitAgentIgnoresOtherPaths(t *testing.T) {
-	h := limitAgent(newAgentLimiter(rate.Every(time.Hour), 1), okHandler())
+func TestAgentAnonFloodDoesNotLockOutValidToken(t *testing.T) {
+	h := limitedAgent(3, 3)
+	for _, auth := range []string{"", "Bearer falsch", "Basic xyz"} {
+		if rec := agentReq(h, "/api/agent/cv", auth); rec.Code != http.StatusUnauthorized {
+			t.Fatalf("%q: Status %d, erwartet 401", auth, rec.Code)
+		}
+	}
+	// Fremde Anfragen über dem Limit: 429 statt 401.
+	expectTooMany(t, agentReq(h, "/api/agent/cv", "Bearer falsch"))
+	expectTooMany(t, agentReq(h, "/api/agent/cv", ""))
+	if rec := agentReq(h, "/api/agent/cv", "Bearer "+testToken); rec.Code != http.StatusOK {
+		t.Fatalf("gültiges Token nach Flut: Status %d, erwartet 200", rec.Code)
+	}
+}
+
+func TestAgentAuthLimitRejectsAfterBurst(t *testing.T) {
+	h := limitedAgent(3, 3)
+	for i := range 3 {
+		if rec := agentReq(h, "/api/agent/cv", "Bearer "+testToken); rec.Code != http.StatusOK {
+			t.Fatalf("Anfrage %d: Status %d, erwartet 200", i+1, rec.Code)
+		}
+	}
+	expectTooMany(t, agentReq(h, "/api/agent/cv", "Bearer "+testToken))
+	// Das fremde Kontingent ist davon unberührt.
+	if rec := agentReq(h, "/api/agent/cv", "Bearer falsch"); rec.Code != http.StatusUnauthorized {
+		t.Errorf("fremde Anfrage: Status %d, erwartet 401", rec.Code)
+	}
+}
+
+func TestAgentLimitIgnoresOtherPaths(t *testing.T) {
+	h := limitedAgent(1, 1)
 	for i := range 5 {
-		rec := httptest.NewRecorder()
-		h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/v1/cv", nil))
-		if rec.Code != http.StatusOK {
+		if rec := agentReq(h, "/api/v1/cv", ""); rec.Code != http.StatusOK {
 			t.Fatalf("Anfrage %d: Status %d, erwartet 200", i+1, rec.Code)
 		}
 	}
@@ -77,6 +116,9 @@ func TestLimitAgentIgnoresOtherPaths(t *testing.T) {
 func TestAgentLimitDefaults(t *testing.T) {
 	if agentRate != rate.Every(500*time.Millisecond) || agentBurst != 20 {
 		t.Errorf("agentRate = %v, agentBurst = %d", agentRate, agentBurst)
+	}
+	if agentAnonRate != rate.Every(time.Second) || agentAnonBurst != 10 {
+		t.Errorf("agentAnonRate = %v, agentAnonBurst = %d", agentAnonRate, agentAnonBurst)
 	}
 	if authWarnInterval != time.Minute {
 		t.Errorf("authWarnInterval = %v", authWarnInterval)
@@ -106,7 +148,9 @@ func TestAgentAuthWarningIsThrottled(t *testing.T) {
 	clock := &fakeClock{t: time.Date(2026, 10, 5, 12, 0, 0, 0, time.UTC)}
 	warner := newWarnThrottle(slog.New(slog.NewJSONHandler(&logs, nil)), authWarnInterval)
 	warner.now = clock.now
-	h := requireAgentToken("richtiges-token", warner, okHandler())
+	// Ungedrosselt, damit alle 50 Fehlversuche die Token-Prüfung erreichen.
+	unlimited := agentLimits{auth: rate.NewLimiter(rate.Inf, 0), anon: rate.NewLimiter(rate.Inf, 0)}
+	h := requireAgentToken(testToken, unlimited, warner, okHandler())
 
 	bad := func() {
 		req := httptest.NewRequest(http.MethodGet, "/api/agent/cv", nil)
@@ -140,6 +184,22 @@ func TestAgentAuthWarningIsThrottled(t *testing.T) {
 	}
 	if lines[1]["suppressed"] != float64(49) {
 		t.Errorf("suppressed = %v, erwartet 49", lines[1]["suppressed"])
+	}
+}
+
+func TestAgentThrottledRequestsDoNotWarn(t *testing.T) {
+	var logs bytes.Buffer
+	limits := agentLimits{auth: newAgentLimiter(rate.Every(time.Hour), 1), anon: newAgentLimiter(rate.Every(time.Hour), 1)}
+	warner := newWarnThrottle(slog.New(slog.NewJSONHandler(&logs, nil)), authWarnInterval)
+	h := requireAgentToken(testToken, limits, warner, okHandler())
+	agentReq(h, "/api/agent/cv", "Bearer falsch")
+	expectTooMany(t, agentReq(h, "/api/agent/cv", "Bearer falsch"))
+	expectTooMany(t, agentReq(h, "/api/agent/cv", "Bearer falsch"))
+	if n := len(logLines(t, &logs)); n != 1 {
+		t.Fatalf("%d Logzeilen, erwartet 1: %s", n, logs.String())
+	}
+	if warner.suppressed != 0 {
+		t.Errorf("suppressed = %d, gedrosselte Anfragen sollen nicht zählen", warner.suppressed)
 	}
 }
 

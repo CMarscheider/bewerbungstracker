@@ -110,24 +110,31 @@ func TestAgentAuthPathVariants(t *testing.T) {
 	}
 }
 
-func TestAgentRateLimitBeforeTokenCheck(t *testing.T) {
+func TestAgentRateLimitSeparatesValidAndForeign(t *testing.T) {
 	testdb.Reset(t, testPool)
 	h, err := httpapi.NewRouter(service.New(testPool, time.Now), slog.New(slog.NewTextHandler(io.Discard, nil)),
-		httpapi.WithAgentToken(agentToken), httpapi.WithAgentRateLimit(rate.Every(time.Hour), 2))
+		httpapi.WithAgentToken(agentToken),
+		httpapi.WithAgentRateLimit(rate.Every(time.Hour), 2),
+		httpapi.WithAgentAnonRateLimit(rate.Every(time.Hour), 2))
 	if err != nil {
 		t.Fatal(err)
 	}
 	srv := httptest.NewServer(h)
 	t.Cleanup(srv.Close)
+	expectStatus(t, call(t, srv, http.MethodPut, "/api/v1/cv", sampleCV()), http.StatusOK)
 
-	// Auch Anfragen ohne Token verbrauchen das Kontingent.
+	// (a)/(c) Fremde Anfragen schöpfen nur ihr eigenes Kontingent aus und bekommen dann 429.
 	expectProblem(t, callWith(t, srv, http.MethodGet, "/api/agent/cv", "", nil), http.StatusUnauthorized, "/problems/unauthorized")
-	expectProblem(t, callWith(t, srv, http.MethodGet, "/api/agent/cv", "", nil), http.StatusUnauthorized, "/problems/unauthorized")
-	r := callWith(t, srv, http.MethodGet, "/api/agent/cv", agentToken, nil)
+	expectProblem(t, callWith(t, srv, http.MethodGet, "/api/agent/cv", "falsch", nil), http.StatusUnauthorized, "/problems/unauthorized")
+	r := callWith(t, srv, http.MethodGet, "/api/agent/cv", "falsch", nil)
 	expectProblem(t, r, http.StatusTooManyRequests, "/problems/too-many-requests")
 	if r.Header.Get("Retry-After") != "1" {
 		t.Errorf("Retry-After = %q", r.Header.Get("Retry-After"))
 	}
+	// (b) Gültiges Token: eigenes Kontingent, danach 429.
+	expectStatus(t, callWith(t, srv, http.MethodGet, "/api/agent/cv", agentToken, nil), http.StatusOK)
+	expectStatus(t, callWith(t, srv, http.MethodGet, "/api/agent/cv", agentToken, nil), http.StatusOK)
+	expectProblem(t, callWith(t, srv, http.MethodGet, "/api/agent/cv", agentToken, nil), http.StatusTooManyRequests, "/problems/too-many-requests")
 	// Die UI-API bleibt ungedrosselt.
 	for range 5 {
 		expectStatus(t, call(t, srv, http.MethodGet, "/api/v1/cv", nil), http.StatusOK)
