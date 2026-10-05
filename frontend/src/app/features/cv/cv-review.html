@@ -1,7 +1,20 @@
 <section class="review">
-  <h2>Mit Claude optimieren</h2>
+  <h2 tabindex="-1">Mit Claude optimieren</h2>
+  <div role="status" class="status">
+    @if (loading()) {
+      <p class="muted">Lade …</p>
+    } @else if (loadError()) {
+      <p class="error">Der Stand der Optimierung konnte nicht geladen werden.</p>
+    } @else if (review()?.state === 'angefordert') {
+      <p>Angefordert am {{ review()!.requested_at | date: 'dd.MM.yyyy, HH:mm' }} Uhr. Claude bearbeitet die Anfrage beim nächsten Lauf.</p>
+    } @else if (review()?.state === 'fertig' && !changes().length) {
+      <p class="muted">Claude schlägt keine Änderungen vor.</p>
+    }
+  </div>
   @if (loading()) {
-    <p class="muted">Lade …</p>
+    <!-- Status oben -->
+  } @else if (loadError()) {
+    <button mat-stroked-button type="button" class="retry" (click)="load()">Erneut versuchen</button>
   } @else if (review() === null) {
     <p class="muted">
       Claude schärft Formulierungen, Stichpunkte und Schlagworte – nur mit Angaben aus deinem Lebenslauf. Du entscheidest je Abschnitt, was
@@ -16,11 +29,16 @@
       }
     </div>
   } @else if (review()!.state === 'angefordert') {
-    <p>Angefordert am {{ review()!.requested_at | date: 'dd.MM.yyyy, HH:mm' }} Uhr. Claude bearbeitet die Anfrage beim nächsten Lauf.</p>
-    <button mat-button type="button" class="withdraw" (click)="close()" [disabled]="busy()">Anfrage zurückziehen</button>
+    <div class="review-actions">
+      <button mat-stroked-button type="button" class="refresh" (click)="load()" [disabled]="busy()">Status aktualisieren</button>
+      <button mat-button type="button" class="withdraw" (click)="withdraw()" [disabled]="busy()">Anfrage zurückziehen</button>
+    </div>
   } @else {
     @if (stale()) {
       <p class="stale">Der Lebenslauf wurde seit der Anforderung geändert – prüfe die Vorschläge besonders genau.</p>
+    }
+    @if (dirty() && changes().length) {
+      <p class="dirty-hint">Ungespeicherte Änderungen werden beim Übernehmen überschrieben.</p>
     }
     @if (review()!.notes.length) {
       <h3>Hinweise von Claude</h3>
@@ -33,8 +51,15 @@
     @for (c of changes(); track c.section) {
       <div class="change">
         <div class="change-head">
-          <h3>{{ c.label }}</h3>
-          <button mat-stroked-button type="button" class="apply" (click)="apply(c.section)" [disabled]="applied().has(c.section)">
+          <h3 tabindex="-1" [attr.data-head]="c.section">{{ c.label }}</h3>
+          <button
+            mat-stroked-button
+            type="button"
+            class="apply"
+            [attr.aria-label]="c.label + (applied().has(c.section) ? ' übernommen' : ' übernehmen')"
+            (click)="apply(c.section)"
+            [disabled]="applied().has(c.section)"
+          >
             {{ applied().has(c.section) ? 'Übernommen' : 'Übernehmen' }}
           </button>
         </div>
@@ -57,14 +82,14 @@
           </div>
         </div>
       </div>
-    } @empty {
-      <p class="muted">Claude schlägt keine Änderungen vor.</p>
     }
     <div class="review-actions">
       @if (changes().length) {
-        <button mat-flat-button type="button" class="apply-all" (click)="applyAll()">Alles übernehmen</button>
+        <button mat-flat-button type="button" class="apply-all" (click)="applyAll()" [disabled]="allApplied()">Alles übernehmen</button>
       }
-      <button mat-button type="button" class="close" (click)="close()" [disabled]="busy()">Abschließen</button>
+      <button mat-button type="button" class="close" (click)="close()" [disabled]="busy()">
+        {{ applied().size ? 'Abschließen' : 'Vorschläge verwerfen' }}
+      </button>
     </div>
   }
 </section>

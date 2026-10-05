@@ -19,20 +19,35 @@
 .compare {
   display: grid;
   gap: 16px;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
 }
 .compare h4 {
   margin: 4px 0;
 }
 .compare p {
+  overflow-wrap: anywhere;
   margin: 0 0 4px;
 }
 .before {
   color: var(--mat-sys-on-surface-variant);
 }
-.stale {
+.stale,
+.error {
   color: var(--mat-sys-error);
 }
 .notes {
   margin-top: 0;
+}
+.dirty-hint {
+  color: var(--mat-sys-on-surface-variant);
+  font-style: italic;
+}
+.review h2:focus,
+.change-head h3:focus {
+  outline: none;
+}
+.review h2:focus-visible,
+.change-head h3:focus-visible {
+  outline: 2px solid var(--mat-sys-primary);
+  outline-offset: 2px;
 }
