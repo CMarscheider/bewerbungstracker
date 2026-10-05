@@ -18,6 +18,9 @@ describe('Dashboard', () => {
       ),
       getSummary: vi.fn(() => throwError(() => new Error('x'))),
       listApplications: vi.fn(() => of([{ id: '1' }, { id: '2' }, { id: '3' }])),
+      listSuggestions: vi.fn(() =>
+        of([{ id: 's1', application_id: 'a1', company_name: 'Acme', position_title: 'Dev', suggested_type: 'Absage', occurred_on: '2026-10-04', reason: 'Absage', state: 'offen', created_at: '2026-10-05T08:00:00+02:00' }]),
+      ),
     };
     TestBed.configureTestingModule({ imports: [Dashboard], providers: [provideRouter([]), { provide: Api, useValue: api }] });
     const fixture = TestBed.createComponent(Dashboard);
@@ -40,11 +43,15 @@ describe('Dashboard', () => {
     expect(appointment.querySelector('.dot')?.classList).toContain('tone-violet');
     expect(el.querySelector('.tile .value')?.textContent?.trim()).toBe('3');
     expect(el.querySelectorAll('.tile .value')[2].textContent?.trim()).toBe('–');
+    // Vorschläge stehen oberhalb der Fristen.
+    const suggestions = el.querySelector('app-agent-suggestions')!;
+    expect(suggestions.textContent).toContain('Vorschläge des Agenten');
+    expect(suggestions.compareDocumentPosition(el.querySelector('.deadlines')!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it('zeigt Fehlertexte statt Leerzuständen, wenn Fristen und Termine nicht laden', async () => {
     const fail = vi.fn(() => throwError(() => new Error('x')));
-    const api = { listDeadlines: fail, listAppointments: fail, getSummary: fail, listApplications: fail };
+    const api = { listDeadlines: fail, listAppointments: fail, getSummary: fail, listApplications: fail, listSuggestions: fail };
     TestBed.configureTestingModule({ imports: [Dashboard], providers: [provideRouter([]), { provide: Api, useValue: api }] });
     const fixture = TestBed.createComponent(Dashboard);
     fixture.detectChanges();

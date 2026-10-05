@@ -1,0 +1,69 @@
+@if (visible()) {
+  <mat-card class="card">
+    <section aria-labelledby="suggestions-heading">
+      <h2 id="suggestions-heading" class="card-title" tabindex="-1">
+        Vorschläge des Agenten <span class="count">· {{ suggestions()!.length }}</span>
+      </h2>
+      <p class="hint muted">Aus der Postfach-Auswertung – bitte prüfen</p>
+      <p role="status" class="status">{{ message() }}</p>
+      @if (suggestions()!.length === 0) {
+        <p class="muted state">Keine offenen Vorschläge mehr.</p>
+      }
+      <ul class="rows">
+        @for (s of suggestions(); track s.id) {
+          @let isBusy = busy().has(s.id);
+          <li class="suggestion" tabindex="-1" [attr.data-id]="s.id" [attr.aria-labelledby]="'suggestion-' + s.id">
+            <div class="head">
+              @if (s.application_id) {
+                <a class="what" [id]="'suggestion-' + s.id" [routerLink]="['/bewerbungen', s.application_id]">
+                  <span class="company">{{ s.company_name }}</span>
+                  <span class="position">{{ s.position_title }}</span>
+                </a>
+              } @else {
+                <span class="what unassigned" [id]="'suggestion-' + s.id">
+                  <span class="company">Nicht zugeordnet</span>
+                </span>
+              }
+              <app-status-badge [status]="s.suggested_type" />
+            </div>
+            <p class="dates">
+              <span>{{ formatDate(s.occurred_on) }}</span>
+              @if (s.due_on) {
+                <span class="due">{{ dueLabel(s.suggested_type) }} {{ formatDate(s.due_on) }}</span>
+              }
+            </p>
+            <p class="reason">{{ s.reason }}</p>
+            @if (s.mail_subject || s.mail_from || s.mail_url) {
+              <p class="mail-info muted">
+                @if (s.mail_subject) {
+                  <span class="subject">Betreff: {{ s.mail_subject }}</span>
+                }
+                @if (s.mail_from) {
+                  <span class="from">Von: {{ s.mail_from }}</span>
+                }
+                @if (s.mail_url) {
+                  <a class="mail" [href]="s.mail_url" target="_blank" rel="noopener" aria-label="Mail öffnen (öffnet in neuem Tab)">Mail öffnen</a>
+                }
+              </p>
+            }
+            @if (!s.application_id) {
+              <mat-form-field class="pick" subscriptSizing="dynamic">
+                <mat-label>Bewerbung</mat-label>
+                <select matNativeControl [value]="chosen()[s.id] ?? ''" (change)="choose(s.id, $any($event.target).value)" [disabled]="isBusy">
+                  <option value="">Bitte wählen …</option>
+                  @for (a of openApplications(); track a.id) {
+                    <option [value]="a.id">{{ a.company_name }} – {{ a.position_title }}</option>
+                  }
+                </select>
+              </mat-form-field>
+            }
+            <div class="actions">
+              <button mat-flat-button type="button" class="accept" (click)="accept(s)" [disabled]="!canAccept(s)">Übernehmen</button>
+              <button mat-button type="button" class="dismiss" (click)="dismiss(s)" [disabled]="isBusy">Verwerfen</button>
+            </div>
+          </li>
+        }
+      </ul>
+    </section>
+  </mat-card>
+}

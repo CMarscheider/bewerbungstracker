@@ -20,10 +20,12 @@ import {
   FunnelStep,
   NewEvent,
   Phase,
+  Suggestion,
+  SuggestionAccept,
   Summary,
 } from '../api/models';
 import { SILENT_NOT_FOUND } from './error.interceptor';
-import { ApplicationsService, CompaniesService, CvService, DashboardService, DocumentsService } from '../api/services';
+import { ApplicationsService, CompaniesService, CvService, DashboardService, DocumentsService, SuggestionsService } from '../api/services';
 
 export interface ApplicationFilter {
   phase?: Phase;
@@ -41,6 +43,7 @@ export class Api {
   private readonly dashboard = inject(DashboardService);
   private readonly cv = inject(CvService);
   private readonly documents = inject(DocumentsService);
+  private readonly suggestions = inject(SuggestionsService);
 
   listCompanies(): Observable<Company[]> {
     return this.companies.listCompanies();
@@ -132,5 +135,15 @@ export class Api {
   }
   createDraft(id: string): Observable<Application> {
     return this.documents.createDraft({ id });
+  }
+
+  listSuggestions(): Observable<Suggestion[]> {
+    return this.suggestions.listSuggestions();
+  }
+  acceptSuggestion(id: string, body: SuggestionAccept): Observable<Application> {
+    return this.suggestions.acceptSuggestion({ id, body });
+  }
+  dismissSuggestion(id: string): Observable<void> {
+    return this.suggestions.dismissSuggestion({ id });
   }
 }

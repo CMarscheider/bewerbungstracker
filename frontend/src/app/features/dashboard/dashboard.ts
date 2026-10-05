@@ -8,10 +8,11 @@ import { Api } from '../../core/api';
 import { formatDayMonth, weekdayShort } from '../../core/dates';
 import { loaded } from '../../core/loaded';
 import { DEADLINE_LABELS, STATUS_TONE, eventLabel } from '../../shared/labels';
+import { AgentSuggestions } from './agent-suggestions';
 
 @Component({
   selector: 'app-dashboard',
-  imports: [PercentPipe, RouterLink, MatCardModule],
+  imports: [PercentPipe, RouterLink, MatCardModule, AgentSuggestions],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss',
 })
