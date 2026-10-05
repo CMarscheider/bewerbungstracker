@@ -647,7 +647,7 @@ components:
       required: [label, url]
       properties:
         label: { type: string, minLength: 1, maxLength: 100, pattern: '\S' }
-        url: { type: string, minLength: 1, maxLength: 500, pattern: '\S' }
+        url: { type: string, minLength: 1, maxLength: 500, pattern: '^https?://\S' }
     CvPerson:
       type: object
       required: [name, links]
@@ -697,7 +697,7 @@ components:
       required: [name, technologies]
       properties:
         name: { type: string, minLength: 1, maxLength: 200, pattern: '\S' }
-        url: { type: string, maxLength: 500 }
+        url: { type: string, maxLength: 500, pattern: '^https?://\S' }
         description: { type: string, maxLength: 2000 }
         technologies:
           type: array

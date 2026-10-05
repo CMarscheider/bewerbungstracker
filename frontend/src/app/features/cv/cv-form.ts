@@ -3,6 +3,8 @@ import { Cv, CvEducation, CvExperience, CvLanguage, CvLink, CvProject, CvSkillGr
 import { CvSection } from './cv-review-model';
 
 const PERIOD = /^\s*\d{4}(-(0[1-9]|1[0-2]))?\s*$/;
+/** Nur http(s)-Links; Leerzeichen am Anfang toleriert, da beim Speichern getrimmt wird. */
+const HTTP_URL = /^\s*https?:\/\/\S/;
 
 const text = (value = '') => new FormControl(value, { nonNullable: true });
 const required = (value = '') => new FormControl(value, { nonNullable: true, validators: [Validators.required, Validators.pattern(/\S/)] });
@@ -36,7 +38,10 @@ function compact<T extends object>(obj: T): T {
   return Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined)) as T;
 }
 
-export const linkGroup = (l?: CvLink) => new FormGroup({ label: required(l?.label), url: required(l?.url) });
+const httpUrl = (value = '', mandatory = false) =>
+  new FormControl(value, { nonNullable: true, validators: mandatory ? [Validators.required, Validators.pattern(HTTP_URL)] : [Validators.pattern(HTTP_URL)] });
+
+export const linkGroup = (l?: CvLink) => new FormGroup({ label: required(l?.label), url: httpUrl(l?.url, true) });
 
 export const experienceGroup = (e?: CvExperience) =>
   new FormGroup({
@@ -62,7 +67,7 @@ export const skillGroup = (s?: CvSkillGroup) => new FormGroup({ category: requir
 export const projectGroup = (p?: CvProject) =>
   new FormGroup({
     name: required(p?.name),
-    url: text(p?.url),
+    url: httpUrl(p?.url),
     description: text(p?.description),
     technologies: text(p?.technologies.join(', ')),
   });

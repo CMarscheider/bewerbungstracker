@@ -82,3 +82,23 @@ func TestSaveCVWithBlankNameIsBadRequest(t *testing.T) {
 	// bevor der Service (ValidationError für person.name) greift.
 	expectProblem(t, call(t, srv, http.MethodPut, "/api/v1/cv", cv), http.StatusBadRequest, "/problems/bad-request")
 }
+
+func TestSaveCVRejectsNonHTTPLinks(t *testing.T) {
+	srv := newTestServer(t)
+
+	cv := sampleCV()
+	cv["person"].(map[string]any)["links"] = []any{map[string]any{"label": "X", "url": "javascript:alert(1)"}}
+	expectProblem(t, call(t, srv, http.MethodPut, "/api/v1/cv", cv), http.StatusBadRequest, "/problems/bad-request")
+
+	cv = sampleCV()
+	cv["projects"] = []any{map[string]any{"name": "P", "url": "ftp://x", "technologies": []any{}}}
+	expectProblem(t, call(t, srv, http.MethodPut, "/api/v1/cv", cv), http.StatusBadRequest, "/problems/bad-request")
+}
+
+func TestSaveCVAcceptsHTTPLinks(t *testing.T) {
+	srv := newTestServer(t)
+	cv := sampleCV()
+	cv["person"].(map[string]any)["links"] = []any{map[string]any{"label": "GitHub", "url": "https://github.com/x"}}
+	cv["projects"] = []any{map[string]any{"name": "P", "url": "http://localhost:4200", "technologies": []any{}}}
+	expectStatus(t, call(t, srv, http.MethodPut, "/api/v1/cv", cv), http.StatusOK)
+}

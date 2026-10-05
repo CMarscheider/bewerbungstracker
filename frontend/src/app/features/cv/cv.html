@@ -26,7 +26,7 @@
         @for (g of f.controls.person.controls.links.controls; track g; let i = $index) {
           <div class="entry grid" [formGroup]="g">
             <mat-form-field><mat-label>Bezeichnung</mat-label><input matInput required formControlName="label" placeholder="GitHub" maxlength="100" /><mat-error>Pflichtfeld</mat-error></mat-form-field>
-            <mat-form-field><mat-label>URL</mat-label><input matInput required formControlName="url" maxlength="500" /><mat-error>Pflichtfeld</mat-error></mat-form-field>
+            <mat-form-field><mat-label>URL</mat-label><input matInput required type="url" formControlName="url" placeholder="https://" maxlength="500" /><mat-error>@if (g.controls.url.hasError('required')) {Pflichtfeld} @else {Bitte mit http:// oder https:// beginnen}</mat-error></mat-form-field>
             <button mat-button type="button" class="remove" [attr.aria-label]="'Link ' + (i + 1) + ' entfernen'" (click)="remove(f.controls.person.controls.links, i)">Entfernen</button>
           </div>
         }
@@ -98,7 +98,7 @@
         <div class="entry" [formGroup]="g">
           <div class="grid">
             <mat-form-field><mat-label>Name</mat-label><input matInput required formControlName="name" maxlength="200" /><mat-error>Pflichtfeld</mat-error></mat-form-field>
-            <mat-form-field><mat-label>URL</mat-label><input matInput formControlName="url" maxlength="500" /></mat-form-field>
+            <mat-form-field><mat-label>URL</mat-label><input matInput type="url" formControlName="url" placeholder="https://" maxlength="500" /><mat-error>Bitte mit http:// oder https:// beginnen</mat-error></mat-form-field>
             <mat-form-field><mat-label>Technologien (kommagetrennt)</mat-label><input matInput formControlName="technologies" /></mat-form-field>
           </div>
           <mat-form-field class="wide"><mat-label>Beschreibung</mat-label><textarea matInput formControlName="description" rows="3" maxlength="2000"></textarea></mat-form-field>

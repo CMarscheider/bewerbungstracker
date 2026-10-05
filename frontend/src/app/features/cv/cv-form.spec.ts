@@ -66,4 +66,22 @@ describe('cv-form', () => {
     expect(out.education).toEqual(cv.education);
     expect(form.dirty).toBe(true);
   });
+
+  it('akzeptiert nur http(s)-Links', () => {
+    const form = cvForm({ ...cv, projects: [{ name: 'Tracker', technologies: [] }] });
+    const link = form.controls.person.controls.links.at(0).controls.url;
+    const project = form.controls.projects.at(0).controls.url;
+    for (const bad of ['javascript:alert(1)', 'github.com/x']) {
+      link.setValue(bad);
+      project.setValue(bad);
+      expect(link.invalid).toBe(true);
+      expect(project.invalid).toBe(true);
+    }
+    link.setValue('https://github.com/x');
+    project.setValue('https://github.com/x');
+    expect(link.valid).toBe(true);
+    expect(project.valid).toBe(true);
+    project.setValue('');
+    expect(project.valid).toBe(true);
+  });
 });
