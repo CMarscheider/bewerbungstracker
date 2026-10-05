@@ -4,6 +4,7 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
@@ -19,6 +20,11 @@ func (e *NotFoundError) Error() string { return e.Resource + " nicht gefunden" }
 type ConflictError struct{ Detail string }
 
 func (e *ConflictError) Error() string { return e.Detail }
+
+// DuplicateError: Die Stelle gibt es schon (HTTP 409 mit ID der vorhandenen Bewerbung).
+type DuplicateError struct{ ExistingID uuid.UUID }
+
+func (e *DuplicateError) Error() string { return "Diese Stelle gibt es schon" }
 
 // UnavailableError: ein benötigter Dienst fehlt oder ist nicht erreichbar (HTTP 503).
 type UnavailableError struct {

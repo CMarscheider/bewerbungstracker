@@ -11,16 +11,21 @@ import (
 )
 
 type Application struct {
-	ID            uuid.UUID
-	CompanyID     uuid.UUID
-	PositionTitle string
-	JobUrl        *string
-	Location      *string
-	Source        *string
-	Notes         *string
-	CurrentStatus string
-	CreatedAt     time.Time
-	UpdatedAt     time.Time
+	ID             uuid.UUID
+	CompanyID      uuid.UUID
+	PositionTitle  string
+	JobUrl         *string
+	Location       *string
+	Source         *string
+	Notes          *string
+	CurrentStatus  string
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+	ContactEmail   *string
+	PostingText    *string
+	FitScore       *int32
+	FitReason      *string
+	CreatedByAgent bool
 }
 
 type ApplicationEvent struct {

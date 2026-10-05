@@ -13,19 +13,25 @@ import (
 )
 
 const createApplication = `-- name: CreateApplication :one
-INSERT INTO applications (company_id, position_title, job_url, location, source, notes, current_status)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
-RETURNING id, company_id, position_title, job_url, location, source, notes, current_status, created_at, updated_at
+INSERT INTO applications (company_id, position_title, job_url, location, source, notes, current_status,
+                          contact_email, posting_text, fit_score, fit_reason, created_by_agent)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+RETURNING id, company_id, position_title, job_url, location, source, notes, current_status, created_at, updated_at, contact_email, posting_text, fit_score, fit_reason, created_by_agent
 `
 
 type CreateApplicationParams struct {
-	CompanyID     uuid.UUID
-	PositionTitle string
-	JobUrl        *string
-	Location      *string
-	Source        *string
-	Notes         *string
-	CurrentStatus string
+	CompanyID      uuid.UUID
+	PositionTitle  string
+	JobUrl         *string
+	Location       *string
+	Source         *string
+	Notes          *string
+	CurrentStatus  string
+	ContactEmail   *string
+	PostingText    *string
+	FitScore       *int32
+	FitReason      *string
+	CreatedByAgent bool
 }
 
 func (q *Queries) CreateApplication(ctx context.Context, arg CreateApplicationParams) (Application, error) {
@@ -37,6 +43,11 @@ func (q *Queries) CreateApplication(ctx context.Context, arg CreateApplicationPa
 		arg.Source,
 		arg.Notes,
 		arg.CurrentStatus,
+		arg.ContactEmail,
+		arg.PostingText,
+		arg.FitScore,
+		arg.FitReason,
+		arg.CreatedByAgent,
 	)
 	var i Application
 	err := row.Scan(
@@ -50,6 +61,11 @@ func (q *Queries) CreateApplication(ctx context.Context, arg CreateApplicationPa
 		&i.CurrentStatus,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ContactEmail,
+		&i.PostingText,
+		&i.FitScore,
+		&i.FitReason,
+		&i.CreatedByAgent,
 	)
 	return i, err
 }
@@ -66,26 +82,58 @@ func (q *Queries) DeleteApplication(ctx context.Context, id uuid.UUID) (int64, e
 	return result.RowsAffected(), nil
 }
 
+const findDuplicateApplication = `-- name: FindDuplicateApplication :one
+SELECT a.id
+FROM applications a
+JOIN companies c ON c.id = a.company_id
+WHERE ($1::text IS NOT NULL
+       AND lower(rtrim(a.job_url, '/')) = lower(rtrim($1::text, '/')))
+   OR (lower(c.name) = lower($2::text)
+       AND lower(a.position_title) = lower($3::text))
+ORDER BY a.created_at
+LIMIT 1
+`
+
+type FindDuplicateApplicationParams struct {
+	JobUrl        *string
+	CompanyName   string
+	PositionTitle string
+}
+
+// Gleiche Anzeige (normalisierte URL) oder gleiche Firma + gleicher Titel, jeweils ohne Groß-/Kleinschreibung.
+func (q *Queries) FindDuplicateApplication(ctx context.Context, arg FindDuplicateApplicationParams) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, findDuplicateApplication, arg.JobUrl, arg.CompanyName, arg.PositionTitle)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
 const getApplication = `-- name: GetApplication :one
 SELECT a.id, a.company_id, c.name AS company_name, a.position_title, a.job_url, a.location,
-       a.source, a.notes, a.current_status, a.created_at, a.updated_at
+       a.source, a.notes, a.contact_email, a.posting_text, a.fit_score, a.fit_reason, a.created_by_agent,
+       a.current_status, a.created_at, a.updated_at
 FROM applications a
 JOIN companies c ON c.id = a.company_id
 WHERE a.id = $1
 `
 
 type GetApplicationRow struct {
-	ID            uuid.UUID
-	CompanyID     uuid.UUID
-	CompanyName   string
-	PositionTitle string
-	JobUrl        *string
-	Location      *string
-	Source        *string
-	Notes         *string
-	CurrentStatus string
-	CreatedAt     time.Time
-	UpdatedAt     time.Time
+	ID             uuid.UUID
+	CompanyID      uuid.UUID
+	CompanyName    string
+	PositionTitle  string
+	JobUrl         *string
+	Location       *string
+	Source         *string
+	Notes          *string
+	ContactEmail   *string
+	PostingText    *string
+	FitScore       *int32
+	FitReason      *string
+	CreatedByAgent bool
+	CurrentStatus  string
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
 }
 
 func (q *Queries) GetApplication(ctx context.Context, id uuid.UUID) (GetApplicationRow, error) {
@@ -100,6 +148,11 @@ func (q *Queries) GetApplication(ctx context.Context, id uuid.UUID) (GetApplicat
 		&i.Location,
 		&i.Source,
 		&i.Notes,
+		&i.ContactEmail,
+		&i.PostingText,
+		&i.FitScore,
+		&i.FitReason,
+		&i.CreatedByAgent,
 		&i.CurrentStatus,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -109,7 +162,8 @@ func (q *Queries) GetApplication(ctx context.Context, id uuid.UUID) (GetApplicat
 
 const listApplications = `-- name: ListApplications :many
 SELECT a.id, a.company_id, c.name AS company_name, a.position_title, a.current_status,
-       a.updated_at, le.occurred_on AS last_event_on, le.due_on AS open_due_on
+       a.updated_at, le.occurred_on AS last_event_on, le.due_on AS open_due_on,
+       a.fit_score, a.created_by_agent
 FROM applications a
 JOIN companies c ON c.id = a.company_id
 JOIN latest_events le ON le.application_id = a.id
@@ -117,27 +171,38 @@ WHERE ($1::text[] IS NULL OR a.current_status = ANY ($1::text[]))
   AND ($2::text IS NULL
        OR strpos(lower(c.name), lower($2::text)) > 0
        OR strpos(lower(a.position_title), lower($2::text)) > 0)
-ORDER BY a.updated_at DESC, a.id
+  AND ($3::bool IS NULL OR a.created_by_agent = $3::bool)
+ORDER BY CASE WHEN $4::bool THEN a.fit_score END DESC NULLS LAST,
+         a.updated_at DESC, a.id
 `
 
 type ListApplicationsParams struct {
-	Statuses []string
-	Query    *string
+	Statuses  []string
+	Query     *string
+	FromAgent *bool
+	ByScore   bool
 }
 
 type ListApplicationsRow struct {
-	ID            uuid.UUID
-	CompanyID     uuid.UUID
-	CompanyName   string
-	PositionTitle string
-	CurrentStatus string
-	UpdatedAt     time.Time
-	LastEventOn   time.Time
-	OpenDueOn     *time.Time
+	ID             uuid.UUID
+	CompanyID      uuid.UUID
+	CompanyName    string
+	PositionTitle  string
+	CurrentStatus  string
+	UpdatedAt      time.Time
+	LastEventOn    time.Time
+	OpenDueOn      *time.Time
+	FitScore       *int32
+	CreatedByAgent bool
 }
 
 func (q *Queries) ListApplications(ctx context.Context, arg ListApplicationsParams) ([]ListApplicationsRow, error) {
-	rows, err := q.db.Query(ctx, listApplications, arg.Statuses, arg.Query)
+	rows, err := q.db.Query(ctx, listApplications,
+		arg.Statuses,
+		arg.Query,
+		arg.FromAgent,
+		arg.ByScore,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -154,6 +219,8 @@ func (q *Queries) ListApplications(ctx context.Context, arg ListApplicationsPara
 			&i.UpdatedAt,
 			&i.LastEventOn,
 			&i.OpenDueOn,
+			&i.FitScore,
+			&i.CreatedByAgent,
 		); err != nil {
 			return nil, err
 		}
@@ -166,7 +233,7 @@ func (q *Queries) ListApplications(ctx context.Context, arg ListApplicationsPara
 }
 
 const lockApplication = `-- name: LockApplication :one
-SELECT id, company_id, position_title, job_url, location, source, notes, current_status, created_at, updated_at FROM applications WHERE id = $1 FOR UPDATE
+SELECT id, company_id, position_title, job_url, location, source, notes, current_status, created_at, updated_at, contact_email, posting_text, fit_score, fit_reason, created_by_agent FROM applications WHERE id = $1 FOR UPDATE
 `
 
 func (q *Queries) LockApplication(ctx context.Context, id uuid.UUID) (Application, error) {
@@ -183,6 +250,11 @@ func (q *Queries) LockApplication(ctx context.Context, id uuid.UUID) (Applicatio
 		&i.CurrentStatus,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ContactEmail,
+		&i.PostingText,
+		&i.FitScore,
+		&i.FitReason,
+		&i.CreatedByAgent,
 	)
 	return i, err
 }
@@ -204,9 +276,9 @@ func (q *Queries) SetApplicationStatus(ctx context.Context, arg SetApplicationSt
 const updateApplication = `-- name: UpdateApplication :one
 UPDATE applications
 SET company_id = $2, position_title = $3, job_url = $4, location = $5, source = $6, notes = $7,
-    updated_at = now()
+    contact_email = $8, updated_at = now()
 WHERE id = $1
-RETURNING id, company_id, position_title, job_url, location, source, notes, current_status, created_at, updated_at
+RETURNING id, company_id, position_title, job_url, location, source, notes, current_status, created_at, updated_at, contact_email, posting_text, fit_score, fit_reason, created_by_agent
 `
 
 type UpdateApplicationParams struct {
@@ -217,6 +289,7 @@ type UpdateApplicationParams struct {
 	Location      *string
 	Source        *string
 	Notes         *string
+	ContactEmail  *string
 }
 
 func (q *Queries) UpdateApplication(ctx context.Context, arg UpdateApplicationParams) (Application, error) {
@@ -228,6 +301,7 @@ func (q *Queries) UpdateApplication(ctx context.Context, arg UpdateApplicationPa
 		arg.Location,
 		arg.Source,
 		arg.Notes,
+		arg.ContactEmail,
 	)
 	var i Application
 	err := row.Scan(
@@ -241,6 +315,11 @@ func (q *Queries) UpdateApplication(ctx context.Context, arg UpdateApplicationPa
 		&i.CurrentStatus,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ContactEmail,
+		&i.PostingText,
+		&i.FitScore,
+		&i.FitReason,
+		&i.CreatedByAgent,
 	)
 	return i, err
 }

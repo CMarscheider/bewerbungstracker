@@ -27,3 +27,6 @@ RETURNING *;
 
 -- name: DeleteCompany :execrows
 DELETE FROM companies WHERE id = $1;
+
+-- name: GetCompanyByName :one
+SELECT * FROM companies WHERE lower(name) = lower($1);

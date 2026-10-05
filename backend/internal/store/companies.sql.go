@@ -81,6 +81,23 @@ func (q *Queries) GetCompany(ctx context.Context, id uuid.UUID) (GetCompanyRow, 
 	return i, err
 }
 
+const getCompanyByName = `-- name: GetCompanyByName :one
+SELECT id, name, website, notes, created_at FROM companies WHERE lower(name) = lower($1)
+`
+
+func (q *Queries) GetCompanyByName(ctx context.Context, lower string) (Company, error) {
+	row := q.db.QueryRow(ctx, getCompanyByName, lower)
+	var i Company
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Website,
+		&i.Notes,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const listCompanies = `-- name: ListCompanies :many
 SELECT c.id, c.name, c.website, c.notes, c.created_at,
        count(a.id)::int AS application_count
