@@ -70,8 +70,9 @@ describe('ApplicationDetail', () => {
   it('zeigt die Passung mit Score und Begründung', async () => {
     const { el } = await render([], agentJob);
     const fit = el.querySelector('[data-testid="fit"]') as HTMLElement;
+    expect(fit.classList).toContain('fit-section');
     expect(fit.textContent).toContain('Passung');
-    expect(fit.querySelector('.fit')?.textContent?.trim()).toBe('82');
+    expect(fit.querySelector('[role="img"]')?.textContent?.trim()).toBe('82');
     expect(fit.textContent).toContain('Passt gut zu Angular und Go.');
   });
 
@@ -91,8 +92,24 @@ describe('ApplicationDetail', () => {
   it('zeigt die Bewerbungs-E-Mail als mailto-Link', async () => {
     const { el } = await render([], agentJob);
     const link = el.querySelector('a[href^="mailto:"]');
-    expect(link?.getAttribute('href')).toBe('mailto:jobs@acme.de');
+    expect(link?.getAttribute('href')).toBe('mailto:' + encodeURIComponent('jobs@acme.de'));
     expect(el.querySelector('dl')?.textContent).toContain('Bewerbungs-E-Mail');
+  });
+
+  it('kodiert die Adresse im mailto-Link', async () => {
+    const { el } = await render([], { ...agentJob, contact_email: 'a+b@acme.de?cc=x' });
+    expect(el.querySelector('a[href^="mailto:"]')?.getAttribute('href')).toBe('mailto:a%2Bb%40acme.de%3Fcc%3Dx');
+  });
+
+  it('zeigt Anzeigentext und Begründung als reinen Text', async () => {
+    const evil = '<img src=x onerror=alert(1)>';
+    const { fixture, el } = await render([], { ...agentJob, fit_reason: evil, posting_text: evil });
+    (el.querySelector('mat-expansion-panel-header') as HTMLElement).click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(el.querySelector('img')).toBeNull();
+    expect(el.querySelector('[data-testid="fit"]')?.textContent).toContain(evil);
+    expect(el.querySelector('.posting .pre')?.textContent).toBe(evil);
   });
 
   it('sendet die Bewerbungs-E-Mail beim Speichern mit (leer löscht)', async () => {

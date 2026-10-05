@@ -7,8 +7,13 @@
 .fit-row {
   align-items: baseline;
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   margin: 0;
+}
+.fit-reason {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .posting {
   margin-top: 16px;
@@ -49,6 +54,9 @@
 .note,
 .pre {
   white-space: pre-wrap;
+}
+.pre {
+  overflow-wrap: anywhere;
 }
 .note {
   margin: 4px 0 0;

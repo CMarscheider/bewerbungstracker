@@ -50,11 +50,11 @@ func (s *Service) CreateAgentJob(ctx context.Context, in AgentJob) (Application,
 	jobURL := cleanOptional(in.JobURL)
 	score := int32(in.FitScore)
 
+	dupParams := store.FindDuplicateApplicationParams{JobUrl: jobURL, CompanyName: company, PositionTitle: title}
+
 	var id uuid.UUID
 	err = s.inTx(ctx, func(q *store.Queries) error {
-		dup, err := q.FindDuplicateApplication(ctx, store.FindDuplicateApplicationParams{
-			JobUrl: jobURL, CompanyName: company, PositionTitle: title,
-		})
+		dup, err := q.FindDuplicateApplication(ctx, dupParams)
 		if err == nil {
 			return &DuplicateError{ExistingID: dup}
 		}
@@ -91,6 +91,13 @@ func (s *Service) CreateAgentJob(ctx context.Context, in AgentJob) (Application,
 		_, err = q.InsertEvent(ctx, insertParams(app.ID, first, nil))
 		return err
 	})
+	if errors.Is(err, errDuplicateURL) {
+		// Ein gleichzeitiger Lauf hat dieselbe Anzeige zwischen Dublettensuche und Einfügen festgeschrieben.
+		// Die Transaktion ist abgebrochen, darum außerhalb neu suchen, um die vorhandene ID zu melden.
+		if dup, lookupErr := s.queries().FindDuplicateApplication(ctx, dupParams); lookupErr == nil {
+			return Application{}, &DuplicateError{ExistingID: dup}
+		}
+	}
 	if err != nil {
 		return Application{}, err
 	}

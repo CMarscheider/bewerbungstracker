@@ -10,7 +10,7 @@ export function fitLevel(score: number): FitLevel {
 @Component({
   selector: 'app-fit-score',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `<span [class]="'fit ' + level()" [attr.aria-label]="'Passung ' + score() + ' von 100'">{{ score() }}</span>`,
+  template: `<span role="img" [class]="'fit ' + level()" [attr.aria-label]="'Passung ' + score() + ' von 100'">{{ score() }}</span>`,
   styles: `
     .fit {
       border-radius: 999px;

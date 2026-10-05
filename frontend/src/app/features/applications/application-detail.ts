@@ -43,6 +43,8 @@ export class ApplicationDetail {
   protected readonly eventLabel = eventLabel;
   protected readonly formatDate = formatDate;
   protected readonly contactEmailError = CONTACT_EMAIL_ERROR;
+  /** Adresse kodiert, damit sie keine mailto-Parameter (?cc=, &body=) einschleusen kann. */
+  protected readonly mailto = (address: string) => 'mailto:' + encodeURIComponent(address);
 
   protected readonly form = new FormGroup({
     position_title: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.pattern(/\S/)] }),

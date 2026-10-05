@@ -20,5 +20,6 @@ describe('FitScore', () => {
     expect(el.textContent?.trim()).toBe('82');
     expect(el.classList).toContain('hoch');
     expect(el.getAttribute('aria-label')).toBe('Passung 82 von 100');
+    expect(el.getAttribute('role')).toBe('img');
   });
 });

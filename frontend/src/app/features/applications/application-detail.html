@@ -5,12 +5,12 @@
   </header>
 
   @if (app.fit_score != null) {
-    <section class="fit" data-testid="fit">
+    <section class="fit-section" data-testid="fit">
       <h2>Passung</h2>
       <p class="fit-row">
         <app-fit-score [score]="app.fit_score" />
         @if (app.fit_reason) {
-          <span>{{ app.fit_reason }}</span>
+          <span class="fit-reason">{{ app.fit_reason }}</span>
         }
       </p>
     </section>
@@ -90,7 +90,7 @@
         <dt>Bewerbungs-E-Mail</dt>
         <dd>
           @if (app.contact_email) {
-            <a [href]="'mailto:' + app.contact_email">{{ app.contact_email }}</a>
+            <a [href]="mailto(app.contact_email)">{{ app.contact_email }}</a>
           } @else {
             –
           }

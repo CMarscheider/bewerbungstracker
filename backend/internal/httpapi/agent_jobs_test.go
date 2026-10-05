@@ -41,14 +41,23 @@ func TestAgentCreateApplication(t *testing.T) {
 func TestAgentCreateApplicationValidatesAndNeedsToken(t *testing.T) {
 	srv := newAgentTestServer(t, agentToken)
 	for name, body := range map[string]string{
-		"score": `{"company_name":"A","position_title":"B","fit_score":101,"fit_reason":"x"}`,
-		"url":   `{"company_name":"A","position_title":"B","job_url":"javascript:alert(1)","fit_score":5,"fit_reason":"x"}`,
-		"email": `{"company_name":"A","position_title":"B","contact_email":"kein-mail","fit_score":5,"fit_reason":"x"}`,
-		"leer":  `{"company_name":" ","position_title":"B","fit_score":5,"fit_reason":"x"}`,
-		"grund": `{"company_name":"A","position_title":"B","fit_score":5}`,
+		"score":                   `{"company_name":"A","position_title":"B","fit_score":101,"fit_reason":"x"}`,
+		"url":                     `{"company_name":"A","position_title":"B","job_url":"javascript:alert(1)","fit_score":5,"fit_reason":"x"}`,
+		"email":                   `{"company_name":"A","position_title":"B","contact_email":"kein-mail","fit_score":5,"fit_reason":"x"}`,
+		"leer":                    `{"company_name":" ","position_title":"B","fit_score":5,"fit_reason":"x"}`,
+		"grund":                   `{"company_name":"A","position_title":"B","fit_score":5}`,
+		"url mit Leerzeichen":     `{"company_name":"A","position_title":"B","job_url":"https://jobs.example.com/a b","fit_score":5,"fit_reason":"x"}`,
+		"website mit Leerzeichen": `{"company_name":"A","company_website":"https://a.example x","position_title":"B","fit_score":5,"fit_reason":"x"}`,
+		"email mit Query":         `{"company_name":"A","position_title":"B","contact_email":"a@b.de?subject=x","fit_score":5,"fit_reason":"x"}`,
 	} {
 		if res := callWith(t, srv, http.MethodPost, "/api/agent/applications", agentToken, json.RawMessage(body)); res.Status != http.StatusBadRequest {
 			t.Errorf("%s: status %d; Body: %s", name, res.Status, res.Body)
+		}
+	}
+	for _, bad := range invalidContactEmails[:5] {
+		body := map[string]any{"company_name": "A", "position_title": "B", "contact_email": bad, "fit_score": 5, "fit_reason": "x"}
+		if res := callWith(t, srv, http.MethodPost, "/api/agent/applications", agentToken, body); res.Status != http.StatusBadRequest {
+			t.Errorf("E-Mail %q: status %d", bad, res.Status)
 		}
 	}
 	res := callWith(t, srv, http.MethodPost, "/api/agent/applications", "", json.RawMessage(agentJobBody))
@@ -89,4 +98,35 @@ func TestListApplicationsFromAgentAndSort(t *testing.T) {
 		t.Fatalf("manuelle: %d", n)
 	}
 	expectStatus(t, call(t, srv, http.MethodGet, "/api/v1/applications?sort=foo", nil), http.StatusBadRequest)
+}
+
+// Ungültige Bewerbungs-Adressen, vor allem solche, die im mailto-Link Parameter einschleusen könnten.
+// Die ersten fünf prüft auch der Agenten-Test (mehr sprengt dort die Drosselung, Burst 20).
+var invalidContactEmails = []string{
+	"a@b.de?cc=x", "a@b.de%3Fcc", "a b@c.de", "a@b.de#x", "a@b",
+	"a@b.de?subject=x", "a@b.de&cc=c@d.de", `"a"@b.de`, "<a@b.de>", "a@b.de=x", "a,b@c.de", "a;b@c.de", "a/b@c.de", "a:b@c.de",
+}
+
+func TestContactEmailRejectsMailtoParameters(t *testing.T) {
+	srv := newTestServer(t)
+	company := createCompany(t, srv, "Acme")
+	res := call(t, srv, http.MethodPost, "/api/v1/applications", map[string]any{
+		"company_id": company, "position_title": "Frontend", "contact_email": "a@b.de?subject=x",
+		"first_event": map[string]any{"type": "Vorgemerkt", "occurred_on": today()},
+	})
+	expectStatus(t, res, http.StatusBadRequest)
+
+	ok := call(t, srv, http.MethodPost, "/api/v1/applications", map[string]any{
+		"company_id": company, "position_title": "Frontend", "contact_email": "jobs@acme.example",
+		"first_event": map[string]any{"type": "Vorgemerkt", "occurred_on": today()},
+	})
+	expectStatus(t, ok, http.StatusCreated)
+	id := ok.object(t)["id"].(string)
+	for _, bad := range invalidContactEmails {
+		res := call(t, srv, http.MethodPatch, "/api/v1/applications/"+id, map[string]any{"contact_email": bad})
+		if res.Status != http.StatusBadRequest {
+			t.Errorf("PATCH %q: status %d", bad, res.Status)
+		}
+	}
+	expectStatus(t, call(t, srv, http.MethodPatch, "/api/v1/applications/"+id, map[string]any{"contact_email": ""}), http.StatusOK)
 }

@@ -554,7 +554,7 @@ components:
         location: { type: string, maxLength: 200 }
         source: { type: string, maxLength: 100 }
         notes: { type: string, maxLength: 5000 }
-        contact_email: { type: string, maxLength: 200, pattern: '^$|^[^@\s]+@[^@\s]+\.[^@\s]+$' }
+        contact_email: { type: string, maxLength: 200, pattern: '^$|^[^@\s?&=#%,;:/<>"]+@[^@\s?&=#%,;:/<>"]+\.[^@\s?&=#%,;:/<>"]+$' }
         first_event: { $ref: "#/components/schemas/NewEvent" }
     ApplicationPatch:
       type: object
@@ -566,7 +566,7 @@ components:
         location: { type: string, maxLength: 200 }
         source: { type: string, maxLength: 100 }
         notes: { type: string, maxLength: 5000 }
-        contact_email: { type: string, maxLength: 200, pattern: '^$|^[^@\s]+@[^@\s]+\.[^@\s]+$' }
+        contact_email: { type: string, maxLength: 200, pattern: '^$|^[^@\s?&=#%,;:/<>"]+@[^@\s?&=#%,;:/<>"]+\.[^@\s?&=#%,;:/<>"]+$' }
     ApplicationSummary:
       type: object
       required: [id, company_id, company_name, position_title, status, phase, updated_at, last_event_on, created_by_agent]
@@ -611,12 +611,12 @@ components:
       required: [company_name, position_title, fit_score, fit_reason]
       properties:
         company_name: { type: string, minLength: 1, maxLength: 200, pattern: '\S' }
-        company_website: { type: string, maxLength: 500, pattern: '^https?://\S' }
+        company_website: { type: string, maxLength: 500, pattern: '^https?://\S+$' }
         position_title: { type: string, minLength: 1, maxLength: 300, pattern: '\S' }
-        job_url: { type: string, maxLength: 1000, pattern: '^https?://\S' }
+        job_url: { type: string, maxLength: 1000, pattern: '^https?://\S+$' }
         location: { type: string, maxLength: 200 }
         source: { type: string, maxLength: 100 }
-        contact_email: { type: string, maxLength: 200, pattern: '^[^@\s]+@[^@\s]+\.[^@\s]+$' }
+        contact_email: { type: string, maxLength: 200, pattern: '^[^@\s?&=#%,;:/<>"]+@[^@\s?&=#%,;:/<>"]+\.[^@\s?&=#%,;:/<>"]+$' }
         posting_text: { type: string, maxLength: 30000 }
         fit_score: { type: integer, minimum: 0, maximum: 100 }
         fit_reason: { type: string, minLength: 1, maxLength: 1000, pattern: '\S' }
