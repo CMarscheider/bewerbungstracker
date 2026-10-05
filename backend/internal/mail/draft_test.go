@@ -161,3 +161,64 @@ func TestBuildDraftRejectsHeaderInjection(t *testing.T) {
 		})
 	}
 }
+
+func TestBuildDraftFoldsSubject(t *testing.T) {
+	d := testDraft()
+	d.Subject = strings.Repeat("Bewerbung für Müller & Söhne – ", 6)
+	raw, err := BuildDraft(d)
+	if err != nil {
+		t.Fatal(err)
+	}
+	head, _, _ := strings.Cut(string(raw), "\r\n\r\n")
+	start := strings.Index(head, "\r\nSubject: ")
+	if start < 0 {
+		t.Fatal("Subject fehlt")
+	}
+	subjRaw := head[start+2:]
+	if end := strings.Index(subjRaw, "\r\nDate:"); end >= 0 {
+		subjRaw = subjRaw[:end]
+	}
+	lines := strings.Split(subjRaw, "\r\n")
+	if len(lines) < 2 {
+		t.Fatalf("Subject nicht gefaltet: %q", subjRaw)
+	}
+	for i, line := range lines {
+		if i > 0 && !strings.HasPrefix(line, " =?utf-8?") {
+			t.Errorf("Folgezeile %d beginnt nicht mit Leerzeichen + encoded-word: %q", i, line)
+		}
+		if len(line) > 100 {
+			t.Errorf("Zeile %d zu lang: %d", i, len(line))
+		}
+	}
+
+	msg, err := netmail.ReadMessage(bytes.NewReader(raw))
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := new(mime.WordDecoder).DecodeHeader(msg.Header.Get("Subject"))
+	if err != nil || got != d.Subject {
+		t.Errorf("Subject = %q (%v), want %q", got, err, d.Subject)
+	}
+}
+
+func TestBuildDraftSubjectLength(t *testing.T) {
+	d := testDraft()
+	d.Subject = strings.Repeat("ä", 200)
+	if _, err := BuildDraft(d); err != nil {
+		t.Errorf("200 Zeichen abgelehnt: %v", err)
+	}
+	d.Subject = strings.Repeat("ä", 201)
+	if _, err := BuildDraft(d); err == nil {
+		t.Error("201 Zeichen nicht abgelehnt")
+	}
+}
+
+func TestBuildDraftRejectsEmptyPDF(t *testing.T) {
+	for _, pdf := range [][]byte{nil, {}} {
+		d := testDraft()
+		d.PDF = pdf
+		if _, err := BuildDraft(d); err == nil {
+			t.Errorf("leeres PDF (%v) nicht abgelehnt", pdf)
+		}
+	}
+}

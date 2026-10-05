@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net"
 	"slices"
 	"time"
@@ -17,6 +18,24 @@ type IMAPConfig struct {
 	Addr               string // z. B. "imap.gmail.com:993"
 	Username, Password string
 	Insecure           bool // nur für Tests: ohne TLS
+}
+
+// redacted ersetzt das Passwort in Ausgaben.
+const redacted = "[verborgen]"
+
+// String verbirgt das Passwort (fmt, %v, %+v).
+func (c IMAPConfig) String() string {
+	return fmt.Sprintf("IMAPConfig{Addr:%s Username:%s Password:%s Insecure:%t}", c.Addr, c.Username, redacted, c.Insecure)
+}
+
+// LogValue verbirgt das Passwort in slog-Ausgaben.
+func (c IMAPConfig) LogValue() slog.Value {
+	return slog.GroupValue(
+		slog.String("addr", c.Addr),
+		slog.String("username", c.Username),
+		slog.String("password", redacted),
+		slog.Bool("insecure", c.Insecure),
+	)
 }
 
 var (
@@ -91,20 +110,32 @@ func (d *IMAPDrafter) Save(ctx context.Context, msg []byte) (err error) {
 	app := c.Append(mailbox, int64(len(msg)), &imap.AppendOptions{Flags: []imap.Flag{imap.FlagDraft}})
 	if _, err := app.Write(msg); err != nil {
 		_ = app.Close()
-		return fmt.Errorf("imap: entwurf übertragen: %w", err)
+		return classify("entwurf übertragen", err)
 	}
 	if err := app.Close(); err != nil {
-		return fmt.Errorf("imap: entwurf übertragen: %w", err)
+		return classify("entwurf übertragen", err)
 	}
 	if _, err := app.Wait(); err != nil {
-		return fmt.Errorf("imap: entwurf ablegen in %q: %w", mailbox, err)
+		return classify(fmt.Sprintf("entwurf ablegen in %q", mailbox), err)
 	}
 	// Der Entwurf liegt; ein Fehler beim Abmelden ändert daran nichts.
 	_ = c.Logout().Wait()
 	return nil
 }
 
-// draftsMailbox sucht den Ordner mit Attribut \Drafts, sonst einen der bekannten Namen.
+// classify ordnet Fehler nach dem Login ein: Antworten des Servers (*imap.Error)
+// bleiben, wie sie sind; alles andere ist ein Netzfehler und erfüllt ErrUnavailable.
+func classify(op string, err error) error {
+	if err == nil {
+		return nil
+	}
+	if imapErr, ok := errors.AsType[*imap.Error](err); ok && imapErr != nil {
+		return fmt.Errorf("imap: %s: %w", op, err)
+	}
+	return fmt.Errorf("%w: %s: %w", ErrUnavailable, op, err)
+}
+
+// draftsMailbox listet die Ordner und wählt den Entwurfsordner.
 func draftsMailbox(c *imapclient.Client) (string, error) {
 	var opts *imap.ListOptions
 	if c.Caps().Has(imap.CapSpecialUse) {
@@ -112,8 +143,14 @@ func draftsMailbox(c *imapclient.Client) (string, error) {
 	}
 	list, err := c.List("", "*", opts).Collect()
 	if err != nil {
-		return "", fmt.Errorf("imap: ordner auflisten: %w", err)
+		return "", classify("ordner auflisten", err)
 	}
+	return pickDrafts(list)
+}
+
+// pickDrafts wählt den Ordner mit Attribut \Drafts, sonst den ersten
+// vorhandenen aus fallbackDrafts.
+func pickDrafts(list []*imap.ListData) (string, error) {
 	names := make([]string, 0, len(list))
 	for _, mb := range list {
 		if slices.Contains(mb.Attrs, imap.MailboxAttrDrafts) {

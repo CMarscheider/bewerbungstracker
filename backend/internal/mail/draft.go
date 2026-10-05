@@ -15,6 +15,7 @@ import (
 	"net/textproto"
 	"strings"
 	"time"
+	"unicode/utf8"
 )
 
 // Draft enthält alles für einen Bewerbungsentwurf: Mailtext und PDF-Anhang.
@@ -27,6 +28,9 @@ type Draft struct {
 
 // base64LineLen: maximale Zeilenlänge im base64-Anhang (RFC 2045).
 const base64LineLen = 76
+
+// maxSubjectRunes: längster erlaubter Betreff (die API begrenzt ebenso).
+const maxSubjectRunes = 200
 
 // BuildDraft erzeugt eine RFC-5322-Nachricht (multipart/mixed: Text + PDF).
 // Header-Werte mit Zeilenumbruch werden abgelehnt (Header-Injection).
@@ -47,6 +51,12 @@ func BuildDraft(d Draft) ([]byte, error) {
 	if strings.TrimSpace(d.FileName) == "" {
 		return nil, errors.New("mail: dateiname fehlt")
 	}
+	if n := utf8.RuneCountInString(d.Subject); n > maxSubjectRunes {
+		return nil, fmt.Errorf("mail: betreff länger als %d zeichen (%d)", maxSubjectRunes, n)
+	}
+	if len(d.PDF) == 0 {
+		return nil, errors.New("mail: pdf fehlt")
+	}
 	msgID, err := messageID(from.Address)
 	if err != nil {
 		return nil, err
@@ -61,7 +71,7 @@ func BuildDraft(d Draft) ([]byte, error) {
 	header := func(k, v string) { fmt.Fprintf(&buf, "%s: %s\r\n", k, v) }
 	header("From", from.String())
 	header("To", to.String())
-	header("Subject", mime.QEncoding.Encode("utf-8", d.Subject))
+	header("Subject", foldSubject(d.Subject))
 	header("Date", date.Format(time.RFC1123Z))
 	header("Message-Id", msgID)
 	header("MIME-Version", "1.0")
@@ -132,4 +142,14 @@ func messageID(addr string) (string, error) {
 		return "", fmt.Errorf("mail: message-id: %w", err)
 	}
 	return "<" + hex.EncodeToString(b) + "@" + domain + ">", nil
+}
+
+// foldSubject kodiert den Betreff nach RFC 2047 und faltet zwischen den
+// encoded-words (CRLF + Leerzeichen), damit keine Zeile zu lang wird.
+func foldSubject(s string) string {
+	enc := mime.QEncoding.Encode("utf-8", s)
+	if enc == s {
+		return s // reines ASCII, nicht kodiert
+	}
+	return strings.ReplaceAll(enc, "?= =?", "?=\r\n =?")
 }
