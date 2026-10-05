@@ -1,30 +1,131 @@
-.toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 8px;
-  height: auto;
-  min-height: 64px;
-  padding: 8px 16px;
+// Oberer Balken: klebt oben, Inhalt auf --content-max begrenzt.
+.topbar {
+  backdrop-filter: saturate(1.4) blur(8px);
+  background: color-mix(in srgb, var(--app-card-bg) 92%, transparent);
+  border-bottom: 1px solid var(--app-border);
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
+.bar {
+  align-items: center;
+  box-sizing: border-box;
+  display: flex;
+  gap: var(--space-2) var(--space-5);
+  margin: 0 auto;
+  max-width: var(--content-max);
+  min-height: var(--topbar-height);
+  padding: 0 var(--gutter);
+}
+
 .brand {
-  color: inherit;
-  font-weight: 600;
-  margin-right: 16px;
+  align-items: center;
+  color: var(--app-heading);
+  display: inline-flex;
+  flex: none;
+  font-size: 1rem;
+  font-weight: 700;
+  gap: var(--space-2);
+  letter-spacing: -0.01em;
   text-decoration: none;
 }
+.mark-bg {
+  fill: var(--brand-petrol);
+  stroke: light-dark(transparent, #2f5d66);
+}
+.mark-line {
+  fill: none;
+  stroke: var(--brand-teal);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 3;
+}
+.mark-dot {
+  fill: #ffffff;
+}
+
 nav {
+  align-self: stretch;
   display: flex;
-  flex-wrap: wrap;
+  gap: var(--space-1);
 }
-.active {
-  text-decoration: underline;
-  text-underline-offset: 6px;
+.nav-link {
+  align-items: center;
+  color: var(--app-muted);
+  display: inline-flex;
+  font-weight: 550;
+  min-height: 44px;
+  padding: 0 var(--space-3);
+  position: relative;
+  text-decoration: none;
+  transition:
+    color var(--dur-fast) ease,
+    background-color var(--dur-fast) ease;
+  white-space: nowrap;
 }
-.spacer {
-  flex: 1;
+.nav-link:hover {
+  color: var(--app-text);
 }
+.nav-link:focus-visible {
+  outline-offset: -2px;
+}
+// Aktiver Punkt: Teal-Text, fette Schrift und Balken unten (nicht nur Farbe).
+.nav-link.active {
+  color: var(--app-accent-ink);
+  font-weight: 650;
+}
+.nav-link.active::after {
+  background: var(--brand-teal);
+  border-radius: 2px 2px 0 0;
+  bottom: -1px;
+  content: '';
+  height: 3px;
+  left: var(--space-3);
+  position: absolute;
+  right: var(--space-3);
+}
+
+.tools {
+  align-items: center;
+  display: flex;
+  flex: none;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+
 .content {
+  box-sizing: border-box;
   margin: 0 auto;
-  max-width: 1100px;
-  padding: 16px;
+  max-width: var(--content-max);
+  padding: var(--space-6) var(--gutter) var(--space-7);
+}
+
+// Schmale Fenster: Navigation als eigene, waagerecht scrollbare Zeile unter Marke und Aktion.
+@media (max-width: 899px) {
+  .bar {
+    flex-wrap: wrap;
+    padding-top: var(--space-2);
+  }
+  nav {
+    margin: 0 calc(var(--gutter) * -1);
+    order: 3;
+    overflow-x: auto;
+    padding: 0 calc(var(--gutter) - var(--space-3));
+    scrollbar-width: none;
+    width: calc(100% + 2 * var(--gutter));
+  }
+  nav::-webkit-scrollbar {
+    display: none;
+  }
+  .nav-link.active::after {
+    bottom: 0;
+  }
+  .content {
+    padding-top: var(--space-5);
+  }
+}
+@media (max-width: 420px) {
+  .brand .name {
+    display: none;
+  }
 }

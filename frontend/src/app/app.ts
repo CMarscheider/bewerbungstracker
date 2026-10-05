@@ -1,12 +1,11 @@
 import { Component } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
-import { MatToolbarModule } from '@angular/material/toolbar';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { ThemeToggle } from './shared/theme-toggle';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, MatToolbarModule, MatButtonModule, ThemeToggle],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, MatButtonModule, ThemeToggle],
   templateUrl: './app.html',
   styleUrl: './app.scss',
 })

@@ -1,14 +1,24 @@
-<mat-toolbar class="toolbar">
-  <a class="brand" routerLink="/" tabindex="-1" aria-hidden="true">Bewerbungs-Tracker</a>
-  <nav aria-label="Hauptnavigation">
-    @for (link of links; track link.path) {
-      <a mat-button [routerLink]="link.path" routerLinkActive="active" ariaCurrentWhenActive="page" [routerLinkActiveOptions]="{ exact: link.exact }">{{ link.label }}</a>
-    }
-  </nav>
-  <span class="spacer"></span>
-  <app-theme-toggle />
-  <a mat-flat-button routerLink="/bewerbungen/neu">Neue Bewerbung</a>
-</mat-toolbar>
+<header class="topbar">
+  <div class="bar">
+    <a class="brand" routerLink="/" tabindex="-1" aria-hidden="true">
+      <svg class="mark" viewBox="0 0 32 32" width="32" height="32" aria-hidden="true" focusable="false">
+        <rect width="32" height="32" rx="8" class="mark-bg" />
+        <path d="M8 22.5l5.5-5.5 4 3L24 12.5" class="mark-line" />
+        <circle cx="24" cy="12.5" r="2.5" class="mark-dot" />
+      </svg>
+      <span class="name">Bewerbungs-Tracker</span>
+    </a>
+    <nav aria-label="Hauptnavigation">
+      @for (link of links; track link.path) {
+        <a class="nav-link" [routerLink]="link.path" routerLinkActive="active" ariaCurrentWhenActive="page" [routerLinkActiveOptions]="{ exact: link.exact }">{{ link.label }}</a>
+      }
+    </nav>
+    <div class="tools">
+      <app-theme-toggle />
+      <a mat-flat-button class="cta" routerLink="/bewerbungen/neu">Neue Bewerbung</a>
+    </div>
+  </div>
+</header>
 <main class="content">
   <router-outlet />
 </main>
