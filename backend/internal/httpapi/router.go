@@ -117,7 +117,7 @@ func NewRouter(svc *service.Service, logger *slog.Logger, opts ...RouterOption) 
 	warner := newLogThrottle(logger, authWarnInterval)
 	rejects := newLogThrottle(logger, agentRejectInterval)
 	return logRequests(logger, rejects, recoverPanics(logger, limitBody(
-		requireAgentToken(cfg.agentToken, limits, warner, mux)))), nil
+		requireAgentToken(cfg.agentToken, limits, warner, extendWriteDeadline(slowWriteTimeout, mux))))), nil
 }
 
 // maxBodyBytes begrenzt die Größe von Request-Bodys.
