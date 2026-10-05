@@ -10,6 +10,7 @@
   <p class="muted">Lade …</p>
 } @else {
   @let f = form()!;
+  <app-cv-review [form]="f" [savedAt]="updatedAt()" [dirty]="f.dirty" />
   <form [formGroup]="f" (ngSubmit)="save()">
     <section formGroupName="person">
       <h2>Person</h2>

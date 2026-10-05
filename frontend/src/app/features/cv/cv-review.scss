@@ -1,0 +1,38 @@
+.review {
+  margin-bottom: 32px;
+}
+.review-actions,
+.change-head {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+.change-head {
+  justify-content: space-between;
+}
+.change {
+  border-left: 3px solid var(--mat-sys-primary);
+  margin: 16px 0;
+  padding-left: 12px;
+}
+.compare {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+.compare h4 {
+  margin: 4px 0;
+}
+.compare p {
+  margin: 0 0 4px;
+}
+.before {
+  color: var(--mat-sys-on-surface-variant);
+}
+.stale {
+  color: var(--mat-sys-error);
+}
+.notes {
+  margin-top: 0;
+}

@@ -1,0 +1,70 @@
+<section class="review">
+  <h2>Mit Claude optimieren</h2>
+  @if (loading()) {
+    <p class="muted">Lade …</p>
+  } @else if (review() === null) {
+    <p class="muted">
+      Claude schärft Formulierungen, Stichpunkte und Schlagworte – nur mit Angaben aus deinem Lebenslauf. Du entscheidest je Abschnitt, was
+      übernommen wird.
+    </p>
+    <div class="review-actions">
+      <button mat-stroked-button type="button" class="request" (click)="request()" [disabled]="busy() || !savedAt() || dirty()">
+        Mit Claude optimieren
+      </button>
+      @if (dirty()) {
+        <span class="muted">Erst speichern.</span>
+      }
+    </div>
+  } @else if (review()!.state === 'angefordert') {
+    <p>Angefordert am {{ review()!.requested_at | date: 'dd.MM.yyyy, HH:mm' }} Uhr. Claude bearbeitet die Anfrage beim nächsten Lauf.</p>
+    <button mat-button type="button" class="withdraw" (click)="close()" [disabled]="busy()">Anfrage zurückziehen</button>
+  } @else {
+    @if (stale()) {
+      <p class="stale">Der Lebenslauf wurde seit der Anforderung geändert – prüfe die Vorschläge besonders genau.</p>
+    }
+    @if (review()!.notes.length) {
+      <h3>Hinweise von Claude</h3>
+      <ul class="notes">
+        @for (n of review()!.notes; track $index) {
+          <li>{{ n }}</li>
+        }
+      </ul>
+    }
+    @for (c of changes(); track c.section) {
+      <div class="change">
+        <div class="change-head">
+          <h3>{{ c.label }}</h3>
+          <button mat-stroked-button type="button" class="apply" (click)="apply(c.section)" [disabled]="applied().has(c.section)">
+            {{ applied().has(c.section) ? 'Übernommen' : 'Übernehmen' }}
+          </button>
+        </div>
+        <div class="compare">
+          <div class="before">
+            <h4>Bisher</h4>
+            @for (l of c.before; track $index) {
+              <p>{{ l }}</p>
+            } @empty {
+              <p class="muted">–</p>
+            }
+          </div>
+          <div class="after">
+            <h4>Vorschlag</h4>
+            @for (l of c.after; track $index) {
+              <p>{{ l }}</p>
+            } @empty {
+              <p class="muted">–</p>
+            }
+          </div>
+        </div>
+      </div>
+    } @empty {
+      <p class="muted">Claude schlägt keine Änderungen vor.</p>
+    }
+    <div class="review-actions">
+      @if (changes().length) {
+        <button mat-flat-button type="button" class="apply-all" (click)="applyAll()">Alles übernehmen</button>
+      }
+      <button mat-button type="button" class="close" (click)="close()" [disabled]="busy()">Abschließen</button>
+    </div>
+  }
+</section>

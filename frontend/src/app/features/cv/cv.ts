@@ -8,11 +8,12 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { finalize } from 'rxjs';
 import { Api } from '../../core/api';
 import { CvPhoto } from './cv-photo';
+import { CvReviewPanel } from './cv-review';
 import { cvForm, CvForm, educationGroup, experienceGroup, formToCv, languageGroup, linkGroup, projectGroup, skillGroup } from './cv-form';
 
 @Component({
   selector: 'app-cv',
-  imports: [CvPhoto, DatePipe, ReactiveFormsModule, MatButtonModule, MatFormFieldModule, MatInputModule],
+  imports: [CvPhoto, CvReviewPanel, DatePipe, ReactiveFormsModule, MatButtonModule, MatFormFieldModule, MatInputModule],
   templateUrl: './cv.html',
   styleUrl: './cv.scss',
 })

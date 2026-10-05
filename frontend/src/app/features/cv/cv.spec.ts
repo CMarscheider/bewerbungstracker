@@ -16,7 +16,7 @@ const stored: CvModel = {
 };
 
 async function render(cv: CvModel = stored) {
-  const api = { getCv: vi.fn(() => of(cv)), getCvPhoto: vi.fn(() => throwError(() => ({ status: 404 }))), saveCv: vi.fn((body: CvModel) => of({ ...body, updated_at: '2026-10-03T13:00:00+02:00' })) };
+  const api = { getCv: vi.fn(() => of(cv)), getCvPhoto: vi.fn(() => throwError(() => ({ status: 404 }))), getCvReview: vi.fn(() => throwError(() => ({ status: 404 }))), requestCvReview: vi.fn(), closeCvReview: vi.fn(), saveCv: vi.fn((body: CvModel) => of({ ...body, updated_at: '2026-10-03T13:00:00+02:00' })) };
   TestBed.configureTestingModule({ imports: [CvPage], providers: [{ provide: Api, useValue: api }] });
   const fixture = TestBed.createComponent(CvPage);
   const settle = async () => {
