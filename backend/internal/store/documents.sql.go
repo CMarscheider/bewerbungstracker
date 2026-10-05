@@ -108,6 +108,32 @@ func (q *Queries) SetDocumentsState(ctx context.Context, arg SetDocumentsStatePa
 	return err
 }
 
+const setDocumentsStateIf = `-- name: SetDocumentsStateIf :execrows
+UPDATE applications SET documents_state = $1, documents_error = $2, updated_at = now()
+WHERE id = $3 AND documents_state = $4
+`
+
+type SetDocumentsStateIfParams struct {
+	NewState       string
+	DocumentsError *string
+	ID             uuid.UUID
+	ExpectedState  string
+}
+
+// Setzt den Zustand nur, wenn er noch dem erwarteten entspricht (kein Überschreiben neuerer Zustände).
+func (q *Queries) SetDocumentsStateIf(ctx context.Context, arg SetDocumentsStateIfParams) (int64, error) {
+	result, err := q.db.Exec(ctx, setDocumentsStateIf,
+		arg.NewState,
+		arg.DocumentsError,
+		arg.ID,
+		arg.ExpectedState,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const setDraftCreated = `-- name: SetDraftCreated :exec
 UPDATE applications SET documents_state = 'entwurf_angelegt', documents_error = NULL, gmail_draft_at = now(), updated_at = now()
 WHERE id = $1

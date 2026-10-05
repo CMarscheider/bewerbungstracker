@@ -306,25 +306,206 @@ func TestUpdateDocuments(t *testing.T) {
 	}
 }
 
-func TestUpdateDocumentsAfterFailureIsCreated(t *testing.T) {
+func TestUpdateDocumentsRenderFailureKeepsStateAndPDF(t *testing.T) {
 	conv := &fakeConverter{}
-	svc, id := docsSetup(t, sampleJob(), service.WithPDFConverter(conv))
+	svc, id := docsSetup(t, sampleJob(), service.WithPDFConverter(conv), service.WithDrafter(&fakeDrafter{}, "erika@example.com"))
 	if _, err := svc.SaveAgentDocuments(ctx, id, sampleDocs()); err != nil {
 		t.Fatal(err)
 	}
 	conv.err = errors.New("kaputt")
 	in := sampleDocs()
-	in.Version = 0
+	in.Version, in.CoverLetter = 0, "Neu."
+	if _, err := svc.UpdateDocuments(ctx, id, in); err == nil || !strings.Contains(err.Error(), "kaputt") {
+		t.Fatalf("erwartet Renderfehler, bekommen %v", err)
+	}
+	if a := mustState(t, svc, id, service.DocsDrafted); a.DocumentsError != nil {
+		t.Errorf("DocumentsError = %v", *a.DocumentsError)
+	}
+	d, err := svc.GetDocuments(ctx, id)
+	if err != nil || d.Version != 1 || d.CoverLetter != sampleDocs().CoverLetter {
+		t.Fatalf("alte Fassung verloren: %v %+v", err, d)
+	}
+	if pdf, _, err := svc.DocumentsPDF(ctx, id); err != nil || string(pdf) != "%PDF-fake" {
+		t.Fatalf("altes PDF verloren: %v %q", err, pdf)
+	}
+
+	// Auch eine neue Anforderung bleibt bei einem gescheiterten Bearbeiten bestehen.
+	if _, err := svc.RequestDocuments(ctx, id); err != nil {
+		t.Fatal(err)
+	}
 	if _, err := svc.UpdateDocuments(ctx, id, in); err == nil {
+		t.Fatal("erwartet Fehler")
+	}
+	mustState(t, svc, id, service.DocsRequested)
+}
+
+// failVersion2 legt Version 1 an, fordert neu an und lässt Version 2 beim Rendern scheitern.
+func failVersion2(t *testing.T, job service.AgentJob) (*service.Service, uuid.UUID, *fakeConverter) {
+	t.Helper()
+	conv := &fakeConverter{}
+	svc, id := docsSetup(t, job, service.WithPDFConverter(conv))
+	if _, err := svc.SaveAgentDocuments(ctx, id, sampleDocs()); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.RequestDocuments(ctx, id); err != nil {
+		t.Fatal(err)
+	}
+	conv.err = errors.New("kaputt")
+	v2 := sampleDocs()
+	v2.Version, v2.CoverLetter = 2, "Version 2."
+	if _, err := svc.SaveAgentDocuments(ctx, id, v2); err == nil {
 		t.Fatal("erwartet Fehler")
 	}
 	mustState(t, svc, id, service.DocsFailed)
 	conv.err = nil
+	return svc, id, conv
+}
+
+func TestUpdateDocumentsAfterFailureIsCreated(t *testing.T) {
+	svc, id, _ := failVersion2(t, sampleJob())
+	in := sampleDocs()
+	in.Version = 0
 	if _, err := svc.UpdateDocuments(ctx, id, in); err != nil {
 		t.Fatal(err)
 	}
 	if a := mustState(t, svc, id, service.DocsCreated); a.DocumentsError != nil {
 		t.Errorf("DocumentsError = %v", *a.DocumentsError)
+	}
+}
+
+func TestUpdateDocumentsAfterFailureWithoutAddressIsPortal(t *testing.T) {
+	job := sampleJob()
+	job.ContactEmail = nil
+	svc, id, _ := failVersion2(t, job)
+	in := sampleDocs()
+	in.Version = 0
+	if _, err := svc.UpdateDocuments(ctx, id, in); err != nil {
+		t.Fatal(err)
+	}
+	if a := mustState(t, svc, id, service.DocsPortal); a.DocumentsError != nil {
+		t.Errorf("DocumentsError = %v", *a.DocumentsError)
+	}
+}
+
+// hookConverter ruft beim ersten Convert einmal hook auf (z. B. eine parallele Lieferung).
+// Der beim ersten Aufruf gelieferte Fehler ist err; alle weiteren Aufrufe gelingen.
+type hookConverter struct {
+	hook func()
+	err  error
+	done bool
+}
+
+func (h *hookConverter) Convert(_ context.Context, _ []byte, _ map[string][]byte) ([]byte, error) {
+	if !h.done {
+		h.done = true
+		h.hook()
+		if h.err != nil {
+			return nil, h.err
+		}
+	}
+	return []byte("%PDF-fake"), nil
+}
+
+func TestSaveAgentDocumentsConcurrentIdenticalDelivery(t *testing.T) {
+	conv, dr := &hookConverter{}, &fakeDrafter{}
+	svc, id := docsSetup(t, sampleJob(), service.WithPDFConverter(conv), service.WithDrafter(dr, "erika@example.com"))
+	conv.hook = func() {
+		if _, err := svc.SaveAgentDocuments(ctx, id, sampleDocs()); err != nil {
+			t.Errorf("parallele Lieferung: %v", err)
+		}
+	}
+	d, err := svc.SaveAgentDocuments(ctx, id, sampleDocs())
+	if err != nil || d.Version != 1 {
+		t.Fatalf("gleiche Lieferung während des Renderns: %v %+v", err, d)
+	}
+	if dr.calls != 1 {
+		t.Errorf("Drafter %d×, erwartet 1", dr.calls)
+	}
+	mustState(t, svc, id, service.DocsDrafted)
+}
+
+func TestRenderFailureDoesNotOverwriteNewerState(t *testing.T) {
+	conv := &hookConverter{err: errors.New("kaputt")}
+	svc, id := docsSetup(t, sampleJob(), service.WithPDFConverter(conv))
+	// Während des gescheiterten Renderns liefert eine parallele Lieferung erfolgreich.
+	conv.hook = func() {
+		if _, err := svc.SaveAgentDocuments(ctx, id, sampleDocs()); err != nil {
+			t.Errorf("parallele Lieferung: %v", err)
+		}
+	}
+	if _, err := svc.SaveAgentDocuments(ctx, id, sampleDocs()); err == nil {
+		t.Fatal("erwartet Renderfehler")
+	}
+	if a := mustState(t, svc, id, service.DocsCreated); a.DocumentsError != nil {
+		t.Errorf("DocumentsError = %v", *a.DocumentsError)
+	}
+}
+
+// hookDrafter ruft vor dem Scheitern hook auf.
+type hookDrafter struct{ hook func() }
+
+func (h *hookDrafter) Save(context.Context, []byte) error {
+	h.hook()
+	return errors.New("imap kaputt")
+}
+
+func TestDraftFailureDoesNotOverwriteNewerState(t *testing.T) {
+	dr := &hookDrafter{}
+	svc, id := docsSetup(t, sampleJob(), service.WithPDFConverter(&fakeConverter{}), service.WithDrafter(dr, "erika@example.com"))
+	dr.hook = func() {
+		if _, err := svc.RequestDocuments(ctx, id); err != nil {
+			t.Error(err)
+		}
+	}
+	if _, err := svc.SaveAgentDocuments(ctx, id, sampleDocs()); err != nil {
+		t.Fatal(err)
+	}
+	if a := mustState(t, svc, id, service.DocsRequested); a.DocumentsError != nil {
+		t.Errorf("DocumentsError = %v", *a.DocumentsError)
+	}
+}
+
+func TestSaveAgentDocumentsRejectsLineBreakInSubject(t *testing.T) {
+	svc, id := docsSetup(t, sampleJob(), service.WithPDFConverter(&fakeConverter{}))
+	for _, subj := range []string{"Bewerbung\nBcc: x@y.z", "Bewerbung\r\nBcc: x@y.z", "Bewerbung\rX"} {
+		in := sampleDocs()
+		in.MailSubject = subj
+		var ve *domain.ValidationError
+		if _, err := svc.SaveAgentDocuments(ctx, id, in); !errors.As(err, &ve) || ve.Field != "mail_subject" {
+			t.Errorf("%q: erwartet ValidationError mail_subject, bekommen %v", subj, err)
+		}
+	}
+}
+
+func TestCreateDraftWhileRequestedIsConflict(t *testing.T) {
+	svc, id := docsSetup(t, sampleJob(), service.WithPDFConverter(&fakeConverter{}), service.WithDrafter(&fakeDrafter{}, "erika@example.com"))
+	if _, err := svc.SaveAgentDocuments(ctx, id, sampleDocs()); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.RequestDocuments(ctx, id); err != nil {
+		t.Fatal(err)
+	}
+	var ce *service.ConflictError
+	if _, err := svc.CreateDraft(ctx, id); !errors.As(err, &ce) || !strings.Contains(ce.Detail, "gerade erstellt") {
+		t.Fatalf("erwartet Conflict, bekommen %v", err)
+	}
+}
+
+func TestCreateDraftErrorMapping(t *testing.T) {
+	dr := &fakeDrafter{}
+	svc, id := docsSetup(t, sampleJob(), service.WithPDFConverter(&fakeConverter{}), service.WithDrafter(dr, "erika@example.com"))
+	if _, err := svc.SaveAgentDocuments(ctx, id, sampleDocs()); err != nil {
+		t.Fatal(err)
+	}
+	dr.err = fmt.Errorf("x: %w", mail.ErrNoDrafts)
+	var ce *service.ConflictError
+	if _, err := svc.CreateDraft(ctx, id); !errors.As(err, &ce) || !strings.Contains(ce.Detail, "Entwurfsordner") {
+		t.Fatalf("ErrNoDrafts: erwartet Conflict, bekommen %v", err)
+	}
+	dr.err = fmt.Errorf("x: %w", context.DeadlineExceeded)
+	var ue *service.UnavailableError
+	if _, err := svc.CreateDraft(ctx, id); !errors.As(err, &ue) {
+		t.Fatalf("DeadlineExceeded: erwartet Unavailable, bekommen %v", err)
 	}
 }
 

@@ -1,6 +1,11 @@
 -- name: SetDocumentsState :exec
 UPDATE applications SET documents_state = $2, documents_error = $3, updated_at = now() WHERE id = $1;
 
+-- name: SetDocumentsStateIf :execrows
+-- Setzt den Zustand nur, wenn er noch dem erwarteten entspricht (kein Überschreiben neuerer Zustände).
+UPDATE applications SET documents_state = sqlc.arg(new_state), documents_error = sqlc.narg(documents_error), updated_at = now()
+WHERE id = sqlc.arg(id) AND documents_state = sqlc.arg(expected_state);
+
 -- name: SetDraftCreated :exec
 UPDATE applications SET documents_state = 'entwurf_angelegt', documents_error = NULL, gmail_draft_at = now(), updated_at = now()
 WHERE id = $1;

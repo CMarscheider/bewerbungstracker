@@ -22,6 +22,8 @@ import (
 const (
 	// draftTimeout begrenzt das Ablegen eines Entwurfs per IMAP.
 	draftTimeout = 30 * time.Second
+	// bookkeepingTimeout begrenzt Zustandsänderungen, die auch nach Abbruch des Aufrufers laufen.
+	bookkeepingTimeout = 5 * time.Second
 	// maxHighlights: so viele Schwerpunkte ordnen die Kenntnisse höchstens.
 	maxHighlights = 8
 )
@@ -162,20 +164,25 @@ func (s *Service) SaveAgentDocuments(ctx context.Context, id uuid.UUID, in Docum
 	}
 
 	var (
-		saved   store.ApplicationDocument
-		contact *string
+		saved     store.ApplicationDocument
+		contact   *string
+		duplicate bool // eine gleiche Lieferung kam während des Renderns zuvor
 	)
 	err = s.inTx(ctx, func(q *store.Queries) error {
 		a, err := q.LockApplication(ctx, id)
 		if err != nil {
 			return notFoundIfNoRows(err, "Bewerbung")
 		}
-		if a.DocumentsState != DocsRequested {
-			return &ConflictError{Detail: "Für diese Stelle sind keine Unterlagen angefordert"}
-		}
 		cur, has, err := findDocuments(ctx, q, id)
 		if err != nil {
 			return err
+		}
+		if has && int(cur.Version) == in.Version && sameDocuments(cur, in) {
+			saved, duplicate = cur, true
+			return nil
+		}
+		if a.DocumentsState != DocsRequested {
+			return &ConflictError{Detail: "Für diese Stelle sind keine Unterlagen angefordert"}
 		}
 		if has && in.Version <= int(cur.Version) {
 			return &ConflictError{Detail: "Version ist veraltet"}
@@ -190,13 +197,11 @@ func (s *Service) SaveAgentDocuments(ctx context.Context, id uuid.UUID, in Docum
 		return Documents{}, err
 	}
 
-	if contact != nil && s.drafter != nil {
+	if !duplicate && contact != nil && s.drafter != nil {
 		// Die Unterlagen sind gespeichert; ein gescheiterter Entwurf ist kein Fehler des Aufrufs.
 		if err := s.saveDraft(ctx, id, r.cvName, *contact, saved); err != nil {
 			msg := "Gmail-Entwurf konnte nicht angelegt werden: " + err.Error()
-			if err := s.queries().SetDocumentsState(context.WithoutCancel(ctx), store.SetDocumentsStateParams{
-				ID: id, DocumentsState: DocsCreated, DocumentsError: &msg,
-			}); err != nil {
+			if err := s.setStateIf(ctx, id, DocsCreated, DocsCreated, &msg); err != nil {
 				return Documents{}, err
 			}
 		}
@@ -225,9 +230,14 @@ func (s *Service) UpdateDocuments(ctx context.Context, id uuid.UUID, in Document
 		return Documents{}, &NotFoundError{Resource: "Unterlagen"}
 	}
 
+	// Ein Renderfehler beim Bearbeiten ändert nichts: alte Fassung, PDF und Zustand bleiben.
 	r, err := s.renderDocuments(ctx, app.CompanyName, app.PositionTitle, in)
+	var rf *renderFailedError
+	if errors.As(err, &rf) {
+		return Documents{}, rf.err
+	}
 	if err != nil {
-		return Documents{}, s.handleRenderError(ctx, id, err)
+		return Documents{}, err
 	}
 
 	var saved store.ApplicationDocument
@@ -292,6 +302,9 @@ func (s *Service) CreateDraft(ctx context.Context, id uuid.UUID) (Application, e
 	if d.Pdf == nil || d.FileName == nil {
 		return Application{}, &NotFoundError{Resource: "PDF"}
 	}
+	if app.DocumentsState == DocsRequested {
+		return Application{}, &ConflictError{Detail: "Unterlagen werden gerade erstellt"}
+	}
 	if app.ContactEmail == nil {
 		return Application{}, &domain.ValidationError{Field: "contact_email", Detail: "keine Bewerbungsadresse hinterlegt"}
 	}
@@ -352,19 +365,29 @@ func (s *Service) renderDocuments(ctx context.Context, company, position string,
 	return rendered{pdf: pdf, fileName: documents.ApplicationFileName(cv, company), cvName: strings.TrimSpace(cv.Person.Name)}, nil
 }
 
-// handleRenderError hält einen echten Renderfehler im Zustand "fehler" fest und gibt ihn zurück.
+// handleRenderError hält einen echten Renderfehler im Zustand "fehler" fest (nur wenn die Stelle
+// noch "angefordert" ist) und gibt ihn zurück.
 func (s *Service) handleRenderError(ctx context.Context, id uuid.UUID, err error) error {
 	var rf *renderFailedError
 	if !errors.As(err, &rf) {
 		return err
 	}
 	msg := "PDF konnte nicht erzeugt werden: " + rf.err.Error()
-	if serr := s.queries().SetDocumentsState(context.WithoutCancel(ctx), store.SetDocumentsStateParams{
-		ID: id, DocumentsState: DocsFailed, DocumentsError: &msg,
-	}); serr != nil {
+	if serr := s.setStateIf(ctx, id, DocsRequested, DocsFailed, &msg); serr != nil {
 		return errors.Join(rf.err, serr)
 	}
 	return rf.err
+}
+
+// setStateIf setzt den Zustand nur, wenn er noch expected ist – ein inzwischen neuerer Zustand
+// (z. B. eine neue Anforderung) bleibt. Läuft auch nach Abbruch des Aufrufers.
+func (s *Service) setStateIf(ctx context.Context, id uuid.UUID, expected, state string, errMsg *string) error {
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), bookkeepingTimeout)
+	defer cancel()
+	_, err := s.queries().SetDocumentsStateIf(ctx, store.SetDocumentsStateIfParams{
+		ID: id, ExpectedState: expected, NewState: state, DocumentsError: errMsg,
+	})
+	return err
 }
 
 // saveDraft baut die Nachricht, legt sie per Drafter ab und vermerkt den Entwurf.
@@ -385,12 +408,14 @@ func (s *Service) saveDraft(ctx context.Context, id uuid.UUID, name, to string, 
 	if err != nil {
 		return err
 	}
-	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), draftTimeout)
+	imapCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), draftTimeout)
 	defer cancel()
-	if err := s.drafter.Save(ctx, msg); err != nil {
+	if err := s.drafter.Save(imapCtx, msg); err != nil {
 		return err
 	}
-	return s.queries().SetDraftCreated(ctx, id)
+	dbCtx, cancelDB := context.WithTimeout(context.WithoutCancel(ctx), bookkeepingTimeout)
+	defer cancelDB()
+	return s.queries().SetDraftCreated(dbCtx, id)
 }
 
 // cvName liefert den Namen aus dem gespeicherten Lebenslauf ("" ohne Lebenslauf).
@@ -447,6 +472,9 @@ func normalizeDocuments(in DocumentsInput, agent bool) (DocumentsInput, error) {
 	}
 	if in.MailSubject, err = requireText("mail_subject", in.MailSubject); err != nil {
 		return in, err
+	}
+	if strings.ContainsAny(in.MailSubject, "\r\n") {
+		return in, &domain.ValidationError{Field: "mail_subject", Detail: "darf keinen Zeilenumbruch enthalten"}
 	}
 	if in.MailBody, err = requireText("mail_body", in.MailBody); err != nil {
 		return in, err
