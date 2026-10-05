@@ -1,12 +1,79 @@
-// Include theming for Angular Material with `mat.theme()`.
-// This Sass mixin will define CSS variables that are used for styling Angular Material
-// components according to the Material 3 design spec.
-// Learn more about theming and how to use it for your application's
-// custom components at https://material.angular.dev/guide/theming
+// Globales Design: Material-3-Theme aus den Markenfarben, Inter als Schrift und Design-Tokens.
+// Farben, Abstände, Radien und Kartenstil stehen hier als CSS-Variablen; Komponenten nutzen nur die Variablen.
 @use '@angular/material' as mat;
-@use '@fontsource/roboto/400.css' as roboto400;
-@use '@fontsource/roboto/500.css' as roboto500;
+@use 'theme-colors' as brand;
+// Inter (variabel, selbst gehostet, font-display: swap) – keine Google-Fonts-CDN, die App läuft offline.
+@use '@fontsource-variable/inter/index.css' as inter;
 
+// ---------------------------------------------------------------------------
+// Design-Tokens
+// ---------------------------------------------------------------------------
+:root {
+  // Marke (wie im Lebenslauf-PDF)
+  --brand-petrol: #12343b;
+  --brand-teal: #2a9d8f;
+
+  // Abstände im 4/8-px-Raster
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  // Radien
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-pill: 999px;
+
+  // Layout
+  --content-max: 1200px;
+  --gutter: 16px;
+  --topbar-height: 64px;
+
+  // Bewegung
+  --dur-fast: 150ms;
+  --dur: 200ms;
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+
+  // Flächen und Text (hell / dunkel). Dunkel: tiefes Petrol statt Schwarz.
+  --app-bg: light-dark(#f4f7f8, #0a1b1f);
+  --app-card-bg: light-dark(#ffffff, #10262b);
+  --app-card-bg-subtle: light-dark(#f8fafa, #0d2125);
+  --app-border: light-dark(#d9e1e3, #24414a);
+  --app-border-strong: light-dark(#b9c6c9, #3a5a63);
+  --app-heading: light-dark(#12343b, #e6f2f3);
+  --app-text: light-dark(#1a2a2e, #dce9eb);
+  --app-muted: light-dark(#4e5f63, #a3b8bc);
+  --app-hover: light-dark(#eef4f4, #143038);
+  --app-accent-soft: light-dark(#e1f2ef, #12383a);
+  --app-accent-ink: light-dark(#00695f, #7fdccd);
+
+  // Karten
+  --card-radius: var(--radius-md);
+  --card-padding: var(--space-5);
+  --card-border: 1px solid var(--app-border);
+  --card-hover-shadow: light-dark(0 2px 8px rgb(18 52 59 / 0.08), 0 2px 10px rgb(0 0 0 / 0.35));
+
+  // Fokus
+  --focus-ring-color: light-dark(#00695f, #6fd8c8);
+  --focus-ring: 2px solid var(--focus-ring-color);
+
+  // Gefahrenzone
+  --danger-border: light-dark(#e5a29c, #7a2f2b);
+  --danger-bg: light-dark(#fff8f7, #1d1a1c);
+}
+
+@media (min-width: 700px) {
+  :root {
+    --gutter: 24px;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Material-Theme
+// ---------------------------------------------------------------------------
 html {
   height: 100%;
   // Folgt der Systemeinstellung; data-theme (gesetzt von ThemeService) überschreibt.
@@ -14,62 +81,355 @@ html {
   @include mat.theme(
     (
       color: (
-        primary: mat.$azure-palette,
-        tertiary: mat.$blue-palette,
+        primary: brand.$primary-palette,
+        tertiary: brand.$tertiary-palette,
       ),
-      typography: Roboto,
+      typography: (
+        plain-family: 'Inter Variable',
+        brand-family: 'Inter Variable',
+        bold-weight: 650,
+        medium-weight: 550,
+        regular-weight: 400,
+      ),
       density: 0,
+    )
+  );
+
+  // Flächen etwas neutraler/kühler als die generierte Palette, dunkel mit Petrol-Stich.
+  @include mat.theme-overrides(
+    (
+      surface: var(--app-bg),
+      background: var(--app-bg),
+      on-surface: var(--app-text),
+      on-surface-variant: var(--app-muted),
+      surface-container-lowest: light-dark(#ffffff, #071619),
+      surface-container-low: light-dark(#f8fafa, #0d2125),
+      surface-container: light-dark(#eff3f4, #10262b),
+      surface-container-high: light-dark(#e8eeef, #153036),
+      surface-container-highest: light-dark(#e1e8ea, #1a3940),
+      outline: light-dark(#6c7c80, #85a0a6),
+      outline-variant: var(--app-border),
+    )
+  );
+
+  @include mat.card-overrides(
+    (
+      elevated-container-color: var(--app-card-bg),
+      elevated-container-elevation: none,
+      elevated-container-shape: var(--card-radius),
+      outlined-container-color: var(--app-card-bg),
+      outlined-container-shape: var(--card-radius),
+      outlined-outline-color: var(--app-border),
+    )
+  );
+
+  @include mat.expansion-overrides(
+    (
+      container-background-color: var(--app-card-bg),
+      container-elevation-shadow: none,
+      container-shape: var(--card-radius),
+      header-text-weight: 600,
+    )
+  );
+
+  @include mat.button-overrides(
+    (
+      filled-container-shape: var(--radius-sm),
+      outlined-container-shape: var(--radius-sm),
+      text-container-shape: var(--radius-sm),
+      tonal-container-shape: var(--radius-sm),
+      protected-container-shape: var(--radius-sm),
+      outlined-outline-color: var(--app-border-strong),
+    )
+  );
+
+  @include mat.button-toggle-overrides(
+    (
+      shape: var(--radius-sm),
+      selected-state-background-color: var(--app-accent-soft),
+      selected-state-text-color: var(--app-accent-ink),
+      divider-color: var(--app-border-strong),
+    )
+  );
+
+  @include mat.form-field-overrides(
+    (
+      outlined-container-shape: var(--radius-sm),
+      outlined-outline-color: var(--app-border-strong),
+      container-text-tracking: 0,
+      outlined-label-text-tracking: 0,
+      subscript-text-tracking: 0,
+    )
+  );
+
+  @include mat.select-overrides(
+    (
+      trigger-text-tracking: 0,
+    )
+  );
+
+  @include mat.table-overrides(
+    (
+      background-color: transparent,
+      header-headline-color: var(--app-muted),
+      header-headline-weight: 600,
+      header-headline-size: 0.8125rem,
+      row-item-outline-color: var(--app-border),
+      row-item-container-height: 56px,
+      header-container-height: 44px,
+      row-item-label-text-tracking: 0,
+      header-headline-tracking: 0,
+    )
+  );
+
+  @include mat.dialog-overrides(
+    (
+      container-shape: var(--card-radius),
     )
   );
 }
 
-body {
-  // Set a default background, font and text colors for the application using
-  // Angular Material's system-level CSS variables. Learn more about these
-  // variables at https://material.angular.dev/guide/system-variables
-  background-color: var(--mat-sys-surface);
-  color: var(--mat-sys-on-surface);
-  font: var(--mat-sys-body-medium);
-
-  // Reset the user agent margin.
-  margin: 0;
-  height: 100%;
+html[data-theme='light'] {
+  color-scheme: light;
 }
-html[data-theme='light'] { color-scheme: light; }
-html[data-theme='dark'] { color-scheme: dark; }
+html[data-theme='dark'] {
+  color-scheme: dark;
+}
+
+body {
+  background-color: var(--app-bg);
+  color: var(--app-text);
+  font: var(--mat-sys-body-medium);
+  font-family: 'Inter Variable', system-ui, sans-serif;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  margin: 0;
+  min-height: 100%;
+  -webkit-font-smoothing: antialiased;
+  // Inter-Varianten: eindeutige Ziffer 1, gerade Ziffern-Höhen.
+  font-feature-settings: 'cv11', 'ss01';
+}
+
+// ---------------------------------------------------------------------------
+// Typografie
+// ---------------------------------------------------------------------------
+h1,
+h2,
+h3,
+h4 {
+  color: var(--app-heading);
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+}
+h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 0 0 var(--space-5);
+}
+h2 {
+  font-size: 1.125rem;
+  font-weight: 650;
+  margin: 0 0 var(--space-3);
+}
+h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: var(--space-4) 0 var(--space-2);
+}
+h4 {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+@media (max-width: 600px) {
+  h1 {
+    font-size: 1.5rem;
+  }
+}
+
+// Ziffern gleicher Breite für Daten, Zahlen, Scores und KPIs.
+.num,
+.tabular,
+time {
+  font-variant-numeric: tabular-nums;
+}
 
 // Einfache Links in Theme-Farbe; :where hält die Spezifität bei 0, damit Buttons und Komponenten gewinnen.
-:where(a) { color: var(--mat-sys-primary); }
+:where(a) {
+  color: var(--app-accent-ink);
+  text-underline-offset: 2px;
+}
+
+// ---------------------------------------------------------------------------
+// Zugänglichkeit
+// ---------------------------------------------------------------------------
+// Sichtbarer Fokusring (Teal, 2 px, Abstand) für alle fokussierbaren Elemente.
+:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+// Material-Buttons: eigener Ring statt nur State-Layer.
+.mat-mdc-button-base:focus-visible,
+.mat-mdc-button-base.cdk-keyboard-focused {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+.mat-expansion-panel-header.cdk-keyboard-focused {
+  outline: var(--focus-ring);
+  outline-offset: -2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+// Mindestgröße für Touch-Ziele auf Mobilgeräten.
+@media (pointer: coarse) {
+  .mat-mdc-button-base:not(.mat-mdc-icon-button) {
+    min-height: 44px;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Karten und Seitenbausteine
+// ---------------------------------------------------------------------------
+// Flache Karten mit 1-px-Rand; Schatten nur beim Hover klickbarer Karten (.is-clickable).
+.mat-mdc-card.mat-mdc-card,
+.surface-card {
+  background: var(--app-card-bg);
+  border: var(--card-border);
+  border-radius: var(--card-radius);
+  box-shadow: none;
+}
+.surface-card {
+  padding: var(--card-padding);
+}
+.is-clickable {
+  cursor: pointer;
+  transition:
+    box-shadow var(--dur) var(--ease),
+    transform var(--dur) var(--ease),
+    border-color var(--dur) var(--ease);
+}
+.is-clickable:hover {
+  border-color: var(--app-border-strong);
+  box-shadow: var(--card-hover-shadow);
+  transform: translateY(-1px);
+}
+.mat-expansion-panel.mat-expansion-panel {
+  border: var(--card-border);
+  box-shadow: none;
+}
+.mat-expansion-panel:not([class*='mat-elevation-z']) {
+  box-shadow: none;
+}
+
+// Seitenkopf: Titel (+ Zusatz) links, Aktion rechts.
+.page-head {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-4);
+  justify-content: space-between;
+  margin-bottom: var(--space-5);
+}
+.page-head h1 {
+  margin: 0;
+}
+.page-head .sub {
+  color: var(--app-muted);
+  margin: var(--space-1) 0 0;
+}
+
+// Abschnitt als Karte mit Titelzeile.
+.section-card {
+  background: var(--app-card-bg);
+  border: var(--card-border);
+  border-radius: var(--card-radius);
+  margin-bottom: var(--space-4);
+  padding: var(--card-padding);
+}
+.section-card > h2:first-child,
+.section-card > header:first-child h2 {
+  margin-top: 0;
+}
+@media (max-width: 600px) {
+  :root {
+    --card-padding: var(--space-4);
+  }
+}
+
+// Leerer Zustand: Icon + kurzer Text.
+.empty {
+  align-items: center;
+  color: var(--app-muted);
+  display: flex;
+  gap: var(--space-3);
+  margin: var(--space-2) 0 var(--space-3);
+}
+.empty-icon {
+  align-items: center;
+  background: var(--app-accent-soft);
+  border-radius: 50%;
+  color: var(--app-accent-ink);
+  display: inline-flex;
+  flex: none;
+  height: 36px;
+  justify-content: center;
+  width: 36px;
+}
 
 // Status-Farbtöne (siehe STATUS_TONE in shared/labels.ts). Je Ton Hintergrund, Text und Punktfarbe,
-// jeweils für hell und dunkel; Text/Hintergrund mit Kontrast >= 4,5:1.
-.tone-neutral { --tone-bg: light-dark(#eef0f3, #2f343c); --tone-fg: light-dark(#374151, #d1d5db); --tone-dot: light-dark(#6b7280, #9ca3af); }
-.tone-blue    { --tone-bg: light-dark(#dbeafe, #1e3a5f); --tone-fg: light-dark(#1e40af, #bfdbfe); --tone-dot: light-dark(#2563eb, #60a5fa); }
-.tone-violet  { --tone-bg: light-dark(#ede9fe, #3b2a63); --tone-fg: light-dark(#5b21b6, #ddd6fe); --tone-dot: light-dark(#7c3aed, #a78bfa); }
-.tone-amber   { --tone-bg: light-dark(#fef3c7, #4a3410); --tone-fg: light-dark(#92400e, #fde68a); --tone-dot: light-dark(#d97706, #fbbf24); }
-.tone-green   { --tone-bg: light-dark(#dcfce7, #163d27); --tone-fg: light-dark(#166534, #bbf7d0); --tone-dot: light-dark(#16a34a, #4ade80); }
+// jeweils für hell und dunkel; Text/Hintergrund mit Kontrast >= 4,5:1 (geprüft gegen weiße und
+// Petrol-Karten). Die Bedeutung steht immer zusätzlich als Text daneben.
+.tone-neutral { --tone-bg: light-dark(#eef1f3, #22343a); --tone-fg: light-dark(#374151, #d6dee1); --tone-dot: light-dark(#6b7280, #9aabb0); }
+.tone-blue    { --tone-bg: light-dark(#dbeafe, #1b3656); --tone-fg: light-dark(#1e40af, #c7dcfd); --tone-dot: light-dark(#2563eb, #60a5fa); }
+.tone-violet  { --tone-bg: light-dark(#ede9fe, #33285a); --tone-fg: light-dark(#5b21b6, #ddd6fe); --tone-dot: light-dark(#7c3aed, #a78bfa); }
+.tone-amber   { --tone-bg: light-dark(#fef3c7, #45330f); --tone-fg: light-dark(#92400e, #fde68a); --tone-dot: light-dark(#d97706, #fbbf24); }
+.tone-green   { --tone-bg: light-dark(#dcfce7, #143a27); --tone-fg: light-dark(#166534, #bbf7d0); --tone-dot: light-dark(#16a34a, #4ade80); }
 .tone-success { --tone-bg: light-dark(#15803d, #22c55e); --tone-fg: light-dark(#ffffff, #052e16); --tone-dot: light-dark(#15803d, #22c55e); }
-.tone-red     { --tone-bg: light-dark(#fee2e2, #4c1d1d); --tone-fg: light-dark(#991b1b, #fecaca); --tone-dot: light-dark(#dc2626, #f87171); }
+.tone-red     { --tone-bg: light-dark(#fee2e2, #4a1c1f); --tone-fg: light-dark(#991b1b, #fecaca); --tone-dot: light-dark(#dc2626, #f87171); }
 
 // Passungs-Score (shared/fit-score.ts): hoch/mittel/niedrig, hell und dunkel, Kontrast >= 4,5:1.
 :root {
-  --fit-high-bg: light-dark(#d8f3e6, #163d27); --fit-high-fg: light-dark(#0b5b35, #bbf7d0);
-  --fit-mid-bg: light-dark(#fff1cc, #4a3410);  --fit-mid-fg: light-dark(#6b4a00, #fde68a);
-  --fit-low-bg: light-dark(#eef0f3, #2f343c);  --fit-low-fg: light-dark(#4b5563, #d1d5db);
+  --fit-high-bg: light-dark(#d8f3e6, #143a27); --fit-high-fg: light-dark(#0b5b35, #bbf7d0);
+  --fit-mid-bg: light-dark(#fff1cc, #45330f);  --fit-mid-fg: light-dark(#6b4a00, #fde68a);
+  --fit-low-bg: light-dark(#eef1f3, #22343a);  --fit-low-fg: light-dark(#4b5563, #d6dee1);
 }
 
-
-h1 { font-size: 1.6rem; margin: 8px 0 16px; }
-h2 { font-size: 1.15rem; margin: 24px 0 8px; }
-.muted { color: var(--mat-sys-on-surface-variant, #6b7280); }
-.head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+// ---------------------------------------------------------------------------
+// Hilfsklassen
+// ---------------------------------------------------------------------------
+.muted { color: var(--app-muted); }
+.head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2); }
 .list { list-style: none; margin: 0; padding: 0; }
-.list a { color: var(--mat-sys-primary); text-decoration: none; }
+.list a { color: var(--app-accent-ink); text-decoration: none; }
 .list a:hover { text-decoration: underline; }
 .flush { margin-inline-start: -12px; }
-.list li { border-bottom: 1px solid var(--mat-sys-outline-variant, #e5e7eb); padding: 8px 0; }
+.list li { border-bottom: 1px solid var(--app-border); padding: var(--space-2) 0; }
 .table-wrap { overflow-x: auto; }
 .danger {
   --mat-button-text-label-text-color: var(--mat-sys-error);
   --mat-button-text-state-layer-color: var(--mat-sys-error);
+  --mat-button-outlined-label-text-color: var(--mat-sys-error);
+  --mat-button-outlined-outline-color: var(--danger-border);
+  --mat-button-outlined-state-layer-color: var(--mat-sys-error);
+}
+.visually-hidden {
+  border: 0;
+  clip: rect(0 0 0 0);
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
 }
