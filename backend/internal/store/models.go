@@ -26,6 +26,24 @@ type Application struct {
 	FitScore       *int32
 	FitReason      *string
 	CreatedByAgent bool
+	DocumentsState string
+	DocumentsError *string
+	GmailDraftAt   *time.Time
+}
+
+type ApplicationDocument struct {
+	ApplicationID uuid.UUID
+	Version       int32
+	Language      string
+	CoverLetter   string
+	ProfileLine   *string
+	Highlights    []byte
+	MailSubject   string
+	MailBody      string
+	Pdf           []byte
+	FileName      *string
+	RenderedAt    *time.Time
+	UpdatedAt     time.Time
 }
 
 type ApplicationEvent struct {

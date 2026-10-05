@@ -45,6 +45,9 @@ type Application struct {
 	CreatedByAgent bool
 	Status         domain.EventType
 	Phase          domain.Phase
+	DocumentsState string     // Zustand der Unterlagen, siehe Docs*
+	DocumentsError *string    // Fehlertext, wenn DocumentsState = DocsFailed
+	GmailDraftAt   *time.Time // wann der Gmail-Entwurf angelegt wurde
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
 	Events         []Event
@@ -163,6 +166,7 @@ func (s *Service) GetApplication(ctx context.Context, id uuid.UUID) (Application
 		ContactEmail: r.ContactEmail, PostingText: r.PostingText, FitScore: intPtr(r.FitScore),
 		FitReason: r.FitReason, CreatedByAgent: r.CreatedByAgent,
 		Status: status, Phase: status.Phase(),
+		DocumentsState: r.DocumentsState, DocumentsError: r.DocumentsError, GmailDraftAt: r.GmailDraftAt,
 		CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt, Events: events,
 	}, nil
 }

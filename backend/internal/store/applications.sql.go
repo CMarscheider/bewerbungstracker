@@ -16,7 +16,7 @@ const createApplication = `-- name: CreateApplication :one
 INSERT INTO applications (company_id, position_title, job_url, location, source, notes, current_status,
                           contact_email, posting_text, fit_score, fit_reason, created_by_agent)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-RETURNING id, company_id, position_title, job_url, location, source, notes, current_status, created_at, updated_at, contact_email, posting_text, fit_score, fit_reason, created_by_agent
+RETURNING id, company_id, position_title, job_url, location, source, notes, current_status, created_at, updated_at, contact_email, posting_text, fit_score, fit_reason, created_by_agent, documents_state, documents_error, gmail_draft_at
 `
 
 type CreateApplicationParams struct {
@@ -66,6 +66,9 @@ func (q *Queries) CreateApplication(ctx context.Context, arg CreateApplicationPa
 		&i.FitScore,
 		&i.FitReason,
 		&i.CreatedByAgent,
+		&i.DocumentsState,
+		&i.DocumentsError,
+		&i.GmailDraftAt,
 	)
 	return i, err
 }
@@ -111,7 +114,7 @@ func (q *Queries) FindDuplicateApplication(ctx context.Context, arg FindDuplicat
 const getApplication = `-- name: GetApplication :one
 SELECT a.id, a.company_id, c.name AS company_name, a.position_title, a.job_url, a.location,
        a.source, a.notes, a.contact_email, a.posting_text, a.fit_score, a.fit_reason, a.created_by_agent,
-       a.current_status, a.created_at, a.updated_at
+       a.current_status, a.documents_state, a.documents_error, a.gmail_draft_at, a.created_at, a.updated_at
 FROM applications a
 JOIN companies c ON c.id = a.company_id
 WHERE a.id = $1
@@ -132,6 +135,9 @@ type GetApplicationRow struct {
 	FitReason      *string
 	CreatedByAgent bool
 	CurrentStatus  string
+	DocumentsState string
+	DocumentsError *string
+	GmailDraftAt   *time.Time
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
 }
@@ -154,6 +160,9 @@ func (q *Queries) GetApplication(ctx context.Context, id uuid.UUID) (GetApplicat
 		&i.FitReason,
 		&i.CreatedByAgent,
 		&i.CurrentStatus,
+		&i.DocumentsState,
+		&i.DocumentsError,
+		&i.GmailDraftAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -233,7 +242,7 @@ func (q *Queries) ListApplications(ctx context.Context, arg ListApplicationsPara
 }
 
 const lockApplication = `-- name: LockApplication :one
-SELECT id, company_id, position_title, job_url, location, source, notes, current_status, created_at, updated_at, contact_email, posting_text, fit_score, fit_reason, created_by_agent FROM applications WHERE id = $1 FOR UPDATE
+SELECT id, company_id, position_title, job_url, location, source, notes, current_status, created_at, updated_at, contact_email, posting_text, fit_score, fit_reason, created_by_agent, documents_state, documents_error, gmail_draft_at FROM applications WHERE id = $1 FOR UPDATE
 `
 
 func (q *Queries) LockApplication(ctx context.Context, id uuid.UUID) (Application, error) {
@@ -255,6 +264,9 @@ func (q *Queries) LockApplication(ctx context.Context, id uuid.UUID) (Applicatio
 		&i.FitScore,
 		&i.FitReason,
 		&i.CreatedByAgent,
+		&i.DocumentsState,
+		&i.DocumentsError,
+		&i.GmailDraftAt,
 	)
 	return i, err
 }
@@ -278,7 +290,7 @@ UPDATE applications
 SET company_id = $2, position_title = $3, job_url = $4, location = $5, source = $6, notes = $7,
     contact_email = $8, updated_at = now()
 WHERE id = $1
-RETURNING id, company_id, position_title, job_url, location, source, notes, current_status, created_at, updated_at, contact_email, posting_text, fit_score, fit_reason, created_by_agent
+RETURNING id, company_id, position_title, job_url, location, source, notes, current_status, created_at, updated_at, contact_email, posting_text, fit_score, fit_reason, created_by_agent, documents_state, documents_error, gmail_draft_at
 `
 
 type UpdateApplicationParams struct {
@@ -320,6 +332,9 @@ func (q *Queries) UpdateApplication(ctx context.Context, arg UpdateApplicationPa
 		&i.FitScore,
 		&i.FitReason,
 		&i.CreatedByAgent,
+		&i.DocumentsState,
+		&i.DocumentsError,
+		&i.GmailDraftAt,
 	)
 	return i, err
 }
