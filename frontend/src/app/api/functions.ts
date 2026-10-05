@@ -59,3 +59,5 @@ export type { AgentListCvReviews$Params as AgentListCvReviews$Params } from './f
 export { agentListCvReviews as agentListCvReviews } from './fn/agent/agent-list-cv-reviews';
 export type { AgentCompleteCvReview$Params as AgentCompleteCvReview$Params } from './fn/agent/agent-complete-cv-review';
 export { agentCompleteCvReview as agentCompleteCvReview } from './fn/agent/agent-complete-cv-review';
+export type { AgentCreateApplication$Params as AgentCreateApplication$Params } from './fn/agent/agent-create-application';
+export { agentCreateApplication as agentCreateApplication } from './fn/agent/agent-create-application';

@@ -7,6 +7,7 @@
  */
 export interface ApplicationPatch {
   company_id?: string;
+  contact_email?: string;
   job_url?: string;
   location?: string;
   notes?: string;

@@ -118,26 +118,64 @@ func (e Phase) Valid() bool {
 	}
 }
 
+// Defines values for ListApplicationsParamsSort.
+const (
+	Score   ListApplicationsParamsSort = "score"
+	Updated ListApplicationsParamsSort = "updated"
+)
+
+// Valid indicates whether the value is a known member of the ListApplicationsParamsSort enum.
+func (e ListApplicationsParamsSort) Valid() bool {
+	switch e {
+	case Score:
+		return true
+	case Updated:
+		return true
+	default:
+		return false
+	}
+}
+
+// AgentJob defines model for AgentJob.
+type AgentJob struct {
+	CompanyName    string  `json:"company_name"`
+	CompanyWebsite *string `json:"company_website,omitempty"`
+	ContactEmail   *string `json:"contact_email,omitempty"`
+	FitReason      string  `json:"fit_reason"`
+	FitScore       int     `json:"fit_score"`
+	JobUrl         *string `json:"job_url,omitempty"`
+	Location       *string `json:"location,omitempty"`
+	PositionTitle  string  `json:"position_title"`
+	PostingText    *string `json:"posting_text,omitempty"`
+	Source         *string `json:"source,omitempty"`
+}
+
 // Application defines model for Application.
 type Application struct {
-	CompanyId     openapi_types.UUID `json:"company_id"`
-	CompanyName   string             `json:"company_name"`
-	CreatedAt     time.Time          `json:"created_at"`
-	Events        []Event            `json:"events"`
-	Id            openapi_types.UUID `json:"id"`
-	JobUrl        *string            `json:"job_url,omitempty"`
-	Location      *string            `json:"location,omitempty"`
-	Notes         *string            `json:"notes,omitempty"`
-	Phase         Phase              `json:"phase"`
-	PositionTitle string             `json:"position_title"`
-	Source        *string            `json:"source,omitempty"`
-	Status        EventType          `json:"status"`
-	UpdatedAt     time.Time          `json:"updated_at"`
+	CompanyId      openapi_types.UUID `json:"company_id"`
+	CompanyName    string             `json:"company_name"`
+	ContactEmail   *string            `json:"contact_email,omitempty"`
+	CreatedAt      time.Time          `json:"created_at"`
+	CreatedByAgent bool               `json:"created_by_agent"`
+	Events         []Event            `json:"events"`
+	FitReason      *string            `json:"fit_reason,omitempty"`
+	FitScore       *int               `json:"fit_score,omitempty"`
+	Id             openapi_types.UUID `json:"id"`
+	JobUrl         *string            `json:"job_url,omitempty"`
+	Location       *string            `json:"location,omitempty"`
+	Notes          *string            `json:"notes,omitempty"`
+	Phase          Phase              `json:"phase"`
+	PositionTitle  string             `json:"position_title"`
+	PostingText    *string            `json:"posting_text,omitempty"`
+	Source         *string            `json:"source,omitempty"`
+	Status         EventType          `json:"status"`
+	UpdatedAt      time.Time          `json:"updated_at"`
 }
 
 // ApplicationInput defines model for ApplicationInput.
 type ApplicationInput struct {
 	CompanyId     openapi_types.UUID `json:"company_id"`
+	ContactEmail  *string            `json:"contact_email,omitempty"`
 	FirstEvent    NewEvent           `json:"first_event"`
 	JobUrl        *string            `json:"job_url,omitempty"`
 	Location      *string            `json:"location,omitempty"`
@@ -149,6 +187,7 @@ type ApplicationInput struct {
 // ApplicationPatch Nur gesetzte Felder werden geändert; ein leerer String löscht ein optionales Feld.
 type ApplicationPatch struct {
 	CompanyId     *openapi_types.UUID `json:"company_id,omitempty"`
+	ContactEmail  *string             `json:"contact_email,omitempty"`
 	JobUrl        *string             `json:"job_url,omitempty"`
 	Location      *string             `json:"location,omitempty"`
 	Notes         *string             `json:"notes,omitempty"`
@@ -158,15 +197,17 @@ type ApplicationPatch struct {
 
 // ApplicationSummary defines model for ApplicationSummary.
 type ApplicationSummary struct {
-	CompanyId     openapi_types.UUID  `json:"company_id"`
-	CompanyName   string              `json:"company_name"`
-	Id            openapi_types.UUID  `json:"id"`
-	LastEventOn   openapi_types.Date  `json:"last_event_on"`
-	OpenDueOn     *openapi_types.Date `json:"open_due_on,omitempty"`
-	Phase         Phase               `json:"phase"`
-	PositionTitle string              `json:"position_title"`
-	Status        EventType           `json:"status"`
-	UpdatedAt     time.Time           `json:"updated_at"`
+	CompanyId      openapi_types.UUID  `json:"company_id"`
+	CompanyName    string              `json:"company_name"`
+	CreatedByAgent bool                `json:"created_by_agent"`
+	FitScore       *int                `json:"fit_score,omitempty"`
+	Id             openapi_types.UUID  `json:"id"`
+	LastEventOn    openapi_types.Date  `json:"last_event_on"`
+	OpenDueOn      *openapi_types.Date `json:"open_due_on,omitempty"`
+	Phase          Phase               `json:"phase"`
+	PositionTitle  string              `json:"position_title"`
+	Status         EventType           `json:"status"`
+	UpdatedAt      time.Time           `json:"updated_at"`
 }
 
 // Appointment defines model for Appointment.
@@ -352,6 +393,7 @@ type Phase string
 type Problem struct {
 	Attempted            *EventType             `json:"attempted,omitempty"`
 	Detail               *string                `json:"detail,omitempty"`
+	ExistingId           *openapi_types.UUID    `json:"existing_id,omitempty"`
 	Field                *string                `json:"field,omitempty"`
 	From                 *EventType             `json:"from,omitempty"`
 	Status               int                    `json:"status"`
@@ -400,7 +442,16 @@ type ListApplicationsParams struct {
 
 	// Q Suche in Firmenname und Stellentitel
 	Q *string `form:"q,omitempty" json:"q,omitempty"`
+
+	// FromAgent true = nur vom Agenten angelegte, false = nur manuell angelegte
+	FromAgent *bool `form:"from_agent,omitempty" json:"from_agent,omitempty"`
+
+	// Sort updated (Standard) = zuletzt geändert zuerst, score = beste Passung zuerst
+	Sort *ListApplicationsParamsSort `form:"sort,omitempty" json:"sort,omitempty"`
 }
+
+// ListApplicationsParamsSort defines parameters for ListApplications.
+type ListApplicationsParamsSort string
 
 // ListAppointmentsParams defines parameters for ListAppointments.
 type ListAppointmentsParams struct {
@@ -413,6 +464,9 @@ type ListDeadlinesParams struct {
 	// WithinDays Zeitraum ab heute (Standard 7); überfällige Fristen sind immer enthalten
 	WithinDays *int `form:"within_days,omitempty" json:"within_days,omitempty"`
 }
+
+// AgentCreateApplicationJSONRequestBody defines body for AgentCreateApplication for application/json ContentType.
+type AgentCreateApplicationJSONRequestBody = AgentJob
 
 // AgentCompleteCvReviewJSONRequestBody defines body for AgentCompleteCvReview for application/json ContentType.
 type AgentCompleteCvReviewJSONRequestBody = CvReviewResult
@@ -474,6 +528,14 @@ func (a *Problem) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'detail': %w", err)
 		}
 		delete(object, "detail")
+	}
+
+	if raw, found := object["existing_id"]; found {
+		err = json.Unmarshal(raw, &a.ExistingId)
+		if err != nil {
+			return fmt.Errorf("error reading 'existing_id': %w", err)
+		}
+		delete(object, "existing_id")
 	}
 
 	if raw, found := object["field"]; found {
@@ -549,6 +611,13 @@ func (a Problem) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.ExistingId != nil {
+		object["existing_id"], err = json.Marshal(a.ExistingId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'existing_id': %w", err)
+		}
+	}
+
 	if a.Field != nil {
 		object["field"], err = json.Marshal(a.Field)
 		if err != nil {
@@ -589,6 +658,9 @@ func (a Problem) MarshalJSON() ([]byte, error) {
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// AgentCreateApplication Gefundene Stelle als Vorgemerkt anlegen
+	// (POST /api/agent/applications)
+	AgentCreateApplication(w http.ResponseWriter, r *http.Request)
 	// AgentGetCv Gespeicherter Lebenslauf (404, solange keiner gespeichert ist)
 	// (GET /api/agent/cv)
 	AgentGetCv(w http.ResponseWriter, r *http.Request)
@@ -686,6 +758,20 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// AgentCreateApplication operation middleware
+func (siw *ServerInterfaceWrapper) AgentCreateApplication(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AgentCreateApplication(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
 
 // AgentGetCv operation middleware
 func (siw *ServerInterfaceWrapper) AgentGetCv(w http.ResponseWriter, r *http.Request) {
@@ -804,6 +890,32 @@ func (siw *ServerInterfaceWrapper) ListApplications(w http.ResponseWriter, r *ht
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "q"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "q", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "from_agent" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "from_agent", r.URL.Query(), &params.FromAgent, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "from_agent"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "from_agent", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "sort" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "sort", r.URL.Query(), &params.Sort, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "sort"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "sort", Err: err})
 		}
 		return
 	}
@@ -1464,11 +1576,51 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/agent/cv", wrapper.AgentGetCv)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/agent/cv-reviews", wrapper.AgentListCvReviews)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/agent/cv-reviews/{id}", wrapper.AgentCompleteCvReview)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/agent/applications", wrapper.AgentCreateApplication)
 
 	return m
 }
 
 type ProblemApplicationProblemPlusJSONResponse Problem
+
+type AgentCreateApplicationRequestObject struct {
+	Body *AgentCreateApplicationJSONRequestBody
+}
+
+type AgentCreateApplicationResponseObject interface {
+	VisitAgentCreateApplicationResponse(w http.ResponseWriter) error
+}
+
+type AgentCreateApplication201JSONResponse Application
+
+func (response AgentCreateApplication201JSONResponse) VisitAgentCreateApplicationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AgentCreateApplicationdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response AgentCreateApplicationdefaultApplicationProblemPlusJSONResponse) VisitAgentCreateApplicationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
 
 type AgentGetCvRequestObject struct {
 }
@@ -2598,6 +2750,9 @@ func (response GetSummarydefaultApplicationProblemPlusJSONResponse) VisitGetSumm
 
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
+	// AgentCreateApplication Gefundene Stelle als Vorgemerkt anlegen
+	// (POST /api/agent/applications)
+	AgentCreateApplication(ctx context.Context, request AgentCreateApplicationRequestObject) (AgentCreateApplicationResponseObject, error)
 	// AgentGetCv Gespeicherter Lebenslauf (404, solange keiner gespeichert ist)
 	// (GET /api/agent/cv)
 	AgentGetCv(ctx context.Context, request AgentGetCvRequestObject) (AgentGetCvResponseObject, error)
@@ -2724,6 +2879,37 @@ type strictHandler struct {
 	ssi         StrictServerInterface
 	middlewares []StrictMiddlewareFunc
 	options     StrictHTTPServerOptions
+}
+
+// AgentCreateApplication operation middleware
+func (sh *strictHandler) AgentCreateApplication(w http.ResponseWriter, r *http.Request) {
+	var request AgentCreateApplicationRequestObject
+
+	var body AgentCreateApplicationJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.AgentCreateApplication(ctx, request.(AgentCreateApplicationRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AgentCreateApplication")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(AgentCreateApplicationResponseObject); ok {
+		if err := validResponse.VisitAgentCreateApplicationResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
 }
 
 // AgentGetCv operation middleware
@@ -3506,71 +3692,77 @@ func (sh *strictHandler) GetSummary(w http.ResponseWriter, r *http.Request) {
 // const string: with thousands of chunks the chained `+` fold is several
 // times slower for the Go compiler than parsing a slice literal.
 var swaggerSpec = []string{
-	"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",
+	"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",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,

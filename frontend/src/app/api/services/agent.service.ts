@@ -12,10 +12,13 @@ import { StrictHttpResponse } from '../strict-http-response';
 
 import { agentCompleteCvReview } from '../fn/agent/agent-complete-cv-review';
 import { AgentCompleteCvReview$Params } from '../fn/agent/agent-complete-cv-review';
+import { agentCreateApplication } from '../fn/agent/agent-create-application';
+import { AgentCreateApplication$Params } from '../fn/agent/agent-create-application';
 import { agentGetCv } from '../fn/agent/agent-get-cv';
 import { AgentGetCv$Params } from '../fn/agent/agent-get-cv';
 import { agentListCvReviews } from '../fn/agent/agent-list-cv-reviews';
 import { AgentListCvReviews$Params } from '../fn/agent/agent-list-cv-reviews';
+import { Application } from '../models/application';
 import { Cv } from '../models/cv';
 import { CvReview } from '../models/cv-review';
 
@@ -131,6 +134,41 @@ export class AgentService extends BaseService {
     const resp = this.agentCompleteCvReview$Response(params, context);
     return resp.pipe(
       map((r: StrictHttpResponse<CvReview>): CvReview => r.body)
+    );
+  }
+
+  /** Path part for operation `agentCreateApplication()` */
+  static readonly AgentCreateApplicationPath = '/api/agent/applications';
+
+  /**
+   * Gefundene Stelle als Vorgemerkt anlegen.
+   *
+   * Dublette (gleiche Anzeigen-URL oder gleiche Firma + Titel) → 409 mit `existing_id`.
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `agentCreateApplication()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  agentCreateApplication$Response(params: AgentCreateApplication$Params, context?: HttpContext): Observable<StrictHttpResponse<Application>> {
+    const obs = agentCreateApplication(this.http, this.rootUrl, params, context);
+    return obs;
+  }
+
+  /**
+   * Gefundene Stelle als Vorgemerkt anlegen.
+   *
+   * Dublette (gleiche Anzeigen-URL oder gleiche Firma + Titel) → 409 mit `existing_id`.
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `agentCreateApplication$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  agentCreateApplication(params: AgentCreateApplication$Params, context?: HttpContext): Observable<Application> {
+    const resp = this.agentCreateApplication$Response(params, context);
+    return resp.pipe(
+      map((r: StrictHttpResponse<Application>): Application => r.body)
     );
   }
 

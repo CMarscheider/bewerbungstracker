@@ -8,7 +8,10 @@ import (
 )
 
 func (s *Server) ListApplications(ctx context.Context, req ListApplicationsRequestObject) (ListApplicationsResponseObject, error) {
-	f := service.ApplicationFilter{Query: req.Params.Q}
+	f := service.ApplicationFilter{
+		Query: req.Params.Q, FromAgent: req.Params.FromAgent,
+		SortByScore: req.Params.Sort != nil && *req.Params.Sort == Score,
+	}
 	if req.Params.Phase != nil {
 		p := domain.Phase(*req.Params.Phase)
 		f.Phase = &p
@@ -32,7 +35,7 @@ func (s *Server) CreateApplication(ctx context.Context, req CreateApplicationReq
 	b := req.Body
 	a, err := s.svc.CreateApplication(ctx, service.NewApplication{
 		CompanyID: b.CompanyId, PositionTitle: b.PositionTitle,
-		JobURL: b.JobUrl, Location: b.Location, Source: b.Source, Notes: b.Notes,
+		JobURL: b.JobUrl, Location: b.Location, Source: b.Source, Notes: b.Notes, ContactEmail: b.ContactEmail,
 		FirstEvent: newEventFromDTO(b.FirstEvent),
 	})
 	if err != nil {
@@ -53,7 +56,7 @@ func (s *Server) UpdateApplication(ctx context.Context, req UpdateApplicationReq
 	b := req.Body
 	a, err := s.svc.UpdateApplication(ctx, req.Id, service.ApplicationPatch{
 		CompanyID: b.CompanyId, PositionTitle: b.PositionTitle,
-		JobURL: b.JobUrl, Location: b.Location, Source: b.Source, Notes: b.Notes,
+		JobURL: b.JobUrl, Location: b.Location, Source: b.Source, Notes: b.Notes, ContactEmail: b.ContactEmail,
 	})
 	if err != nil {
 		return nil, err

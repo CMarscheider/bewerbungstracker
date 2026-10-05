@@ -5,6 +5,7 @@ import { EventType } from '../models/event-type';
 export interface Problem {
   attempted?: EventType;
   detail?: string;
+  existing_id?: string;
   field?: string;
   from?: EventType;
   status: number;

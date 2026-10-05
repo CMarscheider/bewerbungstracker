@@ -6,6 +6,8 @@ import { Phase } from '../models/phase';
 export interface ApplicationSummary {
   company_id: string;
   company_name: string;
+  created_by_agent: boolean;
+  fit_score?: number;
   id: string;
   last_event_on: string;
   open_due_on?: string;

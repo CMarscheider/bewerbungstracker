@@ -42,6 +42,7 @@ func problemFor(err error) problem {
 		rule        *domain.RuleError
 		notFound    *service.NotFoundError
 		conflict    *service.ConflictError
+		duplicate   *service.DuplicateError
 		unavailable *service.UnavailableError
 	)
 	switch {
@@ -60,6 +61,9 @@ func problemFor(err error) problem {
 			Status: http.StatusUnprocessableEntity, Detail: rule.Detail}
 	case errors.As(err, &notFound):
 		return problem{Type: problemBase + "not-found", Title: "Nicht gefunden", Status: http.StatusNotFound, Detail: notFound.Error()}
+	case errors.As(err, &duplicate):
+		return problem{Type: problemBase + "duplicate", Title: "Schon vorhanden", Status: http.StatusConflict,
+			Detail: duplicate.Error(), Extra: map[string]any{"existing_id": duplicate.ExistingID}}
 	case errors.As(err, &conflict):
 		return problem{Type: problemBase + "conflict", Title: "Konflikt", Status: http.StatusConflict, Detail: conflict.Detail}
 	case errors.As(err, &unavailable):

@@ -100,9 +100,17 @@ paths:
           in: query
           description: Suche in Firmenname und Stellentitel
           schema: { type: string, maxLength: 200 }
+        - name: from_agent
+          in: query
+          description: true = nur vom Agenten angelegte, false = nur manuell angelegte
+          schema: { type: boolean }
+        - name: sort
+          in: query
+          description: updated (Standard) = zuletzt geändert zuerst, score = beste Passung zuerst
+          schema: { type: string, enum: [updated, score] }
       responses:
         "200":
-          description: Bewerbungen, zuletzt geänderte zuerst
+          description: Bewerbungen, zuletzt geänderte zuerst (bzw. nach Passung bei sort=score)
           content:
             application/json:
               schema:
@@ -434,6 +442,25 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/CvReview" }
         default: { $ref: "#/components/responses/Problem" }
+  /api/agent/applications:
+    post:
+      operationId: agentCreateApplication
+      tags: [Agent]
+      summary: Gefundene Stelle als Vorgemerkt anlegen
+      description: Dublette (gleiche Anzeigen-URL oder gleiche Firma + Titel) → 409 mit `existing_id`.
+      security: [{ agentToken: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AgentJob" }
+      responses:
+        "201":
+          description: Angelegt
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Application" }
+        default: { $ref: "#/components/responses/Problem" }
 components:
   securitySchemes:
     agentToken:
@@ -527,6 +554,7 @@ components:
         location: { type: string, maxLength: 200 }
         source: { type: string, maxLength: 100 }
         notes: { type: string, maxLength: 5000 }
+        contact_email: { type: string, maxLength: 200 }
         first_event: { $ref: "#/components/schemas/NewEvent" }
     ApplicationPatch:
       type: object
@@ -538,9 +566,10 @@ components:
         location: { type: string, maxLength: 200 }
         source: { type: string, maxLength: 100 }
         notes: { type: string, maxLength: 5000 }
+        contact_email: { type: string, maxLength: 200 }
     ApplicationSummary:
       type: object
-      required: [id, company_id, company_name, position_title, status, phase, updated_at, last_event_on]
+      required: [id, company_id, company_name, position_title, status, phase, updated_at, last_event_on, created_by_agent]
       properties:
         id: { type: string, format: uuid }
         company_id: { type: string, format: uuid }
@@ -551,9 +580,11 @@ components:
         updated_at: { type: string, format: date-time }
         last_event_on: { type: string, format: date }
         open_due_on: { type: string, format: date }
+        fit_score: { type: integer, minimum: 0, maximum: 100 }
+        created_by_agent: { type: boolean }
     Application:
       type: object
-      required: [id, company_id, company_name, position_title, status, phase, created_at, updated_at, events]
+      required: [id, company_id, company_name, position_title, status, phase, created_at, updated_at, events, created_by_agent]
       properties:
         id: { type: string, format: uuid }
         company_id: { type: string, format: uuid }
@@ -563,6 +594,11 @@ components:
         location: { type: string }
         source: { type: string }
         notes: { type: string }
+        contact_email: { type: string }
+        posting_text: { type: string }
+        fit_score: { type: integer, minimum: 0, maximum: 100 }
+        fit_reason: { type: string }
+        created_by_agent: { type: boolean }
         status: { $ref: "#/components/schemas/EventType" }
         phase: { $ref: "#/components/schemas/Phase" }
         created_at: { type: string, format: date-time }
@@ -570,6 +606,20 @@ components:
         events:
           type: array
           items: { $ref: "#/components/schemas/Event" }
+    AgentJob:
+      type: object
+      required: [company_name, position_title, fit_score, fit_reason]
+      properties:
+        company_name: { type: string, minLength: 1, maxLength: 200, pattern: '\S' }
+        company_website: { type: string, maxLength: 500, pattern: '^https?://\S' }
+        position_title: { type: string, minLength: 1, maxLength: 300, pattern: '\S' }
+        job_url: { type: string, maxLength: 1000, pattern: '^https?://\S' }
+        location: { type: string, maxLength: 200 }
+        source: { type: string, maxLength: 100 }
+        contact_email: { type: string, maxLength: 200, pattern: '^[^@\s]+@[^@\s]+\.[^@\s]+$' }
+        posting_text: { type: string, maxLength: 30000 }
+        fit_score: { type: integer, minimum: 0, maximum: 100 }
+        fit_reason: { type: string, minLength: 1, maxLength: 1000, pattern: '\S' }
     Deadline:
       type: object
       required: [application_id, company_name, position_title, event_type, due_on, overdue]
@@ -638,6 +688,7 @@ components:
         field: { type: string }
         from: { $ref: "#/components/schemas/EventType" }
         attempted: { $ref: "#/components/schemas/EventType" }
+        existing_id: { type: string, format: uuid }
     CvPeriod:
       type: string
       description: Jahr oder Jahr-Monat, z. B. 2024 oder 2024-03

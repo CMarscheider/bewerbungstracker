@@ -49,7 +49,8 @@ func applicationDTO(a service.Application) Application {
 	return Application{
 		Id: a.ID, CompanyId: a.CompanyID, CompanyName: a.CompanyName, PositionTitle: a.PositionTitle,
 		JobUrl: a.JobURL, Location: a.Location, Source: a.Source, Notes: a.Notes,
-		Status: EventType(a.Status), Phase: Phase(a.Phase),
+		ContactEmail: a.ContactEmail, PostingText: a.PostingText, FitScore: a.FitScore, FitReason: a.FitReason,
+		Status: EventType(a.Status), Phase: Phase(a.Phase), CreatedByAgent: a.CreatedByAgent,
 		CreatedAt: a.CreatedAt, UpdatedAt: a.UpdatedAt, Events: events,
 	}
 }
@@ -59,6 +60,7 @@ func summaryDTO(a service.ApplicationSummary) ApplicationSummary {
 		Id: a.ID, CompanyId: a.CompanyID, CompanyName: a.CompanyName, PositionTitle: a.PositionTitle,
 		Status: EventType(a.Status), Phase: Phase(a.Phase), UpdatedAt: a.UpdatedAt,
 		LastEventOn: toDate(a.LastEventOn), OpenDueOn: toDatePtr(a.OpenDueOn),
+		FitScore: a.FitScore, CreatedByAgent: a.CreatedByAgent,
 	}
 }
 

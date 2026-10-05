@@ -102,7 +102,7 @@ Optional: `GOTENBERG_URL` (z. B. `http://localhost:3000` für einen lokalen `got
 ### Agent-API
 
 Für Claude-Agenten gibt es unter `/api/agent/` eine eigene API, die eine angeforderte
-Lebenslauf-Optimierung abholt und den Vorschlag zurückliefert. Sie ist nur aktiv, wenn `AGENT_TOKEN`
+Lebenslauf-Optimierung abholt und den Vorschlag zurückliefert und gefundene Stellen anlegt. Sie ist nur aktiv, wenn `AGENT_TOKEN`
 gesetzt ist (in `.env`, mind. 32 Zeichen, z. B. `openssl rand -hex 32`); ohne Token antwortet sie mit 404.
 Jeder Aufruf braucht `Authorization: Bearer <token>`, sonst 401.
 
@@ -112,6 +112,9 @@ Jeder Aufruf braucht `Authorization: Bearer <token>`, sonst 401.
   (`updated_at` wird ignoriert), dazu `notes` (Hinweise). 409, wenn der Lauf nicht mehr `angefordert` ist
   (in der Oberfläche abgeschlossen oder schon abgeliefert); nach einer verlorenen Antwort vor einem
   erneuten Versuch die Liste neu lesen.
+- `POST /api/agent/applications` – gefundene Stelle als *Vorgemerkt* anlegen (Firma wird bei Bedarf
+  angelegt; `fit_score` 0–100 und `fit_reason` sind Pflicht). Dublette (gleiche Anzeigen-URL oder
+  gleiche Firma + Titel) → 409 mit `existing_id`.
 
 Die Agent-API ist gedrosselt: mit gültigem Token 2 Anfragen/s (Burst 20), ohne gültiges Token 1/s
 (Burst 10), darüber 429 mit `Retry-After`. Abgewiesene Anfragen landen höchstens einmal pro Minute

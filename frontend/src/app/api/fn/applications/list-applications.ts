@@ -19,6 +19,16 @@ export interface ListApplications$Params {
  * Suche in Firmenname und Stellentitel
  */
   q?: string;
+
+/**
+ * true = nur vom Agenten angelegte, false = nur manuell angelegte
+ */
+  from_agent?: boolean;
+
+/**
+ * updated (Standard) = zuletzt geändert zuerst, score = beste Passung zuerst
+ */
+  sort?: 'updated' | 'score';
 }
 
 export function listApplications(http: HttpClient, rootUrl: string, params?: ListApplications$Params, context?: HttpContext): Observable<StrictHttpResponse<Array<ApplicationSummary>>> {
@@ -27,6 +37,8 @@ export function listApplications(http: HttpClient, rootUrl: string, params?: Lis
     rb.query('phase', params.phase, {});
     rb.query('status', params.status, {});
     rb.query('q', params.q, {});
+    rb.query('from_agent', params.from_agent, {});
+    rb.query('sort', params.sort, {});
   }
 
   return http.request(
