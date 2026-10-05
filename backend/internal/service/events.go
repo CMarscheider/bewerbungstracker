@@ -14,31 +14,40 @@ import (
 func (s *Service) AddEvent(ctx context.Context, appID uuid.UUID, next domain.NewEvent) (Event, error) {
 	var created store.ApplicationEvent
 	err := s.inTx(ctx, func(q *store.Queries) error {
-		if _, err := q.LockApplication(ctx, appID); err != nil {
-			return notFoundIfNoRows(err, "Bewerbung")
-		}
-		rows, err := q.ListEvents(ctx, appID)
-		if err != nil {
-			return err
-		}
-		history := toHistory(rows)
-		if err := domain.CanApply(history, next, s.today()); err != nil {
-			return err
-		}
-		var round *int32
-		if next.Type == domain.Interview {
-			r := int32(domain.InterviewRound(history))
-			round = &r
-		}
-		if created, err = q.InsertEvent(ctx, insertParams(appID, next, round)); err != nil {
-			return err
-		}
-		return q.SetApplicationStatus(ctx, store.SetApplicationStatusParams{ID: appID, CurrentStatus: string(next.Type)})
+		var err error
+		created, err = s.addEvent(ctx, q, appID, next)
+		return err
 	})
 	if err != nil {
 		return Event{}, err
 	}
 	return toEvent(created), nil
+}
+
+// addEvent prüft und speichert ein Ereignis innerhalb einer laufenden Transaktion.
+func (s *Service) addEvent(ctx context.Context, q *store.Queries, appID uuid.UUID, next domain.NewEvent) (store.ApplicationEvent, error) {
+	if _, err := q.LockApplication(ctx, appID); err != nil {
+		return store.ApplicationEvent{}, notFoundIfNoRows(err, "Bewerbung")
+	}
+	rows, err := q.ListEvents(ctx, appID)
+	if err != nil {
+		return store.ApplicationEvent{}, err
+	}
+	history := toHistory(rows)
+	if err := domain.CanApply(history, next, s.today()); err != nil {
+		return store.ApplicationEvent{}, err
+	}
+	var round *int32
+	if next.Type == domain.Interview {
+		r := int32(domain.InterviewRound(history))
+		round = &r
+	}
+	created, err := q.InsertEvent(ctx, insertParams(appID, next, round))
+	if err != nil {
+		return store.ApplicationEvent{}, err
+	}
+	err = q.SetApplicationStatus(ctx, store.SetApplicationStatusParams{ID: appID, CurrentStatus: string(next.Type)})
+	return created, err
 }
 
 // UndoLastEvent löscht das letzte Ereignis und setzt den Status zurück.

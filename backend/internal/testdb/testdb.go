@@ -72,7 +72,7 @@ func Start(ctx context.Context) (*pgxpool.Pool, string, func(), error) {
 // Reset leert alle Tabellen; zu Beginn jedes Tests aufrufen.
 func Reset(t testing.TB, pool *pgxpool.Pool) {
 	t.Helper()
-	_, err := pool.Exec(context.Background(), "TRUNCATE companies, applications, application_events, application_documents, cv, cv_photo, cv_reviews CASCADE")
+	_, err := pool.Exec(context.Background(), "TRUNCATE companies, applications, application_events, application_documents, status_suggestions, processed_mails, cv, cv_photo, cv_reviews CASCADE")
 	if err != nil {
 		t.Fatalf("Tabellen leeren: %v", err)
 	}

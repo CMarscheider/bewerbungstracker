@@ -29,6 +29,7 @@ type Application struct {
 	DocumentsState string
 	DocumentsError *string
 	GmailDraftAt   *time.Time
+	GmailThreadID  *string
 }
 
 type ApplicationDocument struct {
@@ -94,4 +95,26 @@ type LatestEvent struct {
 	OccurredOn     time.Time
 	DueOn          *time.Time
 	InterviewRound *int32
+}
+
+type ProcessedMail struct {
+	GmailMessageID string
+	ApplicationID  *uuid.UUID
+	Outcome        string
+	ProcessedAt    time.Time
+}
+
+type StatusSuggestion struct {
+	ID            uuid.UUID
+	ApplicationID *uuid.UUID
+	SuggestedType string
+	OccurredOn    time.Time
+	DueOn         *time.Time
+	Reason        string
+	MailSubject   *string
+	MailFrom      *string
+	MailUrl       *string
+	State         string
+	CreatedAt     time.Time
+	DecidedAt     *time.Time
 }

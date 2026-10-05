@@ -10,7 +10,8 @@ SELECT * FROM applications WHERE id = $1 FOR UPDATE;
 -- name: GetApplication :one
 SELECT a.id, a.company_id, c.name AS company_name, a.position_title, a.job_url, a.location,
        a.source, a.notes, a.contact_email, a.posting_text, a.fit_score, a.fit_reason, a.created_by_agent,
-       a.current_status, a.documents_state, a.documents_error, a.gmail_draft_at, a.created_at, a.updated_at
+       a.current_status, a.documents_state, a.documents_error, a.gmail_draft_at, a.gmail_thread_id,
+       a.created_at, a.updated_at
 FROM applications a
 JOIN companies c ON c.id = a.company_id
 WHERE a.id = $1;

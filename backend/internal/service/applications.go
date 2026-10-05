@@ -48,6 +48,7 @@ type Application struct {
 	DocumentsState string     // Zustand der Unterlagen, siehe Docs*
 	DocumentsError *string    // Fehlertext, wenn DocumentsState = DocsFailed
 	GmailDraftAt   *time.Time // wann der Gmail-Entwurf angelegt wurde
+	GmailThreadID  *string    // Gmail-Thread der gesendeten Bewerbung (Postfach-Auswertung)
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
 	Events         []Event
@@ -167,7 +168,7 @@ func (s *Service) GetApplication(ctx context.Context, id uuid.UUID) (Application
 		FitReason: r.FitReason, CreatedByAgent: r.CreatedByAgent,
 		Status: status, Phase: status.Phase(),
 		DocumentsState: r.DocumentsState, DocumentsError: r.DocumentsError, GmailDraftAt: r.GmailDraftAt,
-		CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt, Events: events,
+		GmailThreadID: r.GmailThreadID, CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt, Events: events,
 	}, nil
 }
 
