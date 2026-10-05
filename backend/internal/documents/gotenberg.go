@@ -19,7 +19,7 @@ var ErrUnavailable = errors.New("pdf-dienst nicht erreichbar")
 // maxPDFBytes begrenzt die gelesene Antwort.
 const maxPDFBytes = 20 << 20
 
-// Gotenberg wandelt HTML über den Chromium-Endpunkt von Gotenberg in PDF um.
+// Gotenberg wandelt HTML über den Chromium-Endpunkt von Gotenberg in PDF um und fügt PDFs zusammen.
 type Gotenberg struct {
 	url    string
 	client *http.Client
@@ -58,12 +58,32 @@ func (g *Gotenberg) Convert(ctx context.Context, html []byte, assets map[string]
 	if err := w.Close(); err != nil {
 		return nil, err
 	}
+	return g.post(ctx, "/forms/chromium/convert/html", w.FormDataContentType(), &body)
+}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, g.url+"/forms/chromium/convert/html", &body)
+// Merge fügt PDFs in der übergebenen Reihenfolge zu einem zusammen. Gotenberg sortiert die
+// Dateien nach Namen, daher heißen sie 001.pdf, 002.pdf, …
+func (g *Gotenberg) Merge(ctx context.Context, pdfs ...[]byte) ([]byte, error) {
+	var body bytes.Buffer
+	w := multipart.NewWriter(&body)
+	for i, pdf := range pdfs {
+		if err := addFile(w, fmt.Sprintf("%03d.pdf", i+1), pdf); err != nil {
+			return nil, err
+		}
+	}
+	if err := w.Close(); err != nil {
+		return nil, err
+	}
+	return g.post(ctx, "/forms/pdfengines/merge", w.FormDataContentType(), &body)
+}
+
+// post schickt das Formular an Gotenberg und liefert das PDF der Antwort.
+func (g *Gotenberg) post(ctx context.Context, path, contentType string, body io.Reader) ([]byte, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, g.url+path, body)
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Content-Type", w.FormDataContentType())
+	req.Header.Set("Content-Type", contentType)
 	res, err := g.client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrUnavailable, err)

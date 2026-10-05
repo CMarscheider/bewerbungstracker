@@ -16,7 +16,7 @@ var templateFS embed.FS
 var fontFS embed.FS
 
 // templates enthält alle Vorlagen; cv.html.tmpl definiert die gemeinsamen Blöcke
-// "styles", "aside" und "cv-main", die application.html.tmpl wiederverwendet.
+// "base-styles", "styles", "icon-…", "aside" und "cv-main", die letter.html.tmpl teilweise wiederverwendet.
 var templates = template.Must(template.New("").Funcs(template.FuncMap{
 	"period":   period,
 	"safeURL":  safeURL,
@@ -26,18 +26,18 @@ var templates = template.Must(template.New("").Funcs(template.FuncMap{
 // Labels sind die festen Texte der Vorlagen je Sprache.
 type Labels struct {
 	Contact, Skills, Languages, Profile, Projects, Experience, Education, Present, Live string
-	Closing, SubjectPrefix                                                              string
+	Closing, SubjectPrefix, CV                                                          string
 	Months                                                                              [12]string
 }
 
 var labels = map[string]Labels{
 	"de": {Contact: "Kontakt", Skills: "Kenntnisse", Languages: "Sprachen", Profile: "Profil", Projects: "Projekte",
 		Experience: "Berufserfahrung", Education: "Ausbildung", Present: "heute", Live: "Live ansehen",
-		Closing: "Mit freundlichen Grüßen", SubjectPrefix: "Bewerbung als",
+		Closing: "Mit freundlichen Grüßen", SubjectPrefix: "Bewerbung als", CV: "Lebenslauf",
 		Months: [12]string{"Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"}},
 	"en": {Contact: "Contact", Skills: "Skills", Languages: "Languages", Profile: "Profile", Projects: "Projects",
 		Experience: "Experience", Education: "Education", Present: "present", Live: "View live",
-		Closing: "Kind regards", SubjectPrefix: "Application for",
+		Closing: "Kind regards", SubjectPrefix: "Application for", CV: "Curriculum Vitae",
 		Months: [12]string{"January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"}},
 }
 
@@ -45,10 +45,11 @@ type cvView struct {
 	CV
 	Photo template.URL
 	L     Labels
+	Lang  string // "de" oder "en", für <html lang>
 }
 
-func newCVView(cv CV, photo []byte, l Labels) cvView {
-	view := cvView{CV: cv, L: l}
+func newCVView(cv CV, photo []byte, lang string) cvView {
+	view := cvView{CV: cv, L: labels[lang], Lang: lang}
 	if len(photo) > 0 {
 		view.Photo = template.URL("data:image/jpeg;base64," + base64.StdEncoding.EncodeToString(photo))
 	}
@@ -58,7 +59,7 @@ func newCVView(cv CV, photo []byte, l Labels) cvView {
 // RenderCV erzeugt die HTML-Seite des Lebenslaufs; photo ist ein JPEG oder nil.
 func RenderCV(cv CV, photo []byte) ([]byte, error) {
 	var buf bytes.Buffer
-	if err := templates.ExecuteTemplate(&buf, "cv.html.tmpl", newCVView(cv, photo, labels["de"])); err != nil {
+	if err := templates.ExecuteTemplate(&buf, "cv.html.tmpl", newCVView(cv, photo, "de")); err != nil {
 		return nil, fmt.Errorf("lebenslauf-vorlage: %w", err)
 	}
 	return buf.Bytes(), nil

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="{{.Lang}}">
+<head>
+<meta charset="utf-8">
+<title>{{.L.SubjectPrefix}} {{.Letter.PositionTitle}} – {{.Person.Name}}</title>
+<style>{{template "base-styles"}}</style>
+<style>
+  /* Klassischer einspaltiger Brief ohne Seitenleiste; er wird getrennt vom Lebenslauf umgewandelt.
+     Genau eine A4-Seite: zu langer Text wird abgeschnitten statt umzubrechen. */
+  body { margin: 0; font-family: Carlito, Calibri, sans-serif; font-size: 10.5pt; line-height: 1.4; color: var(--text); }
+  .letter { display: flex; flex-direction: column; height: 297mm; overflow: hidden; padding: 16mm 20mm 14mm 25mm; }
+
+  .sender { margin-bottom: 14mm; padding-bottom: 4mm; position: relative; }
+  .sender::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: .4mm;
+                   background: linear-gradient(90deg, var(--accent), var(--line)); }
+  .sender h1 { font-size: 26pt; line-height: 1.1; margin: 0; font-weight: 700; color: var(--side); letter-spacing: -.01em; }
+  .sender .headline { margin: 1.5mm 0 0; font-size: 13pt; color: var(--accent); font-weight: 700; }
+  .contact-line { display: flex; flex-wrap: wrap; gap: 1.5mm 6mm; list-style: none; margin: 4mm 0 0; padding: 0;
+                  font-size: 9.5pt; color: var(--muted); }
+  .contact-line li { display: flex; align-items: center; gap: 1.6mm; }
+  .contact-line svg { flex: none; width: 3.4mm; height: 3.4mm; fill: var(--accent); }
+  .contact-line a { color: var(--muted); text-decoration: none; }
+
+  .recipient { margin: 0 0 8mm; font-weight: 700; color: var(--side); }
+  .dateline { margin: 0 0 8mm; text-align: right; color: var(--muted); }
+  .subject { margin: 0 0 6mm; font-size: 12pt; font-weight: 700; color: var(--side); }
+  .body p { margin: 0 0 3.5mm; text-align: justify; hyphens: auto; }
+  .closing { margin: 4mm 0 0; }
+  .signature { margin: 10mm 0 0; font-weight: 700; color: var(--side); }
+</style>
+</head>
+<body>
+<div class="letter">
+  <header class="sender">
+    <h1>{{.Person.Name}}</h1>
+    {{with .Person.Headline}}<p class="headline">{{.}}</p>{{end}}
+    <ul class="contact-line">
+      {{with .Person.Location}}<li>{{template "icon-location"}}<span>{{.}}</span></li>{{end}}
+      {{with .Person.Phone}}<li>{{template "icon-phone"}}<span>{{.}}</span></li>{{end}}
+      {{with .Person.Email}}<li>{{template "icon-email"}}<span>{{.}}</span></li>{{end}}
+      {{range .Person.Links}}<li>{{template "icon-link"}}{{$label := .Label}}{{with safeURL .URL}}<a href="{{.}}">{{linkText . $label}}</a>{{else}}<span>{{$label}}</span>{{end}}</li>{{end}}
+    </ul>
+  </header>
+
+  <p class="recipient">{{.Letter.CompanyName}}</p>
+  <p class="dateline">{{.Dateline}}</p>
+  <p class="subject">{{.L.SubjectPrefix}} {{.Letter.PositionTitle}}</p>
+  <div class="body">
+    {{range .Paragraphs}}<p>{{range $i, $line := .}}{{if $i}}<br>{{end}}{{$line}}{{end}}</p>
+    {{end}}
+  </div>
+  <p class="closing">{{.L.Closing}}</p>
+  <p class="signature">{{.Person.Name}}</p>
+</div>
+</body>
+</html>

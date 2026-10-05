@@ -14,13 +14,24 @@ import (
 )
 
 type fakeConverter struct {
-	html   []byte
+	html   []byte   // zuletzt umgewandeltes HTML
+	htmls  [][]byte // alle umgewandelten HTML-Dokumente
 	assets map[string][]byte
+	merged [][]byte // zuletzt zusammengefügte PDFs
 	err    error
 }
 
 func (f *fakeConverter) Convert(_ context.Context, html []byte, assets map[string][]byte) ([]byte, error) {
 	f.html, f.assets = html, assets
+	f.htmls = append(f.htmls, html)
+	if f.err != nil {
+		return nil, f.err
+	}
+	return []byte("%PDF-fake"), nil
+}
+
+func (f *fakeConverter) Merge(_ context.Context, pdfs ...[]byte) ([]byte, error) {
+	f.merged = pdfs
 	if f.err != nil {
 		return nil, f.err
 	}

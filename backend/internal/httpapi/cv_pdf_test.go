@@ -15,6 +15,10 @@ func (fakeConverter) Convert(context.Context, []byte, map[string][]byte) ([]byte
 	return []byte("%PDF-fake"), nil
 }
 
+func (fakeConverter) Merge(context.Context, ...[]byte) ([]byte, error) {
+	return []byte("%PDF-fake"), nil
+}
+
 func TestCVPDF(t *testing.T) {
 	srv := newTestServerWith(t, service.WithPDFConverter(fakeConverter{}))
 	expectProblem(t, call(t, srv, http.MethodGet, "/api/v1/cv/pdf", nil), http.StatusNotFound, "/problems/not-found")

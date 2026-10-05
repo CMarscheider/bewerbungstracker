@@ -57,13 +57,44 @@ func (s *Service) loadCV(ctx context.Context) (documents.CV, []byte, error) {
 // convertPDF wandelt HTML über den PDF-Dienst um; fehlt er oder ist er nicht erreichbar: UnavailableError.
 func (s *Service) convertPDF(ctx context.Context, html []byte) ([]byte, error) {
 	if s.pdf == nil {
-		return nil, &UnavailableError{Detail: "PDF-Erzeugung ist nicht eingerichtet (GOTENBERG_URL fehlt)"}
+		return nil, noPDFService()
 	}
 	ctx, cancel := context.WithTimeout(ctx, pdfTimeout)
 	defer cancel()
 	pdf, err := s.pdf.Convert(ctx, html, documents.Fonts())
-	if errors.Is(err, documents.ErrUnavailable) {
-		return nil, &UnavailableError{Detail: "PDF-Dienst ist gerade nicht erreichbar", Err: err}
+	return pdf, pdfServiceError(err)
+}
+
+// applicationPDF wandelt Anschreiben und Lebenslauf getrennt um und fügt sie zusammen (Anschreiben
+// zuerst). Alle drei Schritte teilen sich pdfTimeout. Fehler wie bei convertPDF.
+func (s *Service) applicationPDF(ctx context.Context, html documents.ApplicationHTML) ([]byte, error) {
+	if s.pdf == nil {
+		return nil, noPDFService()
 	}
-	return pdf, err
+	ctx, cancel := context.WithTimeout(ctx, pdfTimeout)
+	defer cancel()
+	fonts := documents.Fonts()
+	letter, err := s.pdf.Convert(ctx, html.Letter, fonts)
+	if err != nil {
+		return nil, pdfServiceError(err)
+	}
+	cv, err := s.pdf.Convert(ctx, html.CV, fonts)
+	if err != nil {
+		return nil, pdfServiceError(err)
+	}
+	pdf, err := s.pdf.Merge(ctx, letter, cv)
+	return pdf, pdfServiceError(err)
+}
+
+// noPDFService: GOTENBERG_URL ist nicht gesetzt.
+func noPDFService() error {
+	return &UnavailableError{Detail: "PDF-Erzeugung ist nicht eingerichtet (GOTENBERG_URL fehlt)"}
+}
+
+// pdfServiceError macht aus einem nicht erreichbaren PDF-Dienst einen UnavailableError.
+func pdfServiceError(err error) error {
+	if errors.Is(err, documents.ErrUnavailable) {
+		return &UnavailableError{Detail: "PDF-Dienst ist gerade nicht erreichbar", Err: err}
+	}
+	return err
 }

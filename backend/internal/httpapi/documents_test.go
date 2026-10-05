@@ -66,6 +66,10 @@ func (unavailableConverter) Convert(context.Context, []byte, map[string][]byte) 
 	return nil, documents.ErrUnavailable
 }
 
+func (unavailableConverter) Merge(context.Context, ...[]byte) ([]byte, error) {
+	return nil, documents.ErrUnavailable
+}
+
 // requestedApplication legt Lebenslauf und eine Stelle an (job: JSON wie agentJobBody) und fordert
 // Unterlagen an; liefert den Pfad der Agent-Unterlagen und die ID.
 func requestedApplication(t *testing.T, srv *httptest.Server, job string) (string, string) {

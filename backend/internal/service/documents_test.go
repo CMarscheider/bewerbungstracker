@@ -123,8 +123,15 @@ func TestSaveAgentDocumentsCreatesDraft(t *testing.T) {
 	if len(d.Highlights) != 1 || d.Highlights[0] != "TypeScript" {
 		t.Errorf("Highlights = %q", d.Highlights)
 	}
-	if !strings.Contains(string(conv.html), "ich bewerbe mich.") {
-		t.Error("Anschreiben fehlt im HTML")
+	// Anschreiben und Lebenslauf werden getrennt umgewandelt und zusammengefügt.
+	if len(conv.htmls) != 2 || len(conv.merged) != 2 {
+		t.Fatalf("umgewandelt %d×, zusammengefügt %d PDFs, erwartet je 2", len(conv.htmls), len(conv.merged))
+	}
+	if letter := string(conv.htmls[0]); !strings.Contains(letter, "ich bewerbe mich.") || strings.Contains(letter, "<aside") {
+		t.Error("erstes Dokument muss das Anschreiben ohne Seitenleiste sein")
+	}
+	if !strings.Contains(string(conv.htmls[1]), "<aside") {
+		t.Error("zweites Dokument muss der Lebenslauf mit Seitenleiste sein")
 	}
 	a := mustState(t, svc, id, service.DocsDrafted)
 	if a.GmailDraftAt == nil || a.DocumentsError != nil {
@@ -297,7 +304,7 @@ func TestUpdateDocuments(t *testing.T) {
 	if err != nil || d.Version != 2 || d.CoverLetter != "Überarbeitet von Hand." {
 		t.Fatalf("Update: %v %+v", err, d)
 	}
-	if !strings.Contains(string(conv.html), "Überarbeitet von Hand.") {
+	if !strings.Contains(string(conv.htmls[len(conv.htmls)-2]), "Überarbeitet von Hand.") {
 		t.Error("nicht neu gerendert")
 	}
 	mustState(t, svc, id, service.DocsDrafted)
@@ -403,6 +410,10 @@ func (h *hookConverter) Convert(_ context.Context, _ []byte, _ map[string][]byte
 			return nil, h.err
 		}
 	}
+	return []byte("%PDF-fake"), nil
+}
+
+func (h *hookConverter) Merge(context.Context, ...[]byte) ([]byte, error) {
 	return []byte("%PDF-fake"), nil
 }
 

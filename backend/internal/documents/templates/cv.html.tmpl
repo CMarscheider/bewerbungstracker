@@ -1,5 +1,5 @@
-{{/* Blöcke für Lebenslauf und Bewerbung; das Dokument selbst steht unten. */ -}}
-{{define "styles"}}
+{{/* Blöcke für Lebenslauf und Anschreiben; das Dokument selbst steht unten. */ -}}
+{{define "base-styles"}}
   @font-face { font-family: Carlito; src: url("Carlito-Regular.ttf"); font-weight: 400; font-style: normal; }
   @font-face { font-family: Carlito; src: url("Carlito-Bold.ttf"); font-weight: 700; font-style: normal; }
   @font-face { font-family: Carlito; src: url("Carlito-Italic.ttf"); font-weight: 400; font-style: italic; }
@@ -10,7 +10,9 @@
   }
   @page { size: A4; margin: 0; }
   * { box-sizing: border-box; }
-  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; background: #fff; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; background: #fff; }{{end -}}
+{{/* Gemeinsame Grundlage plus Seitenleisten-Layout des Lebenslaufs. */ -}}
+{{define "styles"}}{{template "base-styles"}}
   /* Seitenleisten-Hintergrund: fixed wiederholt Chrome im Druck auf jeder Seite als Vektorfläche.
      (Ein Verlauf auf html wurde ab Seite 2 bzw. bei mehrseitigem Dokument grob gerastert und
      wirkte dadurch schmaler als auf Seite 1.) */
@@ -69,14 +71,19 @@
   .timeline ul li { margin: 0 0 .6mm; }
   .details { margin: 1mm 0 0; color: var(--muted); font-style: italic; }
 {{end -}}
+{{/* Kontakt-Symbole, gemeinsam für Seitenleiste und Anschreiben. */ -}}
+{{define "icon-location"}}<svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z"/></svg>{{end -}}
+{{define "icon-phone"}}<svg viewBox="0 0 24 24"><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.02-.24c1.12.37 2.33.57 3.57.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.25 1.02l-2.2 2.2z"/></svg>{{end -}}
+{{define "icon-email"}}<svg viewBox="0 0 24 24"><path d="M20 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm0 4-8 5-8-5V6l8 5 8-5v2z"/></svg>{{end -}}
+{{define "icon-link"}}<svg viewBox="0 0 24 24"><path d="M3.9 12a3.1 3.1 0 0 1 3.1-3.1h4V7H7a5 5 0 0 0 0 10h4v-1.9H7A3.1 3.1 0 0 1 3.9 12zM8 13h8v-2H8v2zm9-6h-4v1.9h4a3.1 3.1 0 0 1 0 6.2h-4V17h4a5 5 0 0 0 0-10z"/></svg>{{end -}}
 {{define "aside"}}<aside>
     {{if .Photo}}<img class="photo" src="{{.Photo}}" alt="Foto">{{end}}
     <h2>{{.L.Contact}}</h2>
     <ul class="contact">
-      {{with .Person.Location}}<li><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z"/></svg><span>{{.}}</span></li>{{end}}
-      {{with .Person.Phone}}<li><svg viewBox="0 0 24 24"><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.02-.24c1.12.37 2.33.57 3.57.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.25 1.02l-2.2 2.2z"/></svg><span>{{.}}</span></li>{{end}}
-      {{with .Person.Email}}<li><svg viewBox="0 0 24 24"><path d="M20 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm0 4-8 5-8-5V6l8 5 8-5v2z"/></svg><span>{{.}}</span></li>{{end}}
-      {{range .Person.Links}}<li><svg viewBox="0 0 24 24"><path d="M3.9 12a3.1 3.1 0 0 1 3.1-3.1h4V7H7a5 5 0 0 0 0 10h4v-1.9H7A3.1 3.1 0 0 1 3.9 12zM8 13h8v-2H8v2zm9-6h-4v1.9h4a3.1 3.1 0 0 1 0 6.2h-4V17h4a5 5 0 0 0 0-10z"/></svg>{{$label := .Label}}{{with safeURL .URL}}<a href="{{.}}">{{linkText . $label}}</a>{{else}}<span>{{$label}}</span>{{end}}</li>{{end}}
+      {{with .Person.Location}}<li>{{template "icon-location"}}<span>{{.}}</span></li>{{end}}
+      {{with .Person.Phone}}<li>{{template "icon-phone"}}<span>{{.}}</span></li>{{end}}
+      {{with .Person.Email}}<li>{{template "icon-email"}}<span>{{.}}</span></li>{{end}}
+      {{range .Person.Links}}<li>{{template "icon-link"}}{{$label := .Label}}{{with safeURL .URL}}<a href="{{.}}">{{linkText . $label}}</a>{{else}}<span>{{$label}}</span>{{end}}</li>{{end}}
     </ul>
 
     {{if .Skills}}<h2>{{.L.Skills}}</h2>
@@ -115,10 +122,10 @@
     </li>{{end}}</ul>{{end}}
   </main>{{end -}}
 <!doctype html>
-<html lang="de">
+<html lang="{{.Lang}}">
 <head>
 <meta charset="utf-8">
-<title>Lebenslauf {{.Person.Name}}</title>
+<title>{{.L.CV}} {{.Person.Name}}</title>
 <style>{{template "styles"}}</style>
 </head>
 <body>

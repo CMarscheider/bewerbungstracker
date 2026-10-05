@@ -332,7 +332,7 @@ func (s *Service) CreateDraft(ctx context.Context, id uuid.UUID) (Application, e
 	return s.GetApplication(ctx, id)
 }
 
-// renderDocuments rendert Anschreiben + Lebenslauf als PDF. Ohne Lebenslauf: ConflictError;
+// renderDocuments rendert Anschreiben + Lebenslauf als ein PDF. Ohne Lebenslauf: ConflictError;
 // PDF-Dienst fehlt oder ist nicht erreichbar: UnavailableError; sonst renderFailedError.
 func (s *Service) renderDocuments(ctx context.Context, company, position string, in DocumentsInput) (rendered, error) {
 	cv, photo, err := s.loadCV(ctx)
@@ -354,7 +354,7 @@ func (s *Service) renderDocuments(ctx context.Context, company, position string,
 	if err != nil {
 		return rendered{}, &renderFailedError{err: err}
 	}
-	pdf, err := s.convertPDF(ctx, html)
+	pdf, err := s.applicationPDF(ctx, html)
 	var ue *UnavailableError
 	if errors.As(err, &ue) {
 		return rendered{}, err

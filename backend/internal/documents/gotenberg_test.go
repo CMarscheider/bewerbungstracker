@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"image"
 	"image/color"
 	"image/jpeg"
@@ -13,7 +14,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"regexp"
+	"slices"
 	"strings"
 	"testing"
 
@@ -74,6 +75,50 @@ func TestGotenbergSendsFilesAndOptions(t *testing.T) {
 	}
 }
 
+func TestGotenbergMergeSendsPDFsInOrder(t *testing.T) {
+	var files []string
+	var contents []string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/forms/pdfengines/merge" {
+			t.Errorf("Pfad = %s", r.URL.Path)
+		}
+		_, params, _ := mime.ParseMediaType(r.Header.Get("Content-Type"))
+		mr := multipart.NewReader(r.Body, params["boundary"])
+		for {
+			p, err := mr.NextPart()
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			if err != nil {
+				t.Errorf("multipart: %v", err)
+				break
+			}
+			v, _ := io.ReadAll(p)
+			files, contents = append(files, p.FileName()), append(contents, string(v))
+		}
+		_, _ = w.Write([]byte("%PDF-1.7 merged"))
+	}))
+	defer srv.Close()
+
+	pdfs := make([][]byte, 11)
+	for i := range pdfs {
+		pdfs[i] = []byte(fmt.Sprintf("%%PDF-%d", i))
+	}
+	pdf, err := documents.NewGotenberg(srv.URL).Merge(context.Background(), pdfs...)
+	if err != nil || string(pdf) != "%PDF-1.7 merged" {
+		t.Fatalf("Merge = %q, %v", pdf, err)
+	}
+	// Gotenberg fügt in Namensreihenfolge zusammen: die Namen müssen so sortieren wie die Eingabe.
+	if !slices.IsSorted(files) || len(files) != 11 || files[0] != "001.pdf" {
+		t.Errorf("Dateien = %v", files)
+	}
+	for i, c := range contents {
+		if c != fmt.Sprintf("%%PDF-%d", i) {
+			t.Errorf("Datei %d = %q", i, c)
+		}
+	}
+}
+
 func TestGotenbergErrors(t *testing.T) {
 	for _, tc := range []struct {
 		name        string
@@ -92,12 +137,16 @@ func TestGotenbergErrors(t *testing.T) {
 				_, _ = w.Write([]byte(tc.body))
 			}))
 			defer srv.Close()
-			_, err := documents.NewGotenberg(srv.URL).Convert(context.Background(), []byte("x"), nil)
-			if err == nil {
-				t.Fatal("Fehler erwartet")
-			}
-			if got := errors.Is(err, documents.ErrUnavailable); got != tc.unavailable {
-				t.Errorf("errors.Is(ErrUnavailable) = %v, erwartet %v (%v)", got, tc.unavailable, err)
+			g := documents.NewGotenberg(srv.URL)
+			_, convErr := g.Convert(context.Background(), []byte("x"), nil)
+			_, mergeErr := g.Merge(context.Background(), []byte("%PDF-a"), []byte("%PDF-b"))
+			for _, err := range []error{convErr, mergeErr} {
+				if err == nil {
+					t.Fatal("Fehler erwartet")
+				}
+				if got := errors.Is(err, documents.ErrUnavailable); got != tc.unavailable {
+					t.Errorf("errors.Is(ErrUnavailable) = %v, erwartet %v (%v)", got, tc.unavailable, err)
+				}
 			}
 		})
 	}
@@ -166,9 +215,9 @@ func TestGotenbergRendersCV(t *testing.T) {
 	}
 }
 
-// TestGotenbergRendersApplication prüft, dass das Anschreiben genau eine Seite bleibt – auch mit
-// zu langem Text – und der Lebenslauf danach folgt. Mit APPLICATION_PDF_OUT=<pfad> wird das
-// Ergebnis mit normalem Anschreiben zum Ansehen gespeichert.
+// TestGotenbergRendersApplication prüft, dass das Anschreiben genau eine Seite ohne Seitenleiste
+// bleibt – auch mit zu langem Text – und der Lebenslauf mit Seitenleiste danach folgt.
+// Mit APPLICATION_PDF_OUT=<pfad> wird das Ergebnis mit normalem Anschreiben zum Ansehen gespeichert.
 func TestGotenbergRendersApplication(t *testing.T) {
 	url := startGotenberg(t)
 	letter := sampleLetter()
@@ -181,13 +230,24 @@ func TestGotenbergRendersApplication(t *testing.T) {
 
 	for name, l := range map[string]documents.Letter{"normal": letter, "zu lang": tooLong} {
 		t.Run(name, func(t *testing.T) {
-			html, err := documents.RenderApplication(sample(t), samplePhoto(t), l)
+			app, err := documents.RenderApplication(sample(t), samplePhoto(t), l)
 			if err != nil {
 				t.Fatal(err)
 			}
-			pdf := convert(t, url, html)
-			if n := pageCount(pdf); n != 2 {
-				t.Errorf("Seiten = %d, erwartet 2 (Anschreiben + Lebenslauf)", n)
+			g := documents.NewGotenberg(url)
+			pdf, err := g.Merge(context.Background(), convert(t, url, app.Letter), convert(t, url, app.CV))
+			if err != nil {
+				t.Fatal(err)
+			}
+			pages := pageContents(t, pdf)
+			if len(pages) != 2 {
+				t.Fatalf("Seiten = %d, erwartet 2 (Anschreiben + Lebenslauf)", len(pages))
+			}
+			if sidebarFilled(pages[0]) {
+				t.Error("Seite 1 (Anschreiben) hat eine Seitenleiste")
+			}
+			if !sidebarFilled(pages[1]) {
+				t.Error("Seite 2 (Lebenslauf) ohne Seitenleiste")
 			}
 			if out := os.Getenv("APPLICATION_PDF_OUT"); out != "" && name == "normal" {
 				if err := os.WriteFile(out, pdf, 0o600); err != nil {
@@ -195,6 +255,28 @@ func TestGotenbergRendersApplication(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// TestGotenbergCVHasSidebarOnEveryPage: der Lebenslauf allein zeichnet die Seitenleiste auf jeder Seite.
+func TestGotenbergCVHasSidebarOnEveryPage(t *testing.T) {
+	url := startGotenberg(t)
+	cv := sample(t)
+	for range 4 { // genug Einträge für eine zweite Seite
+		cv.Experience = append(cv.Experience, cv.Experience...)
+	}
+	html, err := documents.RenderCV(cv, samplePhoto(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	pages := pageContents(t, convert(t, url, html))
+	if len(pages) < 2 {
+		t.Fatalf("Seiten = %d, erwartet mindestens 2", len(pages))
+	}
+	for i, p := range pages {
+		if !sidebarFilled(p) {
+			t.Errorf("Seite %d ohne Seitenleiste", i+1)
+		}
 	}
 }
 
@@ -208,13 +290,6 @@ func convert(t *testing.T, url string, html []byte) []byte {
 		t.Fatalf("kein plausibles PDF (%d Bytes)", len(pdf))
 	}
 	return pdf
-}
-
-var pageObject = regexp.MustCompile(`/Type\s*/Page\b`)
-
-// pageCount zählt die Seitenobjekte (/Type /Page, nicht /Pages).
-func pageCount(pdf []byte) int {
-	return len(pageObject.FindAll(pdf, -1))
 }
 
 func samplePhoto(t *testing.T) []byte {

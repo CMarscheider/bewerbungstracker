@@ -12,9 +12,11 @@ import (
 	"bewerbungsmanager/internal/store"
 )
 
-// PDFConverter wandelt HTML (mit Zusatzdateien wie Schriften) in ein PDF um.
+// PDFConverter wandelt HTML (mit Zusatzdateien wie Schriften) in ein PDF um und fügt PDFs
+// in der übergebenen Reihenfolge zusammen.
 type PDFConverter interface {
 	Convert(ctx context.Context, html []byte, assets map[string][]byte) ([]byte, error)
+	Merge(ctx context.Context, pdfs ...[]byte) ([]byte, error)
 }
 
 // Drafter legt eine fertige Nachricht als Entwurf ab (Produktion: mail.IMAPDrafter).

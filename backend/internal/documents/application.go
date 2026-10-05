@@ -20,38 +20,49 @@ type Letter struct {
 	Date          time.Time
 }
 
-type applicationView struct {
+// letterView sind die Daten des Anschreibens.
+type letterView struct {
 	cvView
 	Letter     Letter
 	Dateline   string     // "Espelkamp, 5. Oktober 2026"
 	Paragraphs [][]string // Absätze, je Absatz die Zeilen
 }
 
-// RenderApplication erzeugt ein HTML-Dokument: Seite 1 Anschreiben, danach der Lebenslauf.
+// ApplicationHTML sind die beiden Teile der Bewerbung. Sie werden getrennt in PDF umgewandelt und
+// danach zusammengefügt (Anschreiben zuerst), weil die Seitenleiste des Lebenslaufs per
+// position: fixed auf jeder Seite ihres Dokuments erscheint – das Anschreiben soll keine haben.
+type ApplicationHTML struct {
+	Letter []byte // genau eine A4-Seite, einspaltig, ohne Foto
+	CV     []byte // Lebenslauf mit Seitenleiste in der Sprache des Anschreibens
+}
+
+// RenderApplication erzeugt Anschreiben und angepassten Lebenslauf als zwei HTML-Dokumente.
 // photo ist ein JPEG oder nil. Die Anschreiben-Seite bricht nie um; zu langer Text wird abgeschnitten.
-func RenderApplication(cv CV, photo []byte, l Letter) ([]byte, error) {
-	lbl, ok := labels[l.Language]
-	if !ok {
-		return nil, fmt.Errorf("bewerbung: unbekannte sprache %q", l.Language)
+func RenderApplication(cv CV, photo []byte, l Letter) (ApplicationHTML, error) {
+	if _, ok := labels[l.Language]; !ok {
+		return ApplicationHTML{}, fmt.Errorf("bewerbung: unbekannte sprache %q", l.Language)
 	}
 	if l.ProfileLine != "" {
 		cv.Summary = l.ProfileLine
 	}
 	cv.Skills = orderSkills(cv.Skills, l.Highlights)
-	view := applicationView{
-		cvView:     newCVView(cv, photo, lbl),
+	view := letterView{
+		cvView:     newCVView(cv, photo, l.Language),
 		Letter:     l,
-		Dateline:   formatDate(l.Date, l.Language, lbl),
+		Dateline:   formatDate(l.Date, l.Language, labels[l.Language]),
 		Paragraphs: paragraphs(l.CoverLetter),
 	}
 	if loc := strings.TrimSpace(cv.Person.Location); loc != "" {
 		view.Dateline = loc + ", " + view.Dateline
 	}
-	var buf bytes.Buffer
-	if err := templates.ExecuteTemplate(&buf, "application.html.tmpl", view); err != nil {
-		return nil, fmt.Errorf("bewerbungs-vorlage: %w", err)
+	var letter, cvHTML bytes.Buffer
+	if err := templates.ExecuteTemplate(&letter, "letter.html.tmpl", view); err != nil {
+		return ApplicationHTML{}, fmt.Errorf("anschreiben-vorlage: %w", err)
 	}
-	return buf.Bytes(), nil
+	if err := templates.ExecuteTemplate(&cvHTML, "cv.html.tmpl", view.cvView); err != nil {
+		return ApplicationHTML{}, fmt.Errorf("lebenslauf-vorlage: %w", err)
+	}
+	return ApplicationHTML{Letter: letter.Bytes(), CV: cvHTML.Bytes()}, nil
 }
 
 func formatDate(d time.Time, lang string, lbl Labels) string {
