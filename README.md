@@ -99,6 +99,17 @@ npm --prefix frontend start          # http://localhost:4200, /api → localhost
 
 Optional: `GOTENBERG_URL` (z. B. `http://localhost:3000` für einen lokalen `gotenberg/gotenberg:8.37.0`-Container) aktiviert den PDF-Export des Lebenslaufs; ohne sie antwortet der Export mit 503. Im Compose-Stack ist sie bereits gesetzt.
 
+### Agent-API
+
+Für Claude-Agenten gibt es unter `/api/agent/` eine eigene API, die einen Lebenslauf-Optimierungslauf
+abholt und den Vorschlag zurückliefert. Sie ist nur aktiv, wenn `AGENT_TOKEN` gesetzt ist (in `.env`,
+mind. 32 Zeichen, z. B. `openssl rand -hex 32`); ohne Token antwortet sie mit 404. Jeder Aufruf braucht
+`Authorization: Bearer <token>`.
+
+- `GET /api/agent/cv` – gespeicherter Lebenslauf
+- `GET /api/agent/cv-reviews?state=angefordert` – angeforderte Optimierungen
+- `PUT /api/agent/cv-reviews/{id}` – Vorschlag (`proposal`) und Hinweise (`notes`) abliefern
+
 ## Projektstruktur
 
 ```

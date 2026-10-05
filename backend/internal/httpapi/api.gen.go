@@ -25,6 +25,27 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+// Defines values for CvReviewState.
+const (
+	CvReviewStateAbgeschlossen CvReviewState = "abgeschlossen"
+	CvReviewStateAngefordert   CvReviewState = "angefordert"
+	CvReviewStateFertig        CvReviewState = "fertig"
+)
+
+// Valid indicates whether the value is a known member of the CvReviewState enum.
+func (e CvReviewState) Valid() bool {
+	switch e {
+	case CvReviewStateAbgeschlossen:
+		return true
+	case CvReviewStateAngefordert:
+		return true
+	case CvReviewStateFertig:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for EventType.
 const (
 	Absage             EventType = "Absage"
@@ -78,19 +99,19 @@ func (e EventType) Valid() bool {
 
 // Defines values for Phase.
 const (
-	Abgeschlossen Phase = "Abgeschlossen"
-	Aktiv         Phase = "Aktiv"
-	Vorbereitung  Phase = "Vorbereitung"
+	PhaseAbgeschlossen Phase = "Abgeschlossen"
+	PhaseAktiv         Phase = "Aktiv"
+	PhaseVorbereitung  Phase = "Vorbereitung"
 )
 
 // Valid indicates whether the value is a known member of the Phase enum.
 func (e Phase) Valid() bool {
 	switch e {
-	case Abgeschlossen:
+	case PhaseAbgeschlossen:
 		return true
-	case Aktiv:
+	case PhaseAktiv:
 		return true
-	case Vorbereitung:
+	case PhaseVorbereitung:
 		return true
 	default:
 		return false
@@ -253,6 +274,31 @@ type CvProject struct {
 	Url          *string  `json:"url,omitempty"`
 }
 
+// CvReview Optimierungslauf; proposal fehlt, solange er angefordert ist.
+type CvReview struct {
+	// BasedOnUpdatedAt Stand des Lebenslaufs bei der Anforderung
+	BasedOnUpdatedAt time.Time          `json:"based_on_updated_at"`
+	CompletedAt      *time.Time         `json:"completed_at,omitempty"`
+	Id               openapi_types.UUID `json:"id"`
+	Notes            []string           `json:"notes"`
+
+	// Proposal Lebenslauf. end fehlt = bis heute. updated_at wird beim Speichern ignoriert. Solange kein Lebenslauf gespeichert ist, liefert GET eine leere Struktur (person.name leer, Listen leer, ohne updated_at).
+	Proposal    *Cv           `json:"proposal,omitempty"`
+	RequestedAt time.Time     `json:"requested_at"`
+	State       CvReviewState `json:"state"`
+}
+
+// CvReviewResult defines model for CvReviewResult.
+type CvReviewResult struct {
+	Notes []string `json:"notes"`
+
+	// Proposal Lebenslauf. end fehlt = bis heute. updated_at wird beim Speichern ignoriert. Solange kein Lebenslauf gespeichert ist, liefert GET eine leere Struktur (person.name leer, Listen leer, ohne updated_at).
+	Proposal Cv `json:"proposal"`
+}
+
+// CvReviewState defines model for CvReviewState.
+type CvReviewState string
+
 // CvSkillGroup defines model for CvSkillGroup.
 type CvSkillGroup struct {
 	Category string   `json:"category"`
@@ -342,6 +388,11 @@ type Summary struct {
 // Id defines model for Id.
 type Id = openapi_types.UUID
 
+// AgentListCvReviewsParams defines parameters for AgentListCvReviews.
+type AgentListCvReviewsParams struct {
+	State CvReviewState `form:"state" json:"state"`
+}
+
 // ListApplicationsParams defines parameters for ListApplications.
 type ListApplicationsParams struct {
 	Phase  *Phase     `form:"phase,omitempty" json:"phase,omitempty"`
@@ -362,6 +413,9 @@ type ListDeadlinesParams struct {
 	// WithinDays Zeitraum ab heute (Standard 7); überfällige Fristen sind immer enthalten
 	WithinDays *int `form:"within_days,omitempty" json:"within_days,omitempty"`
 }
+
+// AgentCompleteCvReviewJSONRequestBody defines body for AgentCompleteCvReview for application/json ContentType.
+type AgentCompleteCvReviewJSONRequestBody = CvReviewResult
 
 // CreateApplicationJSONRequestBody defines body for CreateApplication for application/json ContentType.
 type CreateApplicationJSONRequestBody = ApplicationInput
@@ -538,6 +592,12 @@ type ServerInterface interface {
 	// AgentGetCv Gespeicherter Lebenslauf (404, solange keiner gespeichert ist)
 	// (GET /api/agent/cv)
 	AgentGetCv(w http.ResponseWriter, r *http.Request)
+	// AgentListCvReviews Optimierungen in einem Zustand (für den Agenten meist „angefordert“)
+	// (GET /api/agent/cv-reviews)
+	AgentListCvReviews(w http.ResponseWriter, r *http.Request, params AgentListCvReviewsParams)
+	// AgentCompleteCvReview Vorschlag und Hinweise abliefern (409, wenn nicht angefordert)
+	// (PUT /api/agent/cv-reviews/{id})
+	AgentCompleteCvReview(w http.ResponseWriter, r *http.Request, id Id)
 
 	// (GET /api/v1/applications)
 	ListApplications(w http.ResponseWriter, r *http.Request, params ListApplicationsParams)
@@ -598,6 +658,15 @@ type ServerInterface interface {
 	// SaveCvPhoto Bewerbungsfoto ersetzen (JPEG, max. 1 MB)
 	// (PUT /api/v1/cv/photo)
 	SaveCvPhoto(w http.ResponseWriter, r *http.Request)
+	// CloseCvReview Offene Optimierung abschließen bzw. Anfrage zurückziehen
+	// (DELETE /api/v1/cv/review)
+	CloseCvReview(w http.ResponseWriter, r *http.Request)
+	// GetCvReview Offene Optimierung (angefordert oder fertig); 404, wenn keine offen ist
+	// (GET /api/v1/cv/review)
+	GetCvReview(w http.ResponseWriter, r *http.Request)
+	// RequestCvReview Optimierung anfordern (409 ohne gespeicherten Lebenslauf oder bei offener Optimierung)
+	// (POST /api/v1/cv/review)
+	RequestCvReview(w http.ResponseWriter, r *http.Request)
 
 	// (GET /api/v1/deadlines)
 	ListDeadlines(w http.ResponseWriter, r *http.Request, params ListDeadlinesParams)
@@ -623,6 +692,65 @@ func (siw *ServerInterfaceWrapper) AgentGetCv(w http.ResponseWriter, r *http.Req
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.AgentGetCv(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AgentListCvReviews operation middleware
+func (siw *ServerInterfaceWrapper) AgentListCvReviews(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params AgentListCvReviewsParams
+
+	// ------------- Required query parameter "state" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "state", r.URL.Query(), &params.State, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "state"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "state", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AgentListCvReviews(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AgentCompleteCvReview operation middleware
+func (siw *ServerInterfaceWrapper) AgentCompleteCvReview(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AgentCompleteCvReview(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1084,6 +1212,48 @@ func (siw *ServerInterfaceWrapper) SaveCvPhoto(w http.ResponseWriter, r *http.Re
 	handler.ServeHTTP(w, r)
 }
 
+// CloseCvReview operation middleware
+func (siw *ServerInterfaceWrapper) CloseCvReview(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CloseCvReview(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetCvReview operation middleware
+func (siw *ServerInterfaceWrapper) GetCvReview(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetCvReview(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RequestCvReview operation middleware
+func (siw *ServerInterfaceWrapper) RequestCvReview(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RequestCvReview(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListDeadlines operation middleware
 func (siw *ServerInterfaceWrapper) ListDeadlines(w http.ResponseWriter, r *http.Request) {
 
@@ -1288,7 +1458,12 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/cv/photo", wrapper.GetCvPhoto)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/cv/photo", wrapper.SaveCvPhoto)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/cv/pdf", wrapper.GetCvPdf)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/cv/review", wrapper.CloseCvReview)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/cv/review", wrapper.GetCvReview)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/cv/review", wrapper.RequestCvReview)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/agent/cv", wrapper.AgentGetCv)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/agent/cv-reviews", wrapper.AgentListCvReviews)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/agent/cv-reviews/{id}", wrapper.AgentCompleteCvReview)
 
 	return m
 }
@@ -1322,6 +1497,85 @@ type AgentGetCvdefaultApplicationProblemPlusJSONResponse struct {
 }
 
 func (response AgentGetCvdefaultApplicationProblemPlusJSONResponse) VisitAgentGetCvResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AgentListCvReviewsRequestObject struct {
+	Params AgentListCvReviewsParams
+}
+
+type AgentListCvReviewsResponseObject interface {
+	VisitAgentListCvReviewsResponse(w http.ResponseWriter) error
+}
+
+type AgentListCvReviews200JSONResponse []CvReview
+
+func (response AgentListCvReviews200JSONResponse) VisitAgentListCvReviewsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AgentListCvReviewsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response AgentListCvReviewsdefaultApplicationProblemPlusJSONResponse) VisitAgentListCvReviewsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AgentCompleteCvReviewRequestObject struct {
+	Id   Id `json:"id"`
+	Body *AgentCompleteCvReviewJSONRequestBody
+}
+
+type AgentCompleteCvReviewResponseObject interface {
+	VisitAgentCompleteCvReviewResponse(w http.ResponseWriter) error
+}
+
+type AgentCompleteCvReview200JSONResponse CvReview
+
+func (response AgentCompleteCvReview200JSONResponse) VisitAgentCompleteCvReviewResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AgentCompleteCvReviewdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response AgentCompleteCvReviewdefaultApplicationProblemPlusJSONResponse) VisitAgentCompleteCvReviewResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -2119,6 +2373,114 @@ func (response SaveCvPhotodefaultApplicationProblemPlusJSONResponse) VisitSaveCv
 	return err
 }
 
+type CloseCvReviewRequestObject struct {
+}
+
+type CloseCvReviewResponseObject interface {
+	VisitCloseCvReviewResponse(w http.ResponseWriter) error
+}
+
+type CloseCvReview204Response struct {
+}
+
+func (response CloseCvReview204Response) VisitCloseCvReviewResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type CloseCvReviewdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response CloseCvReviewdefaultApplicationProblemPlusJSONResponse) VisitCloseCvReviewResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCvReviewRequestObject struct {
+}
+
+type GetCvReviewResponseObject interface {
+	VisitGetCvReviewResponse(w http.ResponseWriter) error
+}
+
+type GetCvReview200JSONResponse CvReview
+
+func (response GetCvReview200JSONResponse) VisitGetCvReviewResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCvReviewdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetCvReviewdefaultApplicationProblemPlusJSONResponse) VisitGetCvReviewResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RequestCvReviewRequestObject struct {
+}
+
+type RequestCvReviewResponseObject interface {
+	VisitRequestCvReviewResponse(w http.ResponseWriter) error
+}
+
+type RequestCvReview201JSONResponse CvReview
+
+func (response RequestCvReview201JSONResponse) VisitRequestCvReviewResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RequestCvReviewdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response RequestCvReviewdefaultApplicationProblemPlusJSONResponse) VisitRequestCvReviewResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListDeadlinesRequestObject struct {
 	Params ListDeadlinesParams
 }
@@ -2239,6 +2601,12 @@ type StrictServerInterface interface {
 	// AgentGetCv Gespeicherter Lebenslauf (404, solange keiner gespeichert ist)
 	// (GET /api/agent/cv)
 	AgentGetCv(ctx context.Context, request AgentGetCvRequestObject) (AgentGetCvResponseObject, error)
+	// AgentListCvReviews Optimierungen in einem Zustand (für den Agenten meist „angefordert“)
+	// (GET /api/agent/cv-reviews)
+	AgentListCvReviews(ctx context.Context, request AgentListCvReviewsRequestObject) (AgentListCvReviewsResponseObject, error)
+	// AgentCompleteCvReview Vorschlag und Hinweise abliefern (409, wenn nicht angefordert)
+	// (PUT /api/agent/cv-reviews/{id})
+	AgentCompleteCvReview(ctx context.Context, request AgentCompleteCvReviewRequestObject) (AgentCompleteCvReviewResponseObject, error)
 
 	// (GET /api/v1/applications)
 	ListApplications(ctx context.Context, request ListApplicationsRequestObject) (ListApplicationsResponseObject, error)
@@ -2299,6 +2667,15 @@ type StrictServerInterface interface {
 	// SaveCvPhoto Bewerbungsfoto ersetzen (JPEG, max. 1 MB)
 	// (PUT /api/v1/cv/photo)
 	SaveCvPhoto(ctx context.Context, request SaveCvPhotoRequestObject) (SaveCvPhotoResponseObject, error)
+	// CloseCvReview Offene Optimierung abschließen bzw. Anfrage zurückziehen
+	// (DELETE /api/v1/cv/review)
+	CloseCvReview(ctx context.Context, request CloseCvReviewRequestObject) (CloseCvReviewResponseObject, error)
+	// GetCvReview Offene Optimierung (angefordert oder fertig); 404, wenn keine offen ist
+	// (GET /api/v1/cv/review)
+	GetCvReview(ctx context.Context, request GetCvReviewRequestObject) (GetCvReviewResponseObject, error)
+	// RequestCvReview Optimierung anfordern (409 ohne gespeicherten Lebenslauf oder bei offener Optimierung)
+	// (POST /api/v1/cv/review)
+	RequestCvReview(ctx context.Context, request RequestCvReviewRequestObject) (RequestCvReviewResponseObject, error)
 
 	// (GET /api/v1/deadlines)
 	ListDeadlines(ctx context.Context, request ListDeadlinesRequestObject) (ListDeadlinesResponseObject, error)
@@ -2366,6 +2743,65 @@ func (sh *strictHandler) AgentGetCv(w http.ResponseWriter, r *http.Request) {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(AgentGetCvResponseObject); ok {
 		if err := validResponse.VisitAgentGetCvResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AgentListCvReviews operation middleware
+func (sh *strictHandler) AgentListCvReviews(w http.ResponseWriter, r *http.Request, params AgentListCvReviewsParams) {
+	var request AgentListCvReviewsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.AgentListCvReviews(ctx, request.(AgentListCvReviewsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AgentListCvReviews")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(AgentListCvReviewsResponseObject); ok {
+		if err := validResponse.VisitAgentListCvReviewsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AgentCompleteCvReview operation middleware
+func (sh *strictHandler) AgentCompleteCvReview(w http.ResponseWriter, r *http.Request, id Id) {
+	var request AgentCompleteCvReviewRequestObject
+
+	request.Id = id
+
+	var body AgentCompleteCvReviewJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.AgentCompleteCvReview(ctx, request.(AgentCompleteCvReviewRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AgentCompleteCvReview")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(AgentCompleteCvReviewResponseObject); ok {
+		if err := validResponse.VisitAgentCompleteCvReviewResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -2919,6 +3355,78 @@ func (sh *strictHandler) SaveCvPhoto(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// CloseCvReview operation middleware
+func (sh *strictHandler) CloseCvReview(w http.ResponseWriter, r *http.Request) {
+	var request CloseCvReviewRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CloseCvReview(ctx, request.(CloseCvReviewRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CloseCvReview")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CloseCvReviewResponseObject); ok {
+		if err := validResponse.VisitCloseCvReviewResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetCvReview operation middleware
+func (sh *strictHandler) GetCvReview(w http.ResponseWriter, r *http.Request) {
+	var request GetCvReviewRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetCvReview(ctx, request.(GetCvReviewRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetCvReview")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetCvReviewResponseObject); ok {
+		if err := validResponse.VisitGetCvReviewResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RequestCvReview operation middleware
+func (sh *strictHandler) RequestCvReview(w http.ResponseWriter, r *http.Request) {
+	var request RequestCvReviewRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RequestCvReview(ctx, request.(RequestCvReviewRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RequestCvReview")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RequestCvReviewResponseObject); ok {
+		if err := validResponse.VisitRequestCvReviewResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // ListDeadlines operation middleware
 func (sh *strictHandler) ListDeadlines(w http.ResponseWriter, r *http.Request, params ListDeadlinesParams) {
 	var request ListDeadlinesRequestObject
@@ -2998,63 +3506,71 @@ func (sh *strictHandler) GetSummary(w http.ResponseWriter, r *http.Request) {
 // const string: with thousands of chunks the chained `+` fold is several
 // times slower for the Go compiler than parsing a slice literal.
 var swaggerSpec = []string{
-	"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",
+	"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",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,

@@ -78,8 +78,7 @@ func TestSaveCVWithBlankNameIsBadRequest(t *testing.T) {
 	srv := newTestServer(t)
 	cv := sampleCV()
 	cv["person"] = map[string]any{"name": "   ", "links": []any{}}
-	p := expectProblem(t, call(t, srv, http.MethodPut, "/api/v1/cv", cv), http.StatusBadRequest, "/problems/validation-error")
-	if p["field"] != "person.name" {
-		t.Errorf("field = %v", p["field"])
-	}
+	// Pflicht-Strings haben in der Spec pattern '\S'; der OpenAPI-Validator lehnt reine Leerzeichen ab,
+	// bevor der Service (ValidationError für person.name) greift.
+	expectProblem(t, call(t, srv, http.MethodPut, "/api/v1/cv", cv), http.StatusBadRequest, "/problems/bad-request")
 }

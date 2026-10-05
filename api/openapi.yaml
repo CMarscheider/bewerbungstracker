@@ -350,6 +350,37 @@ paths:
             application/pdf:
               schema: { type: string, format: binary }
         default: { $ref: "#/components/responses/Problem" }
+  /api/v1/cv/review:
+    get:
+      operationId: getCvReview
+      tags: [Cv]
+      summary: Offene Optimierung (angefordert oder fertig); 404, wenn keine offen ist
+      responses:
+        "200":
+          description: Optimierung
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CvReview" }
+        default: { $ref: "#/components/responses/Problem" }
+    post:
+      operationId: requestCvReview
+      tags: [Cv]
+      summary: Optimierung anfordern (409 ohne gespeicherten Lebenslauf oder bei offener Optimierung)
+      responses:
+        "201":
+          description: Angefordert
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CvReview" }
+        default: { $ref: "#/components/responses/Problem" }
+    delete:
+      operationId: closeCvReview
+      tags: [Cv]
+      summary: Offene Optimierung abschließen bzw. Anfrage zurückziehen
+      responses:
+        "204":
+          description: Abgeschlossen
+        default: { $ref: "#/components/responses/Problem" }
   /api/agent/cv:
     get:
       operationId: agentGetCv
@@ -362,6 +393,46 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Cv" }
+        default: { $ref: "#/components/responses/Problem" }
+  /api/agent/cv-reviews:
+    get:
+      operationId: agentListCvReviews
+      tags: [Agent]
+      summary: Optimierungen in einem Zustand (für den Agenten meist „angefordert“)
+      security: [{ agentToken: [] }]
+      parameters:
+        - name: state
+          in: query
+          required: true
+          schema: { $ref: "#/components/schemas/CvReviewState" }
+      responses:
+        "200":
+          description: Optimierungen
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/CvReview" }
+        default: { $ref: "#/components/responses/Problem" }
+  /api/agent/cv-reviews/{id}:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    put:
+      operationId: agentCompleteCvReview
+      tags: [Agent]
+      summary: Vorschlag und Hinweise abliefern (409, wenn nicht angefordert)
+      security: [{ agentToken: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CvReviewResult" }
+      responses:
+        "200":
+          description: Abgeliefert
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CvReview" }
         default: { $ref: "#/components/responses/Problem" }
 components:
   securitySchemes:
@@ -575,13 +646,13 @@ components:
       type: object
       required: [label, url]
       properties:
-        label: { type: string, minLength: 1, maxLength: 100 }
-        url: { type: string, minLength: 1, maxLength: 500 }
+        label: { type: string, minLength: 1, maxLength: 100, pattern: '\S' }
+        url: { type: string, minLength: 1, maxLength: 500, pattern: '\S' }
     CvPerson:
       type: object
       required: [name, links]
       properties:
-        name: { type: string, minLength: 1, maxLength: 200 }
+        name: { type: string, minLength: 1, maxLength: 200, pattern: '\S' }
         headline: { type: string, maxLength: 200 }
         email: { type: string, maxLength: 200 }
         phone: { type: string, maxLength: 100 }
@@ -594,8 +665,8 @@ components:
       type: object
       required: [role, organization, start, highlights]
       properties:
-        role: { type: string, minLength: 1, maxLength: 200 }
-        organization: { type: string, minLength: 1, maxLength: 200 }
+        role: { type: string, minLength: 1, maxLength: 200, pattern: '\S' }
+        organization: { type: string, minLength: 1, maxLength: 200, pattern: '\S' }
         location: { type: string, maxLength: 200 }
         start: { $ref: "#/components/schemas/CvPeriod" }
         end: { $ref: "#/components/schemas/CvPeriod" }
@@ -607,8 +678,8 @@ components:
       type: object
       required: [degree, institution, start]
       properties:
-        degree: { type: string, minLength: 1, maxLength: 200 }
-        institution: { type: string, minLength: 1, maxLength: 200 }
+        degree: { type: string, minLength: 1, maxLength: 200, pattern: '\S' }
+        institution: { type: string, minLength: 1, maxLength: 200, pattern: '\S' }
         start: { $ref: "#/components/schemas/CvPeriod" }
         end: { $ref: "#/components/schemas/CvPeriod" }
         details: { type: string, maxLength: 1000 }
@@ -616,7 +687,7 @@ components:
       type: object
       required: [category, items]
       properties:
-        category: { type: string, minLength: 1, maxLength: 100 }
+        category: { type: string, minLength: 1, maxLength: 100, pattern: '\S' }
         items:
           type: array
           maxItems: 40
@@ -625,7 +696,7 @@ components:
       type: object
       required: [name, technologies]
       properties:
-        name: { type: string, minLength: 1, maxLength: 200 }
+        name: { type: string, minLength: 1, maxLength: 200, pattern: '\S' }
         url: { type: string, maxLength: 500 }
         description: { type: string, maxLength: 2000 }
         technologies:
@@ -636,8 +707,8 @@ components:
       type: object
       required: [language, level]
       properties:
-        language: { type: string, minLength: 1, maxLength: 100 }
-        level: { type: string, minLength: 1, maxLength: 100 }
+        language: { type: string, minLength: 1, maxLength: 100, pattern: '\S' }
+        level: { type: string, minLength: 1, maxLength: 100, pattern: '\S' }
     Cv:
       type: object
       description: Lebenslauf. end fehlt = bis heute. updated_at wird beim Speichern ignoriert. Solange kein Lebenslauf gespeichert ist, liefert GET eine leere Struktur (person.name leer, Listen leer, ohne updated_at).
@@ -666,3 +737,29 @@ components:
           maxItems: 10
           items: { $ref: "#/components/schemas/CvLanguage" }
         updated_at: { type: string, format: date-time }
+    CvReviewState:
+      type: string
+      enum: [angefordert, fertig, abgeschlossen]
+    CvReview:
+      type: object
+      description: Optimierungslauf; proposal fehlt, solange er angefordert ist.
+      required: [id, state, based_on_updated_at, notes, requested_at]
+      properties:
+        id: { type: string, format: uuid }
+        state: { $ref: "#/components/schemas/CvReviewState" }
+        based_on_updated_at: { type: string, format: date-time, description: Stand des Lebenslaufs bei der Anforderung }
+        proposal: { $ref: "#/components/schemas/Cv" }
+        notes:
+          type: array
+          items: { type: string }
+        requested_at: { type: string, format: date-time }
+        completed_at: { type: string, format: date-time }
+    CvReviewResult:
+      type: object
+      required: [proposal, notes]
+      properties:
+        proposal: { $ref: "#/components/schemas/Cv" }
+        notes:
+          type: array
+          maxItems: 30
+          items: { type: string, minLength: 1, maxLength: 500 }
