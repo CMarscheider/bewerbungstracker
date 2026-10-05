@@ -13,7 +13,8 @@ entstehen Dashboard, Verlauf und Statistik.
 ## Funktionen
 
 - **Dashboard:** überfällige Fristen, Fristen der nächsten 7 Tage, anstehende Termine, Kennzahlen
-- **Bewerbungen:** Liste mit Filtern und Suche, Anlegen mit Firmen-Autocomplete
+- **Bewerbungen:** Liste mit Filtern und Suche, Anlegen mit Firmen-Autocomplete; vom Agenten gefundene
+  Stellen mit Passungs-Score, Begründung und Anzeigentext, filter- und nach Passung sortierbar
 - **Verlauf:** Timeline je Bewerbung; nur fachlich erlaubte nächste Schritte werden angeboten,
   Fristen nur dort, wo sie Sinn ergeben (Bewerbungsschluss, Challenge-Abgabe, Antwort auf Angebot)
 - **Statistik:** Funnel, Tage bis zur ersten Antwort, Absagen je Phase, Erfolg je Quelle
@@ -102,7 +103,7 @@ Optional: `GOTENBERG_URL` (z. B. `http://localhost:3000` für einen lokalen `got
 ### Agent-API
 
 Für Claude-Agenten gibt es unter `/api/agent/` eine eigene API, die eine angeforderte
-Lebenslauf-Optimierung abholt und den Vorschlag zurückliefert und gefundene Stellen anlegt. Sie ist nur aktiv, wenn `AGENT_TOKEN`
+Lebenslauf-Optimierung abholt, den Vorschlag zurückliefert und gefundene Stellen anlegt. Sie ist nur aktiv, wenn `AGENT_TOKEN`
 gesetzt ist (in `.env`, mind. 32 Zeichen, z. B. `openssl rand -hex 32`); ohne Token antwortet sie mit 404.
 Jeder Aufruf braucht `Authorization: Bearer <token>`, sonst 401.
 
