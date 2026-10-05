@@ -58,8 +58,19 @@
               </mat-form-field>
             }
             <div class="actions">
-              <button mat-flat-button type="button" class="accept" (click)="accept(s)" [disabled]="!canAccept(s)">Übernehmen</button>
-              <button mat-button type="button" class="dismiss" (click)="dismiss(s)" [disabled]="isBusy">Verwerfen</button>
+              <button
+                mat-flat-button
+                type="button"
+                class="accept"
+                (click)="accept(s)"
+                [disabled]="!canAccept(s)"
+                [attr.aria-describedby]="'suggestion-' + s.id"
+              >
+                Übernehmen
+              </button>
+              <button mat-button type="button" class="dismiss" (click)="dismiss(s)" [disabled]="isBusy" [attr.aria-describedby]="'suggestion-' + s.id">
+                Verwerfen
+              </button>
             </div>
           </li>
         }

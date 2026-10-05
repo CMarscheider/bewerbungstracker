@@ -9,6 +9,7 @@ export interface Suggestion {
   created_at: string;
   decided_at?: string;
   due_on?: string;
+  gmail_message_id?: string;
   id: string;
   mail_from?: string;
   mail_subject?: string;

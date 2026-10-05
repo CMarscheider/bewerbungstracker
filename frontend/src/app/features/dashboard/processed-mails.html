@@ -15,16 +15,23 @@
       @for (m of mails(); track m.gmail_message_id) {
         <li class="mail" tabindex="-1" [attr.data-id]="m.gmail_message_id">
           <span class="when">{{ m.processed_at | date: 'dd.MM.yyyy, HH:mm' }}</span>
-          <span class="outcome">{{ m.outcome }}</span>
+          <span class="outcome" [id]="'processed-' + m.gmail_message_id + '-outcome'">{{ m.outcome }}</span>
           @if (m.application_id) {
-            <a class="what" [routerLink]="['/bewerbungen', m.application_id]">
+            <a class="what" [id]="'processed-' + m.gmail_message_id + '-what'" [routerLink]="['/bewerbungen', m.application_id]">
               <span class="company">{{ m.company_name }}</span>
               <span class="position">{{ m.position_title }}</span>
             </a>
           } @else {
-            <span class="what muted">nicht zugeordnet</span>
+            <span class="what muted" [id]="'processed-' + m.gmail_message_id + '-what'">nicht zugeordnet</span>
           }
-          <button mat-button type="button" class="recheck" (click)="recheck(m)" [disabled]="busy().has(m.gmail_message_id)">
+          <button
+            mat-button
+            type="button"
+            class="recheck"
+            (click)="recheck(m)"
+            [disabled]="busy().has(m.gmail_message_id)"
+            [attr.aria-describedby]="'processed-' + m.gmail_message_id + '-what processed-' + m.gmail_message_id + '-outcome'"
+          >
             Erneut prüfen lassen
           </button>
         </li>

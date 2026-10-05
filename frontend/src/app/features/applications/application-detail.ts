@@ -17,6 +17,7 @@ import { ApplicationDocuments } from './application-documents';
 import { CONTACT_EMAIL_ERROR, contactEmailControl } from './contact-email';
 import { EventDialog, EventDialogData } from './event-dialog';
 
+// `/u/0/` ist das erste im Browser angemeldete Gmail-Konto; bei mehreren Konten ggf. das falsche.
 const GMAIL_THREAD_URL = 'https://mail.google.com/mail/u/0/#all/';
 
 @Component({

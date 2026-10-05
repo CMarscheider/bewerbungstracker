@@ -14,6 +14,7 @@ import { Api } from '../../core/api';
 /** Zustände, in denen es (vielleicht) schon Unterlagen gibt. */
 const WITH_DOCUMENTS: ReadonlySet<DocumentsState> = new Set(['erstellt', 'entwurf_angelegt', 'portal', 'fehler']);
 
+// `/u/0/` ist das erste im Browser angemeldete Gmail-Konto; bei mehreren Konten ggf. das falsche.
 export const GMAIL_DRAFTS_URL = 'https://mail.google.com/mail/u/0/#drafts';
 
 const notBlank = Validators.pattern(/\S/);

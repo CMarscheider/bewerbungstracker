@@ -44,12 +44,12 @@ const unassigned: Suggestion = {
   created_at: '2026-10-05T10:00:00+02:00',
 };
 
-const summary = (id: string, company: string, phase: ApplicationSummary['phase']): ApplicationSummary => ({
+const summary = (id: string, company: string, phase: ApplicationSummary['phase'], status: ApplicationSummary['status'] = 'Beworben'): ApplicationSummary => ({
   id,
   company_id: 'c-' + id,
   company_name: company,
   position_title: 'Dev',
-  status: 'Beworben',
+  status,
   phase,
   created_by_agent: false,
   last_event_on: '2026-10-01',
@@ -62,7 +62,12 @@ async function render(suggestions: Suggestion[], overrides: Record<string, Retur
     acceptSuggestion: vi.fn(() => of({ id: 'a1' } as Application)),
     dismissSuggestion: vi.fn(() => of(undefined)),
     listApplications: vi.fn(() =>
-      of([summary('a1', 'Acme', 'Aktiv'), summary('a9', 'Alt GmbH', 'Abgeschlossen'), summary('a5', 'Gamma', 'Vorbereitung')]),
+      of([
+        summary('a1', 'Acme', 'Aktiv'),
+        summary('a9', 'Alt GmbH', 'Abgeschlossen', 'Absage'),
+        summary('a5', 'Gamma', 'Vorbereitung'),
+        summary('a7', 'Still AG', 'Abgeschlossen', 'KeineRueckmeldung'),
+      ]),
     ),
     ...overrides,
   };
@@ -79,8 +84,14 @@ async function render(suggestions: Suggestion[], overrides: Record<string, Retur
   const el = fixture.nativeElement as HTMLElement;
   const items = () => [...el.querySelectorAll<HTMLElement>('li.suggestion')];
   const button = (item: HTMLElement, cls: string) => item.querySelector<HTMLButtonElement>(`button.${cls}`)!;
-  const status = () => el.querySelector('[role="status"]')?.textContent ?? '';
-  return { api, fixture, el, settle, items, button, status, snack };
+  const status = () => el.querySelector('[role="status"]')?.textContent?.trim() ?? '';
+  /** Die Meldung erscheint kurz verzögert (siehe announce). */
+  const announced = (text: string) =>
+    vi.waitFor(async () => {
+      await settle();
+      expect(status()).toBe(text);
+    });
+  return { api, fixture, el, settle, items, button, status, announced, snack };
 }
 
 describe('AgentSuggestions', () => {
@@ -133,13 +144,18 @@ describe('AgentSuggestions', () => {
   });
 
   it('Übernehmen ruft acceptSuggestion, entfernt den Eintrag und fokussiert den nächsten', async () => {
-    const { api, items, button, settle, snack, status, el } = await render([assigned, second]);
+    const { api, items, button, settle, snack, announced, el } = await render([assigned, second]);
+    // Die Knöpfe nennen ihre Zeile.
+    for (const cls of ['accept', 'dismiss']) {
+      const describedBy = button(items()[0], cls).getAttribute('aria-describedby')!;
+      expect(document.getElementById(describedBy)?.textContent).toContain('Acme');
+    }
     button(items()[0], 'accept').click();
     await settle();
     expect(api.acceptSuggestion).toHaveBeenCalledWith('s1', {});
     expect(items().map((i) => i.dataset['id'])).toEqual(['s2']);
     expect(snack).toHaveBeenCalledWith('Übernommen', undefined, expect.anything());
-    expect(status()).toContain('Übernommen');
+    await announced('Übernommen: Acme.');
     expect(document.activeElement).toBe(items()[0]);
     expect(el.querySelector('.card-title')?.textContent).toContain('1');
   });
@@ -156,20 +172,34 @@ describe('AgentSuggestions', () => {
   });
 
   it('Verwerfen ruft dismissSuggestion, entfernt den Eintrag und fokussiert die Überschrift, wenn keiner bleibt', async () => {
-    const { api, items, button, settle, el, status } = await render([assigned]);
+    const { api, items, button, settle, el, announced } = await render([assigned]);
     button(items()[0], 'dismiss').click();
     await settle();
     expect(api.dismissSuggestion).toHaveBeenCalledWith('s1');
     expect(items().length).toBe(0);
-    expect(status()).toContain('Verworfen');
+    await announced('Verworfen: Acme.');
     expect(el.textContent).toContain('Keine offenen Vorschläge mehr.');
     expect(document.activeElement).toBe(el.querySelector('h2'));
   });
 
+  it('meldet jede Entscheidung neu, auch bei gleichem Text', async () => {
+    const twin: Suggestion = { ...assigned, id: 's9' };
+    const { items, button, settle, status, announced } = await render([assigned, twin]);
+    button(items()[0], 'dismiss').click();
+    await announced('Verworfen: Acme.');
+    // Zwischen zwei Meldungen wird die Live-Region kurz geleert, damit Screenreader erneut ansagen.
+    button(items()[0], 'dismiss').click();
+    await settle();
+    expect(status()).toBe('');
+    await announced('Verworfen: Acme.');
+  });
+
   it('nicht zugeordnet: Auswahl der offenen Bewerbungen, Übernehmen erst nach Auswahl', async () => {
-    const { api, items, button, settle } = await render([unassigned]);
+    const { api, items, button, settle, announced } = await render([unassigned]);
     const [item] = items();
     expect(item.textContent).toContain('Nicht zugeordnet');
+    const describedBy = button(item, 'accept').getAttribute('aria-describedby')!;
+    expect(document.getElementById(describedBy)?.textContent).toContain('Nicht zugeordnet');
     expect(item.querySelector('a.what')).toBeNull();
     expect(api.listApplications).toHaveBeenCalledWith();
     const select = item.querySelector<HTMLSelectElement>('select')!;
@@ -177,6 +207,8 @@ describe('AgentSuggestions', () => {
     expect(options).toContain('Acme – Dev');
     expect(options).toContain('Gamma – Dev');
     expect(options).not.toContain('Alt GmbH – Dev');
+    // Späte Antwort nach „Keine Rückmeldung“ muss zuordenbar bleiben.
+    expect(options).toContain('Still AG – Dev');
     expect(button(item, 'accept').disabled).toBe(true);
     select.value = 'a5';
     select.dispatchEvent(new Event('change'));
@@ -186,6 +218,7 @@ describe('AgentSuggestions', () => {
     await settle();
     expect(api.acceptSuggestion).toHaveBeenCalledWith('s3', { application_id: 'a5' });
     expect(items().length).toBe(0);
+    await announced('Übernommen: Gamma.');
   });
 
   it('Busy-Guard je Eintrag: kein Doppelklick, andere Einträge bleiben bedienbar', async () => {

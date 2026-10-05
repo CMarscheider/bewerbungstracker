@@ -13,6 +13,14 @@ import { formatDate } from '../../core/dates';
 import { DEADLINE_LABELS } from '../../shared/labels';
 import { StatusBadge } from '../../shared/status-badge';
 
+/** Abstand zwischen Leeren und Setzen der Live-Region, damit Screenreader die Änderung bemerken. */
+const ANNOUNCE_DELAY_MS = 100;
+
+/** Zuordenbar sind offene Bewerbungen und solche ohne Rückmeldung – dort kann eine späte Antwort eintreffen. */
+function assignable(a: ApplicationSummary): boolean {
+  return a.phase !== 'Abgeschlossen' || a.status === 'KeineRueckmeldung';
+}
+
 @Component({
   selector: 'app-agent-suggestions',
   imports: [RouterLink, MatButtonModule, MatCardModule, MatFormFieldModule, MatInputModule, StatusBadge],
@@ -41,8 +49,10 @@ export class AgentSuggestions {
   protected readonly openApplications = signal<ApplicationSummary[]>([]);
 
   protected readonly formatDate = formatDate;
+  private announceTimer?: ReturnType<typeof setTimeout>;
 
   constructor() {
+    this.destroyRef.onDestroy(() => clearTimeout(this.announceTimer));
     this.api
       .listSuggestions()
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -74,14 +84,15 @@ export class AgentSuggestions {
       return;
     }
     const applicationId = s.application_id ? undefined : this.chosen()[s.id];
+    const company = applicationId ? this.openApplications().find((a) => a.id === applicationId)?.company_name : s.company_name;
     this.run(s.id, this.api.acceptSuggestion(s.id, applicationId ? { application_id: applicationId } : {}), () => {
       this.snackBar.open('Übernommen', undefined, { duration: 3000, politeness: 'off' });
-      return 'Übernommen.';
+      return `Übernommen: ${company || 'Vorschlag'}.`;
     });
   }
 
   protected dismiss(s: Suggestion): void {
-    this.run(s.id, this.api.dismissSuggestion(s.id), () => 'Verworfen.');
+    this.run(s.id, this.api.dismissSuggestion(s.id), () => `Verworfen: ${s.company_name || 'nicht zugeordneter Vorschlag'}.`);
   }
 
   /**
@@ -100,11 +111,21 @@ export class AgentSuggestions {
       )
       .subscribe({
         next: () => {
-          this.message.set(done());
+          this.announce(done());
           this.remove(id);
         },
         error: () => undefined,
       });
+  }
+
+  /**
+   * Leert die Live-Region und setzt die Meldung kurz danach neu – sonst sagen Screenreader
+   * einen gleichen Text (z. B. zweimal „Verworfen: Acme.“) nicht erneut an.
+   */
+  private announce(text: string): void {
+    clearTimeout(this.announceTimer);
+    this.message.set('');
+    this.announceTimer = setTimeout(() => this.message.set(text), ANNOUNCE_DELAY_MS);
   }
 
   private remove(id: string): void {
@@ -142,6 +163,6 @@ export class AgentSuggestions {
     this.api
       .listApplications()
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({ next: (apps) => this.openApplications.set(apps.filter((a) => a.phase !== 'Abgeschlossen')), error: () => undefined });
+      .subscribe({ next: (apps) => this.openApplications.set(apps.filter(assignable)), error: () => undefined });
   }
 }

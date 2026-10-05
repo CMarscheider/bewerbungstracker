@@ -17,12 +17,13 @@
   font-size: 0.85rem;
   margin: 2px 0 8px;
 }
-.status:empty {
-  display: none;
-}
 .status,
 .state {
   margin: 8px 0 12px;
+}
+/* Leer nicht ausblenden: eine versteckte Live-Region sagen Screenreader nicht zuverlässig an. */
+.status:empty {
+  margin: 0;
 }
 
 .rows {

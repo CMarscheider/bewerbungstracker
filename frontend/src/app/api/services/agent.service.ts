@@ -375,7 +375,7 @@ export class AgentService extends BaseService {
   /**
    * Unklare Antwort als Vorschlag ablegen (ohne `application_id` = nicht zugeordnet).
    *
-   *
+   * Mit `gmail_message_id` idempotent: gibt es zur Mail schon einen Vorschlag (auch einen entschiedenen), kommt dieser unverändert mit 200 zurück.
    *
    * This method provides access to the full `HttpResponse`, allowing access to response headers.
    * To access only the response body, use `agentCreateSuggestion()` instead.
@@ -390,7 +390,7 @@ export class AgentService extends BaseService {
   /**
    * Unklare Antwort als Vorschlag ablegen (ohne `application_id` = nicht zugeordnet).
    *
-   *
+   * Mit `gmail_message_id` idempotent: gibt es zur Mail schon einen Vorschlag (auch einen entschiedenen), kommt dieser unverändert mit 200 zurück.
    *
    * This method provides access only to the response body.
    * To access the full response (for headers, for example), `agentCreateSuggestion$Response()` instead.

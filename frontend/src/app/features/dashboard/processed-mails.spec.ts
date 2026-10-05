@@ -75,6 +75,18 @@ describe('ProcessedMails', () => {
     expect(first.querySelector('b')).toBeNull();
     expect(second.querySelector('a.what')).toBeNull();
     expect(second.textContent).toContain('nicht zugeordnet');
+    // Der Knopf nennt seine Zeile (Bewerbung bzw. „nicht zugeordnet“ und Ergebnis).
+    const described = (row: HTMLElement) =>
+      row
+        .querySelector('button.recheck')!
+        .getAttribute('aria-describedby')!
+        .split(' ')
+        .map((id) => document.getElementById(id)?.textContent ?? '')
+        .join(' ');
+    expect(described(first)).toContain('Acme <b>AG</b>');
+    expect(described(first)).toContain('Ereignis <i>Absage</i> angelegt');
+    expect(described(second)).toContain('nicht zugeordnet');
+    expect(described(second)).toContain('Nicht relevant');
   });
 
   it('zeigt einen Leerzustand', async () => {
