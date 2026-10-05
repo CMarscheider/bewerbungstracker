@@ -21,6 +21,16 @@ describe('cv-form', () => {
     expect(fromList('Go, Angular ,, ')).toEqual(['Go', 'Angular']);
   });
 
+  it('fromList trennt nicht an Kommas in Klammern', () => {
+    expect(fromList('TypeScript, JavaScript (ES6+, OOP), HTML5')).toEqual(['TypeScript', 'JavaScript (ES6+, OOP)', 'HTML5']);
+    expect(fromList('A [x, y], B')).toEqual(['A [x, y]', 'B']);
+  });
+
+  it('übernimmt Kenntnisse mit Komma in Klammern verlustfrei hin und zurück', () => {
+    const withComma: Cv = { ...cv, skills: [{ category: 'Frontend', items: ['JavaScript (ES6+, OOP)', 'HTML5'] }] };
+    expect(formToCv(cvForm(withComma)).skills).toEqual(withComma.skills);
+  });
+
   it('übernimmt einen Lebenslauf verlustfrei hin und zurück', () => {
     const { updated_at: _ignored, ...expected } = cv;
     expect(formToCv(cvForm(cv))).toEqual(expected);

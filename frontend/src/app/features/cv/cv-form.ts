@@ -19,12 +19,23 @@ export function fromLines(value: string): string[] {
     .filter((s) => s !== '');
 }
 
-/** Kommagetrennte Liste; leere Einträge fallen weg. Einträge dürfen selbst kein Komma enthalten. */
+/** Kommagetrennte Liste; leere Einträge fallen weg. Kommas in Klammern trennen nicht, z. B. „JavaScript (ES6+, OOP)“. */
 export function fromList(value: string): string[] {
-  return value
-    .split(',')
-    .map((s) => s.trim())
-    .filter((s) => s !== '');
+  const parts: string[] = [];
+  let depth = 0;
+  let current = '';
+  for (const ch of value) {
+    if (ch === '(' || ch === '[') depth++;
+    else if ((ch === ')' || ch === ']') && depth > 0) depth--;
+    if (ch === ',' && depth === 0) {
+      parts.push(current);
+      current = '';
+    } else {
+      current += ch;
+    }
+  }
+  parts.push(current);
+  return parts.map((s) => s.trim()).filter((s) => s !== '');
 }
 
 /** Getrimmter Text oder undefined, damit leere optionale Felder im JSON fehlen. */
