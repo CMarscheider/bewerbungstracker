@@ -114,7 +114,7 @@ func suggestionDTO(s service.Suggestion) Suggestion {
 		Id: s.ID, ApplicationId: s.ApplicationID, CompanyName: s.CompanyName, PositionTitle: s.PositionTitle,
 		SuggestedType: EventType(s.SuggestedType), OccurredOn: toDate(s.OccurredOn), DueOn: toDatePtr(s.DueOn),
 		Reason: s.Reason, MailSubject: s.MailSubject, MailFrom: s.MailFrom, MailUrl: s.MailURL,
-		State: SuggestionState(s.State), CreatedAt: s.CreatedAt, DecidedAt: s.DecidedAt,
+		GmailMessageId: s.GmailMessageID, State: SuggestionState(s.State), CreatedAt: s.CreatedAt, DecidedAt: s.DecidedAt,
 	}
 }
 

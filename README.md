@@ -151,7 +151,9 @@ von `AGENT_TOKEN`, nur zusammen mit ihm). Es darf nur `GET /api/agent/cv`,
   Thread schon zu einer anderen Bewerbung gehört.
 - `POST /api/agent/suggestions` – unklare Antwort als Vorschlag für das Dashboard ablegen
   (`suggested_type`, `occurred_on`, `reason`; optional `application_id`, `due_on`, `mail_subject`,
-  `mail_from`, `mail_url` nur `https://mail.google.com/…`). Ohne `application_id` ordnet der User zu.
+  `mail_from`, `mail_url` nur `https://mail.google.com/…`, `gmail_message_id`). Ohne `application_id`
+  ordnet der User zu. Mit `gmail_message_id` idempotent: 201 beim ersten Mal; gibt es zur Mail schon
+  einen Vorschlag (auch einen schon übernommenen oder verworfenen), 200 mit diesem unveränderten Vorschlag.
 - `GET /api/agent/processed-mails/{messageId}` – 200, wenn die Mail schon ausgewertet ist, sonst 404.
 - `POST /api/agent/processed-mails` – Mail als ausgewertet merken (`gmail_message_id`, `outcome`,
   optional `application_id`). Idempotent: 201 beim ersten Mal, danach 200 mit dem unveränderten

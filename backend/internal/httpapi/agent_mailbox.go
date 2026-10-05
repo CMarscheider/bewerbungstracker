@@ -39,13 +39,16 @@ func (s *Server) AgentSetGmailThread(ctx context.Context, req AgentSetGmailThrea
 
 func (s *Server) AgentCreateSuggestion(ctx context.Context, req AgentCreateSuggestionRequestObject) (AgentCreateSuggestionResponseObject, error) {
 	b := req.Body
-	sg, err := s.svc.CreateSuggestion(ctx, service.NewSuggestion{
+	sg, created, err := s.svc.CreateSuggestion(ctx, service.NewSuggestion{
 		ApplicationID: b.ApplicationId, SuggestedType: domain.EventType(b.SuggestedType),
 		OccurredOn: b.OccurredOn.Time, DueOn: fromDatePtr(b.DueOn), Reason: b.Reason,
-		MailSubject: b.MailSubject, MailFrom: b.MailFrom, MailURL: b.MailUrl,
+		MailSubject: b.MailSubject, MailFrom: b.MailFrom, MailURL: b.MailUrl, GmailMessageID: b.GmailMessageId,
 	})
 	if err != nil {
 		return nil, err
+	}
+	if !created {
+		return AgentCreateSuggestion200JSONResponse(suggestionDTO(sg)), nil
 	}
 	return AgentCreateSuggestion201JSONResponse(suggestionDTO(sg)), nil
 }

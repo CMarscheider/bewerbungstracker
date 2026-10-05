@@ -739,6 +739,9 @@ paths:
       operationId: agentCreateSuggestion
       tags: [Agent]
       summary: Unklare Antwort als Vorschlag ablegen (ohne `application_id` = nicht zugeordnet)
+      description: >
+        Mit `gmail_message_id` idempotent: gibt es zur Mail schon einen Vorschlag (auch einen entschiedenen),
+        kommt dieser unverändert mit 200 zurück.
       security: [{ agentToken: [] }]
       requestBody:
         required: true
@@ -748,6 +751,11 @@ paths:
       responses:
         "201":
           description: Angelegt
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Suggestion" }
+        "200":
+          description: Zur Mail gab es schon einen Vorschlag
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Suggestion" }
@@ -1064,6 +1072,10 @@ components:
         mail_subject: { type: string, maxLength: 300, pattern: '^[^\r\n]*$' }
         mail_from: { type: string, maxLength: 300, pattern: '^[^\r\n]*$' }
         mail_url: { type: string, maxLength: 500, pattern: '^https://mail\.google\.com/\S*$' }
+        gmail_message_id:
+          allOf:
+            - $ref: "#/components/schemas/GmailMessageId"
+          description: Mail, aus der der Vorschlag stammt; je Mail höchstens ein Vorschlag
     Suggestion:
       type: object
       required: [id, suggested_type, occurred_on, reason, state, created_at]
@@ -1079,6 +1091,7 @@ components:
         mail_subject: { type: string }
         mail_from: { type: string }
         mail_url: { type: string }
+        gmail_message_id: { type: string }
         state: { $ref: "#/components/schemas/SuggestionState" }
         created_at: { type: string, format: date-time }
         decided_at: { type: string, format: date-time }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"regexp"
 	"slices"
 	"strings"
 	"time"
@@ -46,6 +47,9 @@ var agentBookable = []domain.EventType{
 	domain.Beworben, domain.ScreeningGespraech, domain.ChallengeErhalten, domain.Interview,
 	domain.Kennenlerntag, domain.AngebotErhalten, domain.Absage,
 }
+
+// gmailIDPattern entspricht GmailMessageId in der API-Spec.
+var gmailIDPattern = regexp.MustCompile(`^[A-Za-z0-9_-]{1,200}$`)
 
 // Unicode-Zeilen- und Absatztrenner (Kategorie Zl/Zp, nicht Cc/Cf).
 const (
@@ -97,24 +101,27 @@ type NewSuggestion struct {
 	MailSubject   *string
 	MailFrom      *string
 	MailURL       *string
+	// GmailMessageID ist die Mail, aus der der Vorschlag stammt; pro Mail gibt es höchstens einen Vorschlag.
+	GmailMessageID *string
 }
 
 // Suggestion ist ein gespeicherter Vorschlag; Firma und Stelle fehlen bei nicht zugeordneten.
 type Suggestion struct {
-	ID            uuid.UUID
-	ApplicationID *uuid.UUID
-	CompanyName   *string
-	PositionTitle *string
-	SuggestedType domain.EventType
-	OccurredOn    time.Time
-	DueOn         *time.Time
-	Reason        string
-	MailSubject   *string
-	MailFrom      *string
-	MailURL       *string
-	State         string
-	CreatedAt     time.Time
-	DecidedAt     *time.Time
+	ID             uuid.UUID
+	ApplicationID  *uuid.UUID
+	CompanyName    *string
+	PositionTitle  *string
+	SuggestedType  domain.EventType
+	OccurredOn     time.Time
+	DueOn          *time.Time
+	Reason         string
+	MailSubject    *string
+	MailFrom       *string
+	MailURL        *string
+	GmailMessageID *string
+	State          string
+	CreatedAt      time.Time
+	DecidedAt      *time.Time
 }
 
 // ProcessedMail ist eine bereits ausgewertete Mail.
@@ -236,62 +243,81 @@ func (s *Service) SetGmailThread(ctx context.Context, appID uuid.UUID, threadID 
 	})
 }
 
-// CreateSuggestion legt einen offenen Vorschlag an.
-func (s *Service) CreateSuggestion(ctx context.Context, in NewSuggestion) (Suggestion, error) {
+// CreateSuggestion legt einen offenen Vorschlag an. Gibt es zur selben GmailMessageID schon einen
+// (egal in welchem Zustand), wird dieser unverändert zurückgegeben und created ist false.
+func (s *Service) CreateSuggestion(ctx context.Context, in NewSuggestion) (Suggestion, bool, error) {
 	if err := rejectInvisible("reason", in.Reason); err != nil {
-		return Suggestion{}, err
+		return Suggestion{}, false, err
 	}
-	for field, v := range map[string]*string{"mail_subject": in.MailSubject, "mail_from": in.MailFrom, "mail_url": in.MailURL} {
-		if err := rejectInvisibleOptional(field, v); err != nil {
-			return Suggestion{}, err
+	mailFields := []struct {
+		name  string
+		value *string
+	}{{"mail_subject", in.MailSubject}, {"mail_from", in.MailFrom}, {"mail_url", in.MailURL}}
+	for _, f := range mailFields {
+		if err := rejectInvisibleOptional(f.name, f.value); err != nil {
+			return Suggestion{}, false, err
 		}
 	}
+	if in.GmailMessageID != nil && !gmailIDPattern.MatchString(*in.GmailMessageID) {
+		return Suggestion{}, false, &domain.ValidationError{Field: "gmail_message_id", Detail: "nur A–Z, a–z, 0–9, _ und -, höchstens 200 Zeichen"}
+	}
 	if !in.SuggestedType.Valid() {
-		return Suggestion{}, &domain.ValidationError{Field: "suggested_type", Detail: fmt.Sprintf("unbekannter Ereignistyp %q", in.SuggestedType)}
+		return Suggestion{}, false, &domain.ValidationError{Field: "suggested_type", Detail: fmt.Sprintf("unbekannter Ereignistyp %q", in.SuggestedType)}
 	}
 	if in.OccurredOn.IsZero() {
-		return Suggestion{}, &domain.ValidationError{Field: "occurred_on", Detail: "fehlt"}
+		return Suggestion{}, false, &domain.ValidationError{Field: "occurred_on", Detail: "fehlt"}
 	}
 	if in.DueOn != nil && !in.SuggestedType.AllowsDeadline() {
-		return Suggestion{}, &domain.ValidationError{Field: "due_on", Detail: fmt.Sprintf("%s hat keine Frist", in.SuggestedType)}
+		return Suggestion{}, false, &domain.ValidationError{Field: "due_on", Detail: fmt.Sprintf("%s hat keine Frist", in.SuggestedType)}
 	}
 	reason, err := requireText("reason", in.Reason)
 	if err != nil {
-		return Suggestion{}, err
+		return Suggestion{}, false, err
 	}
 	if utf8.RuneCountInString(reason) > maxReasonLen {
-		return Suggestion{}, &domain.ValidationError{Field: "reason", Detail: fmt.Sprintf("höchstens %d Zeichen", maxReasonLen)}
+		return Suggestion{}, false, &domain.ValidationError{Field: "reason", Detail: fmt.Sprintf("höchstens %d Zeichen", maxReasonLen)}
 	}
 	var due *time.Time
 	if in.DueOn != nil {
 		d := domain.DateOf(*in.DueOn)
 		due = &d
 	}
-	var row store.GetSuggestionRow
+	var (
+		row     store.GetSuggestionRow
+		created bool
+	)
 	err = s.inTx(ctx, func(q *store.Queries) error {
-		created, err := q.InsertSuggestion(ctx, store.InsertSuggestionParams{
-			ApplicationID: in.ApplicationID,
-			SuggestedType: string(in.SuggestedType),
-			OccurredOn:    domain.DateOf(in.OccurredOn),
-			DueOn:         due,
-			Reason:        reason,
-			MailSubject:   cleanOptional(in.MailSubject),
-			MailFrom:      cleanOptional(in.MailFrom),
-			MailUrl:       cleanOptional(in.MailURL),
+		inserted, err := q.InsertSuggestion(ctx, store.InsertSuggestionParams{
+			ApplicationID:  in.ApplicationID,
+			SuggestedType:  string(in.SuggestedType),
+			OccurredOn:     domain.DateOf(in.OccurredOn),
+			DueOn:          due,
+			Reason:         reason,
+			MailSubject:    cleanOptional(in.MailSubject),
+			MailFrom:       cleanOptional(in.MailFrom),
+			MailUrl:        cleanOptional(in.MailURL),
+			GmailMessageID: in.GmailMessageID,
 		})
-		if isForeignKeyViolation(err) {
+		id := inserted.ID
+		switch {
+		case isForeignKeyViolation(err):
 			return &NotFoundError{Resource: "Bewerbung"}
-		}
-		if err != nil {
+		case errors.Is(err, pgx.ErrNoRows): // ON CONFLICT DO NOTHING: zur Mail gibt es schon einen Vorschlag
+			if id, err = q.GetSuggestionIDByMessage(ctx, in.GmailMessageID); err != nil {
+				return err
+			}
+		case err != nil:
 			return err
+		default:
+			created = true
 		}
-		row, err = q.GetSuggestion(ctx, created.ID)
+		row, err = q.GetSuggestion(ctx, id)
 		return err
 	})
 	if err != nil {
-		return Suggestion{}, err
+		return Suggestion{}, false, err
 	}
-	return toSuggestion(row), nil
+	return toSuggestion(row), created, nil
 }
 
 // ListOpenSuggestions liefert die offenen Vorschläge, älteste zuerst.
@@ -435,7 +461,7 @@ func toSuggestion(r store.GetSuggestionRow) Suggestion {
 		ID: r.ID, ApplicationID: r.ApplicationID, CompanyName: r.CompanyName, PositionTitle: r.PositionTitle,
 		SuggestedType: domain.EventType(r.SuggestedType), OccurredOn: r.OccurredOn, DueOn: r.DueOn,
 		Reason: r.Reason, MailSubject: r.MailSubject, MailFrom: r.MailFrom, MailURL: r.MailUrl,
-		State: r.State, CreatedAt: r.CreatedAt, DecidedAt: r.DecidedAt,
+		GmailMessageID: r.GmailMessageID, State: r.State, CreatedAt: r.CreatedAt, DecidedAt: r.DecidedAt,
 	}
 }
 

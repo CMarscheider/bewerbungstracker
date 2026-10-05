@@ -69,7 +69,8 @@ func (q *Queries) GetProcessedMail(ctx context.Context, gmailMessageID string) (
 
 const getSuggestion = `-- name: GetSuggestion :one
 SELECT s.id, s.application_id, c.name AS company_name, a.position_title, s.suggested_type, s.occurred_on,
-       s.due_on, s.reason, s.mail_subject, s.mail_from, s.mail_url, s.state, s.created_at, s.decided_at
+       s.due_on, s.reason, s.mail_subject, s.mail_from, s.mail_url, s.gmail_message_id, s.state, s.created_at,
+       s.decided_at
 FROM status_suggestions s
 LEFT JOIN applications a ON a.id = s.application_id
 LEFT JOIN companies c ON c.id = a.company_id
@@ -77,20 +78,21 @@ WHERE s.id = $1
 `
 
 type GetSuggestionRow struct {
-	ID            uuid.UUID
-	ApplicationID *uuid.UUID
-	CompanyName   *string
-	PositionTitle *string
-	SuggestedType string
-	OccurredOn    time.Time
-	DueOn         *time.Time
-	Reason        string
-	MailSubject   *string
-	MailFrom      *string
-	MailUrl       *string
-	State         string
-	CreatedAt     time.Time
-	DecidedAt     *time.Time
+	ID             uuid.UUID
+	ApplicationID  *uuid.UUID
+	CompanyName    *string
+	PositionTitle  *string
+	SuggestedType  string
+	OccurredOn     time.Time
+	DueOn          *time.Time
+	Reason         string
+	MailSubject    *string
+	MailFrom       *string
+	MailUrl        *string
+	GmailMessageID *string
+	State          string
+	CreatedAt      time.Time
+	DecidedAt      *time.Time
 }
 
 func (q *Queries) GetSuggestion(ctx context.Context, id uuid.UUID) (GetSuggestionRow, error) {
@@ -108,11 +110,23 @@ func (q *Queries) GetSuggestion(ctx context.Context, id uuid.UUID) (GetSuggestio
 		&i.MailSubject,
 		&i.MailFrom,
 		&i.MailUrl,
+		&i.GmailMessageID,
 		&i.State,
 		&i.CreatedAt,
 		&i.DecidedAt,
 	)
 	return i, err
+}
+
+const getSuggestionIDByMessage = `-- name: GetSuggestionIDByMessage :one
+SELECT id FROM status_suggestions WHERE gmail_message_id = $1
+`
+
+func (q *Queries) GetSuggestionIDByMessage(ctx context.Context, gmailMessageID *string) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, getSuggestionIDByMessage, gmailMessageID)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
 }
 
 const insertProcessedMail = `-- name: InsertProcessedMail :one
@@ -142,22 +156,25 @@ func (q *Queries) InsertProcessedMail(ctx context.Context, arg InsertProcessedMa
 
 const insertSuggestion = `-- name: InsertSuggestion :one
 INSERT INTO status_suggestions (application_id, suggested_type, occurred_on, due_on, reason,
-                                mail_subject, mail_from, mail_url)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-RETURNING id, application_id, suggested_type, occurred_on, due_on, reason, mail_subject, mail_from, mail_url, state, created_at, decided_at
+                                mail_subject, mail_from, mail_url, gmail_message_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+ON CONFLICT (gmail_message_id) WHERE gmail_message_id IS NOT NULL DO NOTHING
+RETURNING id, application_id, suggested_type, occurred_on, due_on, reason, mail_subject, mail_from, mail_url, state, created_at, decided_at, gmail_message_id
 `
 
 type InsertSuggestionParams struct {
-	ApplicationID *uuid.UUID
-	SuggestedType string
-	OccurredOn    time.Time
-	DueOn         *time.Time
-	Reason        string
-	MailSubject   *string
-	MailFrom      *string
-	MailUrl       *string
+	ApplicationID  *uuid.UUID
+	SuggestedType  string
+	OccurredOn     time.Time
+	DueOn          *time.Time
+	Reason         string
+	MailSubject    *string
+	MailFrom       *string
+	MailUrl        *string
+	GmailMessageID *string
 }
 
+// Ohne Zeile zurück (pgx.ErrNoRows), wenn es zur Mail schon einen Vorschlag gibt.
 func (q *Queries) InsertSuggestion(ctx context.Context, arg InsertSuggestionParams) (StatusSuggestion, error) {
 	row := q.db.QueryRow(ctx, insertSuggestion,
 		arg.ApplicationID,
@@ -168,6 +185,7 @@ func (q *Queries) InsertSuggestion(ctx context.Context, arg InsertSuggestionPara
 		arg.MailSubject,
 		arg.MailFrom,
 		arg.MailUrl,
+		arg.GmailMessageID,
 	)
 	var i StatusSuggestion
 	err := row.Scan(
@@ -183,6 +201,7 @@ func (q *Queries) InsertSuggestion(ctx context.Context, arg InsertSuggestionPara
 		&i.State,
 		&i.CreatedAt,
 		&i.DecidedAt,
+		&i.GmailMessageID,
 	)
 	return i, err
 }
@@ -246,7 +265,8 @@ func (q *Queries) ListOpenAgentApplications(ctx context.Context, statuses []stri
 
 const listOpenSuggestions = `-- name: ListOpenSuggestions :many
 SELECT s.id, s.application_id, c.name AS company_name, a.position_title, s.suggested_type, s.occurred_on,
-       s.due_on, s.reason, s.mail_subject, s.mail_from, s.mail_url, s.state, s.created_at, s.decided_at
+       s.due_on, s.reason, s.mail_subject, s.mail_from, s.mail_url, s.gmail_message_id, s.state, s.created_at,
+       s.decided_at
 FROM status_suggestions s
 LEFT JOIN applications a ON a.id = s.application_id
 LEFT JOIN companies c ON c.id = a.company_id
@@ -255,20 +275,21 @@ ORDER BY s.created_at, s.id
 `
 
 type ListOpenSuggestionsRow struct {
-	ID            uuid.UUID
-	ApplicationID *uuid.UUID
-	CompanyName   *string
-	PositionTitle *string
-	SuggestedType string
-	OccurredOn    time.Time
-	DueOn         *time.Time
-	Reason        string
-	MailSubject   *string
-	MailFrom      *string
-	MailUrl       *string
-	State         string
-	CreatedAt     time.Time
-	DecidedAt     *time.Time
+	ID             uuid.UUID
+	ApplicationID  *uuid.UUID
+	CompanyName    *string
+	PositionTitle  *string
+	SuggestedType  string
+	OccurredOn     time.Time
+	DueOn          *time.Time
+	Reason         string
+	MailSubject    *string
+	MailFrom       *string
+	MailUrl        *string
+	GmailMessageID *string
+	State          string
+	CreatedAt      time.Time
+	DecidedAt      *time.Time
 }
 
 func (q *Queries) ListOpenSuggestions(ctx context.Context) ([]ListOpenSuggestionsRow, error) {
@@ -292,6 +313,7 @@ func (q *Queries) ListOpenSuggestions(ctx context.Context) ([]ListOpenSuggestion
 			&i.MailSubject,
 			&i.MailFrom,
 			&i.MailUrl,
+			&i.GmailMessageID,
 			&i.State,
 			&i.CreatedAt,
 			&i.DecidedAt,
@@ -362,7 +384,7 @@ func (q *Queries) LockProcessedMails(ctx context.Context) error {
 }
 
 const lockSuggestion = `-- name: LockSuggestion :one
-SELECT id, application_id, suggested_type, occurred_on, due_on, reason, mail_subject, mail_from, mail_url, state, created_at, decided_at FROM status_suggestions WHERE id = $1 FOR UPDATE
+SELECT id, application_id, suggested_type, occurred_on, due_on, reason, mail_subject, mail_from, mail_url, state, created_at, decided_at, gmail_message_id FROM status_suggestions WHERE id = $1 FOR UPDATE
 `
 
 func (q *Queries) LockSuggestion(ctx context.Context, id uuid.UUID) (StatusSuggestion, error) {
@@ -381,6 +403,7 @@ func (q *Queries) LockSuggestion(ctx context.Context, id uuid.UUID) (StatusSugge
 		&i.State,
 		&i.CreatedAt,
 		&i.DecidedAt,
+		&i.GmailMessageID,
 	)
 	return i, err
 }

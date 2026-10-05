@@ -141,14 +141,14 @@ func TestSetGmailThread(t *testing.T) {
 func TestCreateAndListSuggestions(t *testing.T) {
 	svc := newService(t)
 	app := agentApp(t, svc)
-	assigned, err := svc.CreateSuggestion(ctx, sampleSuggestion(&app.ID))
+	assigned, _, err := svc.CreateSuggestion(ctx, sampleSuggestion(&app.ID))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if assigned.State != service.SuggestionOpen || assigned.CompanyName == nil || *assigned.CompanyName != "Acme GmbH" {
 		t.Errorf("Vorschlag = %+v", assigned)
 	}
-	unassigned, err := svc.CreateSuggestion(ctx, sampleSuggestion(nil))
+	unassigned, _, err := svc.CreateSuggestion(ctx, sampleSuggestion(nil))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -171,18 +171,18 @@ func TestCreateAndListSuggestions(t *testing.T) {
 func TestCreateSuggestionValidation(t *testing.T) {
 	svc := newService(t)
 	var nf *service.NotFoundError
-	if _, err := svc.CreateSuggestion(ctx, sampleSuggestion(ptr(uuid.New()))); !errors.As(err, &nf) {
+	if _, _, err := svc.CreateSuggestion(ctx, sampleSuggestion(ptr(uuid.New()))); !errors.As(err, &nf) {
 		t.Errorf("erwartet NotFoundError, bekommen %v", err)
 	}
 	empty := sampleSuggestion(nil)
 	empty.Reason = "  "
 	var ve *domain.ValidationError
-	if _, err := svc.CreateSuggestion(ctx, empty); !errors.As(err, &ve) || ve.Field != "reason" {
+	if _, _, err := svc.CreateSuggestion(ctx, empty); !errors.As(err, &ve) || ve.Field != "reason" {
 		t.Errorf("erwartet ValidationError reason, bekommen %v", err)
 	}
 	badType := sampleSuggestion(nil)
 	badType.SuggestedType = "Quatsch"
-	if _, err := svc.CreateSuggestion(ctx, badType); !errors.As(err, &ve) || ve.Field != "suggested_type" {
+	if _, _, err := svc.CreateSuggestion(ctx, badType); !errors.As(err, &ve) || ve.Field != "suggested_type" {
 		t.Errorf("erwartet ValidationError suggested_type, bekommen %v", err)
 	}
 }
@@ -190,7 +190,7 @@ func TestCreateSuggestionValidation(t *testing.T) {
 func TestAcceptAssignedSuggestion(t *testing.T) {
 	svc := newService(t)
 	app := appliedApp(t, svc)
-	s, err := svc.CreateSuggestion(ctx, sampleSuggestion(&app.ID))
+	s, _, err := svc.CreateSuggestion(ctx, sampleSuggestion(&app.ID))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -214,7 +214,7 @@ func TestAcceptAssignedSuggestion(t *testing.T) {
 func TestAcceptUnassignedSuggestion(t *testing.T) {
 	svc := newService(t)
 	app := appliedApp(t, svc)
-	s, err := svc.CreateSuggestion(ctx, sampleSuggestion(nil))
+	s, _, err := svc.CreateSuggestion(ctx, sampleSuggestion(nil))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -234,7 +234,7 @@ func TestAcceptUnassignedSuggestion(t *testing.T) {
 func TestAcceptSuggestionInvalidTransitionKeepsOpen(t *testing.T) {
 	svc := newService(t)
 	app := agentApp(t, svc) // Vorgemerkt: Absage ist nicht erlaubt
-	s, err := svc.CreateSuggestion(ctx, sampleSuggestion(&app.ID))
+	s, _, err := svc.CreateSuggestion(ctx, sampleSuggestion(&app.ID))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -258,7 +258,7 @@ func TestAcceptSuggestionUnknown(t *testing.T) {
 
 func TestDismissSuggestion(t *testing.T) {
 	svc := newService(t)
-	s, err := svc.CreateSuggestion(ctx, sampleSuggestion(nil))
+	s, _, err := svc.CreateSuggestion(ctx, sampleSuggestion(nil))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -341,7 +341,7 @@ func TestAcceptSuggestionOverridesApplication(t *testing.T) {
 	svc := newService(t)
 	assignedTo := agentApp(t, svc)
 	other := appliedApp(t, svc)
-	s, err := svc.CreateSuggestion(ctx, sampleSuggestion(&assignedTo.ID))
+	s, _, err := svc.CreateSuggestion(ctx, sampleSuggestion(&assignedTo.ID))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -362,7 +362,7 @@ func TestAcceptSuggestionOverridesApplication(t *testing.T) {
 
 func TestAcceptSuggestionUnknownApplicationKeepsOpen(t *testing.T) {
 	svc := newService(t)
-	s, err := svc.CreateSuggestion(ctx, sampleSuggestion(nil))
+	s, _, err := svc.CreateSuggestion(ctx, sampleSuggestion(nil))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -378,7 +378,7 @@ func TestAcceptSuggestionUnknownApplicationKeepsOpen(t *testing.T) {
 func TestAcceptUnassignedSuggestionStoresApplication(t *testing.T) {
 	svc := newService(t)
 	app := appliedApp(t, svc)
-	s, err := svc.CreateSuggestion(ctx, sampleSuggestion(nil))
+	s, _, err := svc.CreateSuggestion(ctx, sampleSuggestion(nil))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -395,7 +395,7 @@ func TestAcceptSuggestionDoesNotDoublePrefix(t *testing.T) {
 	app := appliedApp(t, svc)
 	in := sampleSuggestion(&app.ID)
 	in.Reason = "Agent: Absage erkannt"
-	s, err := svc.CreateSuggestion(ctx, in)
+	s, _, err := svc.CreateSuggestion(ctx, in)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -449,17 +449,17 @@ func TestCreateSuggestionRejectsDueOnAndLongReason(t *testing.T) {
 	var ve *domain.ValidationError
 	withDue := sampleSuggestion(nil) // Absage hat keine Frist
 	withDue.DueOn = ptr(day(5))
-	if _, err := svc.CreateSuggestion(ctx, withDue); !errors.As(err, &ve) || ve.Field != "due_on" {
+	if _, _, err := svc.CreateSuggestion(ctx, withDue); !errors.As(err, &ve) || ve.Field != "due_on" {
 		t.Errorf("erwartet ValidationError due_on, bekommen %v", err)
 	}
 	long := sampleSuggestion(nil)
 	long.Reason = strings.Repeat("ä", 1001)
-	if _, err := svc.CreateSuggestion(ctx, long); !errors.As(err, &ve) || ve.Field != "reason" {
+	if _, _, err := svc.CreateSuggestion(ctx, long); !errors.As(err, &ve) || ve.Field != "reason" {
 		t.Errorf("erwartet ValidationError reason, bekommen %v", err)
 	}
 	ok := sampleSuggestion(nil)
 	ok.Reason = strings.Repeat("ä", 1000)
-	if _, err := svc.CreateSuggestion(ctx, ok); err != nil {
+	if _, _, err := svc.CreateSuggestion(ctx, ok); err != nil {
 		t.Errorf("1000 Zeichen abgelehnt: %v", err)
 	}
 }
@@ -517,7 +517,7 @@ func TestAgentAddEventWhitelist(t *testing.T) {
 	// Vorschläge dürfen weiterhin jeden Typ tragen.
 	sg := sampleSuggestion(&app.ID)
 	sg.SuggestedType = domain.Zurueckgezogen
-	if _, err := svc.CreateSuggestion(ctx, sg); err != nil {
+	if _, _, err := svc.CreateSuggestion(ctx, sg); err != nil {
 		t.Fatalf("Vorschlag Zurueckgezogen: %v", err)
 	}
 }
@@ -613,7 +613,7 @@ func TestMailboxRejectsInvisibleCharacters(t *testing.T) {
 		} {
 			sg := sampleSuggestion(&app.ID)
 			mutate(&sg)
-			_, err := svc.CreateSuggestion(ctx, sg)
+			_, _, err := svc.CreateSuggestion(ctx, sg)
 			var ve *domain.ValidationError
 			if !errors.As(err, &ve) || ve.Field != field {
 				t.Errorf("%s %q: erwartet ValidationError, bekommen %v", field, bad, err)
@@ -631,5 +631,65 @@ func TestMailboxRejectsInvisibleCharacters(t *testing.T) {
 	}
 	if _, err := svc.AgentAddEvent(ctx, app.ID, domain.NewEvent{Type: domain.Beworben, OccurredOn: day(0), Note: ptr("Grüße – „ok“ 👍")}); err != nil {
 		t.Errorf("normale Unicode-Zeichen: %v", err)
+	}
+}
+
+func TestCreateSuggestionDeduplicatesByMessageID(t *testing.T) {
+	svc := newService(t)
+	app := agentApp(t, svc)
+	in := sampleSuggestion(&app.ID)
+	in.GmailMessageID = ptr("msg-1")
+	first, created, err := svc.CreateSuggestion(ctx, in)
+	if err != nil || !created {
+		t.Fatalf("erster Vorschlag: created=%v, err=%v", created, err)
+	}
+	if first.GmailMessageID == nil || *first.GmailMessageID != "msg-1" {
+		t.Errorf("GmailMessageID = %v", first.GmailMessageID)
+	}
+	in.Reason = "anderer Grund"
+	again, created, err := svc.CreateSuggestion(ctx, in)
+	if err != nil || created || again.ID != first.ID || again.Reason != first.Reason {
+		t.Fatalf("Dublette: created=%v, err=%v, %+v", created, err, again)
+	}
+	// Auch nach dem Verwerfen entsteht kein neuer Vorschlag für dieselbe Mail.
+	if err := svc.DismissSuggestion(ctx, first.ID); err != nil {
+		t.Fatal(err)
+	}
+	again, created, err = svc.CreateSuggestion(ctx, in)
+	if err != nil || created || again.ID != first.ID || again.State != service.SuggestionDismissed {
+		t.Fatalf("nach Verwerfen: created=%v, err=%v, %+v", created, err, again)
+	}
+	// Ohne Message-ID gibt es keine Dublettenprüfung.
+	for range 2 {
+		if _, created, err := svc.CreateSuggestion(ctx, sampleSuggestion(&app.ID)); err != nil || !created {
+			t.Fatalf("ohne Message-ID: created=%v, err=%v", created, err)
+		}
+	}
+	list, _ := svc.ListOpenSuggestions(ctx)
+	if len(list) != 2 {
+		t.Errorf("offene Vorschläge = %d, erwartet 2", len(list))
+	}
+	in.GmailMessageID = ptr("a/b")
+	var ve *domain.ValidationError
+	if _, _, err := svc.CreateSuggestion(ctx, in); !errors.As(err, &ve) || ve.Field != "gmail_message_id" {
+		t.Errorf("ungültige Message-ID: %v", err)
+	}
+}
+
+func TestCreateSuggestionReportsMailFieldsInOrder(t *testing.T) {
+	svc := newService(t)
+	for range 20 {
+		in := sampleSuggestion(nil)
+		in.MailSubject = ptr("a\x07b")
+		in.MailURL = ptr("https://mail.google.com/\x07")
+		var ve *domain.ValidationError
+		if _, _, err := svc.CreateSuggestion(ctx, in); !errors.As(err, &ve) || ve.Field != "mail_subject" {
+			t.Fatalf("erwartet mail_subject, bekommen %v", err)
+		}
+		in.MailSubject = nil
+		in.MailFrom = ptr("a\x07b")
+		if _, _, err := svc.CreateSuggestion(ctx, in); !errors.As(err, &ve) || ve.Field != "mail_from" {
+			t.Fatalf("erwartet mail_from, bekommen %v", err)
+		}
 	}
 }

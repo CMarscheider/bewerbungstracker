@@ -105,16 +105,17 @@ type ProcessedMail struct {
 }
 
 type StatusSuggestion struct {
-	ID            uuid.UUID
-	ApplicationID *uuid.UUID
-	SuggestedType string
-	OccurredOn    time.Time
-	DueOn         *time.Time
-	Reason        string
-	MailSubject   *string
-	MailFrom      *string
-	MailUrl       *string
-	State         string
-	CreatedAt     time.Time
-	DecidedAt     *time.Time
+	ID             uuid.UUID
+	ApplicationID  *uuid.UUID
+	SuggestedType  string
+	OccurredOn     time.Time
+	DueOn          *time.Time
+	Reason         string
+	MailSubject    *string
+	MailFrom       *string
+	MailUrl        *string
+	State          string
+	CreatedAt      time.Time
+	DecidedAt      *time.Time
+	GmailMessageID *string
 }

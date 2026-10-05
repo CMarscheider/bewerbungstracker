@@ -12,14 +12,20 @@ ORDER BY lower(c.name), lower(a.position_title), a.id;
 UPDATE applications SET gmail_thread_id = $2, updated_at = now() WHERE id = $1;
 
 -- name: InsertSuggestion :one
+-- Ohne Zeile zurück (pgx.ErrNoRows), wenn es zur Mail schon einen Vorschlag gibt.
 INSERT INTO status_suggestions (application_id, suggested_type, occurred_on, due_on, reason,
-                                mail_subject, mail_from, mail_url)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                                mail_subject, mail_from, mail_url, gmail_message_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+ON CONFLICT (gmail_message_id) WHERE gmail_message_id IS NOT NULL DO NOTHING
 RETURNING *;
+
+-- name: GetSuggestionIDByMessage :one
+SELECT id FROM status_suggestions WHERE gmail_message_id = $1;
 
 -- name: ListOpenSuggestions :many
 SELECT s.id, s.application_id, c.name AS company_name, a.position_title, s.suggested_type, s.occurred_on,
-       s.due_on, s.reason, s.mail_subject, s.mail_from, s.mail_url, s.state, s.created_at, s.decided_at
+       s.due_on, s.reason, s.mail_subject, s.mail_from, s.mail_url, s.gmail_message_id, s.state, s.created_at,
+       s.decided_at
 FROM status_suggestions s
 LEFT JOIN applications a ON a.id = s.application_id
 LEFT JOIN companies c ON c.id = a.company_id
@@ -28,7 +34,8 @@ ORDER BY s.created_at, s.id;
 
 -- name: GetSuggestion :one
 SELECT s.id, s.application_id, c.name AS company_name, a.position_title, s.suggested_type, s.occurred_on,
-       s.due_on, s.reason, s.mail_subject, s.mail_from, s.mail_url, s.state, s.created_at, s.decided_at
+       s.due_on, s.reason, s.mail_subject, s.mail_from, s.mail_url, s.gmail_message_id, s.state, s.created_at,
+       s.decided_at
 FROM status_suggestions s
 LEFT JOIN applications a ON a.id = s.application_id
 LEFT JOIN companies c ON c.id = a.company_id

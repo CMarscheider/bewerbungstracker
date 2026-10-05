@@ -207,3 +207,27 @@ func TestProcessedMailsUIEndpoints(t *testing.T) {
 	expectStatus(t, callWith(t, srv, http.MethodPost, "/api/agent/processed-mails", agentToken,
 		map[string]any{"gmail_message_id": "m2", "outcome": "neu"}), http.StatusCreated)
 }
+
+func TestAgentCreateSuggestionDeduplicates(t *testing.T) {
+	srv := newAgentTestServer(t, agentToken)
+	body := map[string]any{"suggested_type": "Absage", "occurred_on": today(), "reason": "Absage?", "gmail_message_id": "msg-1"}
+	first := callWith(t, srv, http.MethodPost, "/api/agent/suggestions", agentToken, body)
+	expectStatus(t, first, http.StatusCreated)
+	created := first.object(t)
+	if created["gmail_message_id"] != "msg-1" {
+		t.Fatalf("Vorschlag: %v", created)
+	}
+	body["reason"] = "anders"
+	again := callWith(t, srv, http.MethodPost, "/api/agent/suggestions", agentToken, body)
+	expectStatus(t, again, http.StatusOK)
+	if o := again.object(t); o["id"] != created["id"] || o["reason"] != "Absage?" {
+		t.Fatalf("Dublette: %v", o)
+	}
+	if items := call(t, srv, http.MethodGet, "/api/v1/suggestions", nil).array(t); len(items) != 1 {
+		t.Fatalf("Vorschläge: %v", items)
+	}
+	body["gmail_message_id"] = "a/b"
+	if res := callWith(t, srv, http.MethodPost, "/api/agent/suggestions", agentToken, body); res.Status != http.StatusBadRequest {
+		t.Errorf("ungültige Message-ID: Status %d", res.Status)
+	}
+}
