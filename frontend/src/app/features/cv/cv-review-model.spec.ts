@@ -39,4 +39,25 @@ describe('cv-review-model', () => {
     expect(sectionLines(base, 'summary')).toEqual(['Alt.']);
     expect(sectionLines(base, 'headline')).toEqual(['Entwicklerin']);
   });
+
+  it('wertet leere optionale Felder in Einträgen nicht als Änderung', () => {
+    const proposal: Cv = { ...base, education: [{ ...base.education[0], details: '' }], experience: [{ ...base.experience[0], location: '  ' }] };
+    expect(changedSections(base, proposal)).toEqual([]);
+  });
+
+  it('wertet fehlende und leere Berufsbezeichnung gleich', () => {
+    const without: Cv = { ...base, person: { name: 'Erika', links: [] } };
+    expect(changedSections(without, { ...without, person: { ...without.person, headline: '' } })).toEqual([]);
+  });
+
+  it('erkennt eine geänderte Reihenfolge', () => {
+    const proposal: Cv = { ...base, skills: [{ category: 'Frontend', items: ['TypeScript', 'Angular'] }] };
+    expect(changedSections(base, proposal)).toEqual(['skills']);
+  });
+
+  it('zeigt den Projektlink, damit eine reine Link-Änderung sichtbar ist', () => {
+    const withUrl: Cv = { ...base, projects: [{ ...base.projects[0], url: 'https://join.example' }] };
+    expect(sectionLines(withUrl, 'projects')).toEqual(['Join: Kanban', 'Link: https://join.example', 'Technologien: JS']);
+    expect(changedSections(base, withUrl)).toEqual(['projects']);
+  });
 });

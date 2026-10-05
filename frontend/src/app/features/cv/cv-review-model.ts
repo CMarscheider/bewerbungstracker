@@ -26,14 +26,14 @@ export function sectionValue(cv: Cv, section: CvSection): unknown {
   }
 }
 
-/** JSON mit sortierten Schlüsseln, damit die Reihenfolge (Go vs. Browser) keine Rolle spielt. */
+/** JSON mit sortierten Schlüsseln, damit die Reihenfolge (Go vs. Browser) keine Rolle spielt; leere Felder zählen wie fehlende. */
 function stable(value: unknown): string {
   if (Array.isArray(value)) {
     return `[${value.map(stable).join(',')}]`;
   }
   if (value && typeof value === 'object') {
     const entries = Object.entries(value as Record<string, unknown>)
-      .filter(([, v]) => v !== undefined)
+      .filter(([, v]) => v !== undefined && !(typeof v === 'string' && v.trim() === ''))
       .sort(([a], [b]) => a.localeCompare(b));
     return `{${entries.map(([k, v]) => `${JSON.stringify(k)}:${stable(v)}`).join(',')}}`;
   }
@@ -59,7 +59,11 @@ export function sectionLines(cv: Cv, section: CvSection): string[] {
     case 'summary':
       return [cv.summary ?? ''].filter(Boolean);
     case 'projects':
-      return cv.projects.flatMap((p) => [`${p.name}${p.description ? `: ${p.description}` : ''}`, ...(p.technologies.length ? [`Technologien: ${p.technologies.join(', ')}`] : [])]);
+      return cv.projects.flatMap((p) => [
+        `${p.name}${p.description ? `: ${p.description}` : ''}`,
+        ...(p.url ? [`Link: ${p.url}`] : []),
+        ...(p.technologies.length ? [`Technologien: ${p.technologies.join(', ')}`] : []),
+      ]);
     case 'experience':
       return cv.experience.flatMap((e) => [
         `${month(e.start)} – ${month(e.end)}: ${e.role}, ${e.organization}${e.location ? ` (${e.location})` : ''}`,
