@@ -28,6 +28,7 @@ const agentNotePrefix = "Agent: "
 const (
 	maxReasonLen  = 1000
 	maxOutcomeLen = 200
+	maxThreadLen  = 100
 )
 
 // OpenApplication ist eine laufende Bewerbung, wie sie die Postfach-Auswertung braucht.
@@ -157,19 +158,26 @@ func agentNote(note *string) *string {
 	return &text
 }
 
-// SetGmailThread merkt sich den Gmail-Thread der gesendeten Bewerbung; erneutes Setzen ist idempotent.
+// SetGmailThread merkt sich den Gmail-Thread der gesendeten Bewerbung. Dieselbe ID erneut ist ein No-op;
+// eine andere ID für dieselbe Bewerbung oder eine schon vergebene ID ergibt einen ConflictError.
 func (s *Service) SetGmailThread(ctx context.Context, appID uuid.UUID, threadID string) error {
 	threadID, err := requireText("gmail_thread_id", threadID)
 	if err != nil {
 		return err
+	}
+	if utf8.RuneCountInString(threadID) > maxThreadLen {
+		return &domain.ValidationError{Field: "gmail_thread_id", Detail: fmt.Sprintf("höchstens %d Zeichen", maxThreadLen)}
 	}
 	return s.inTx(ctx, func(q *store.Queries) error {
 		a, err := q.LockApplication(ctx, appID)
 		if err != nil {
 			return notFoundIfNoRows(err, "Bewerbung")
 		}
-		if a.GmailThreadID != nil && *a.GmailThreadID == threadID {
-			return nil
+		if a.GmailThreadID != nil {
+			if *a.GmailThreadID == threadID {
+				return nil
+			}
+			return &ConflictError{Detail: "Für diese Bewerbung ist bereits ein anderer Gmail-Thread hinterlegt"}
 		}
 		err = q.SetGmailThread(ctx, store.SetGmailThreadParams{ID: appID, GmailThreadID: &threadID})
 		if isUniqueViolation(err) {
@@ -260,9 +268,8 @@ func (s *Service) AcceptSuggestion(ctx context.Context, id uuid.UUID, appID *uui
 		default:
 			return &domain.ValidationError{Field: "application_id", Detail: "Vorschlag ist keiner Bewerbung zugeordnet"}
 		}
-		note := agentNotePrefix + sg.Reason
 		if _, err := s.addEvent(ctx, q, target, domain.NewEvent{
-			Type: domain.EventType(sg.SuggestedType), OccurredOn: sg.OccurredOn, DueOn: sg.DueOn, Note: &note,
+			Type: domain.EventType(sg.SuggestedType), OccurredOn: sg.OccurredOn, DueOn: sg.DueOn, Note: agentNote(&sg.Reason),
 		}); err != nil {
 			return err
 		}

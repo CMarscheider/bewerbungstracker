@@ -322,3 +322,176 @@ func TestMarkMailProcessedValidation(t *testing.T) {
 		t.Errorf("erwartet NotFoundError, bekommen %v", err)
 	}
 }
+
+// suggestionAppID liest die gespeicherte Zuordnung eines Vorschlags direkt aus der Datenbank.
+func suggestionAppID(t *testing.T, id uuid.UUID) (*uuid.UUID, string) {
+	t.Helper()
+	var (
+		appID *uuid.UUID
+		state string
+	)
+	err := testPool.QueryRow(ctx, "SELECT application_id, state FROM status_suggestions WHERE id = $1", id).Scan(&appID, &state)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return appID, state
+}
+
+func TestAcceptSuggestionOverridesApplication(t *testing.T) {
+	svc := newService(t)
+	assignedTo := agentApp(t, svc)
+	other := appliedApp(t, svc)
+	s, err := svc.CreateSuggestion(ctx, sampleSuggestion(&assignedTo.ID))
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := svc.AcceptSuggestion(ctx, s.ID, &other.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.ID != other.ID || got.Status != domain.Absage {
+		t.Errorf("Bewerbung = %+v", got)
+	}
+	if first, _ := svc.GetApplication(ctx, assignedTo.ID); first.Status != domain.Vorgemerkt {
+		t.Errorf("ursprüngliche Bewerbung verändert: %s", first.Status)
+	}
+	if appID, state := suggestionAppID(t, s.ID); appID == nil || *appID != other.ID || state != service.SuggestionAccepted {
+		t.Errorf("Vorschlag: application_id=%v state=%s", appID, state)
+	}
+}
+
+func TestAcceptSuggestionUnknownApplicationKeepsOpen(t *testing.T) {
+	svc := newService(t)
+	s, err := svc.CreateSuggestion(ctx, sampleSuggestion(nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var nf *service.NotFoundError
+	if _, err := svc.AcceptSuggestion(ctx, s.ID, ptr(uuid.New())); !errors.As(err, &nf) {
+		t.Fatalf("erwartet NotFoundError, bekommen %v", err)
+	}
+	if appID, state := suggestionAppID(t, s.ID); appID != nil || state != service.SuggestionOpen {
+		t.Errorf("Vorschlag: application_id=%v state=%s", appID, state)
+	}
+}
+
+func TestAcceptUnassignedSuggestionStoresApplication(t *testing.T) {
+	svc := newService(t)
+	app := appliedApp(t, svc)
+	s, err := svc.CreateSuggestion(ctx, sampleSuggestion(nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.AcceptSuggestion(ctx, s.ID, &app.ID); err != nil {
+		t.Fatal(err)
+	}
+	if appID, state := suggestionAppID(t, s.ID); appID == nil || *appID != app.ID || state != service.SuggestionAccepted {
+		t.Errorf("Vorschlag: application_id=%v state=%s", appID, state)
+	}
+}
+
+func TestAcceptSuggestionDoesNotDoublePrefix(t *testing.T) {
+	svc := newService(t)
+	app := appliedApp(t, svc)
+	in := sampleSuggestion(&app.ID)
+	in.Reason = "Agent: Absage erkannt"
+	s, err := svc.CreateSuggestion(ctx, in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := svc.AcceptSuggestion(ctx, s.ID, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if note := got.Events[len(got.Events)-1].Note; note == nil || *note != "Agent: Absage erkannt" {
+		t.Errorf("Notiz = %v", note)
+	}
+}
+
+func TestAgentAddEventDefaultNote(t *testing.T) {
+	for name, note := range map[string]*string{"nil": nil, "leer": ptr("  ")} {
+		t.Run(name, func(t *testing.T) {
+			svc := newService(t)
+			app := agentApp(t, svc)
+			e, err := svc.AgentAddEvent(ctx, app.ID, domain.NewEvent{Type: domain.Beworben, OccurredOn: day(0), Note: note})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if e.Note == nil || *e.Note != "Agent: automatisch erfasst" {
+				t.Errorf("Notiz = %v", e.Note)
+			}
+		})
+	}
+}
+
+func TestSetGmailThreadRejectsDifferentID(t *testing.T) {
+	svc := newService(t)
+	app := agentApp(t, svc)
+	if err := svc.SetGmailThread(ctx, app.ID, "thread-a"); err != nil {
+		t.Fatal(err)
+	}
+	var ce *service.ConflictError
+	if err := svc.SetGmailThread(ctx, app.ID, "thread-b"); !errors.As(err, &ce) {
+		t.Fatalf("erwartet ConflictError, bekommen %v", err)
+	}
+	got, _ := svc.GetApplication(ctx, app.ID)
+	if got.GmailThreadID == nil || *got.GmailThreadID != "thread-a" {
+		t.Errorf("GmailThreadID = %v", got.GmailThreadID)
+	}
+	var ve *domain.ValidationError
+	if err := svc.SetGmailThread(ctx, app.ID, strings.Repeat("a", 101)); !errors.As(err, &ve) || ve.Field != "gmail_thread_id" {
+		t.Errorf("erwartet ValidationError gmail_thread_id, bekommen %v", err)
+	}
+}
+
+func TestCreateSuggestionRejectsDueOnAndLongReason(t *testing.T) {
+	svc := newService(t)
+	var ve *domain.ValidationError
+	withDue := sampleSuggestion(nil) // Absage hat keine Frist
+	withDue.DueOn = ptr(day(5))
+	if _, err := svc.CreateSuggestion(ctx, withDue); !errors.As(err, &ve) || ve.Field != "due_on" {
+		t.Errorf("erwartet ValidationError due_on, bekommen %v", err)
+	}
+	long := sampleSuggestion(nil)
+	long.Reason = strings.Repeat("ä", 1001)
+	if _, err := svc.CreateSuggestion(ctx, long); !errors.As(err, &ve) || ve.Field != "reason" {
+		t.Errorf("erwartet ValidationError reason, bekommen %v", err)
+	}
+	ok := sampleSuggestion(nil)
+	ok.Reason = strings.Repeat("ä", 1000)
+	if _, err := svc.CreateSuggestion(ctx, ok); err != nil {
+		t.Errorf("1000 Zeichen abgelehnt: %v", err)
+	}
+}
+
+func TestListOpenAgentApplicationsMailSubjectAndOrder(t *testing.T) {
+	svc := newService(t)
+	vorgemerkt := domain.NewEvent{Type: domain.Vorgemerkt, OccurredOn: day(0)}
+	beta, err := svc.CreateApplication(ctx, newApp(mustCompany(t, svc, "beta").ID, "Frontend", vorgemerkt))
+	if err != nil {
+		t.Fatal(err)
+	}
+	alpha, err := svc.CreateApplication(ctx, newApp(mustCompany(t, svc, "Alpha").ID, "Frontend", vorgemerkt))
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = testPool.Exec(ctx, `INSERT INTO application_documents (application_id, version, language, cover_letter, mail_subject, mail_body)
+		VALUES ($1, 1, 'de', 'Anschreiben', 'Bewerbung als Frontend-Entwickler', 'Hallo')`, beta.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	list, err := svc.ListOpenAgentApplications(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(list) != 2 || list[0].ID != alpha.ID || list[1].ID != beta.ID {
+		t.Fatalf("Reihenfolge = %+v", list)
+	}
+	if list[0].MailSubject != nil {
+		t.Errorf("Alpha ohne Unterlagen hat Betreff %v", *list[0].MailSubject)
+	}
+	if list[1].MailSubject == nil || *list[1].MailSubject != "Bewerbung als Frontend-Entwickler" {
+		t.Errorf("MailSubject = %v", list[1].MailSubject)
+	}
+}
