@@ -11,6 +11,7 @@ import (
 	"sync"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	"golang.org/x/time/rate"
 )
@@ -49,10 +50,10 @@ func agentReq(h http.Handler, path, auth string) *httptest.ResponseRecorder {
 
 func limitedAgent(authBurst, anonBurst int) http.Handler {
 	limits := agentLimits{
-		auth: newAgentLimiter(rate.Every(time.Hour), authBurst),
-		anon: newAgentLimiter(rate.Every(time.Hour), anonBurst),
+		auth: rate.NewLimiter(rate.Every(time.Hour), authBurst),
+		anon: rate.NewLimiter(rate.Every(time.Hour), anonBurst),
 	}
-	return requireAgentToken(testToken, limits, newWarnThrottle(slog.New(slog.DiscardHandler), authWarnInterval), okHandler())
+	return requireAgentToken(testToken, limits, newLogThrottle(slog.New(slog.DiscardHandler), authWarnInterval), okHandler())
 }
 
 func expectTooMany(t *testing.T, rec *httptest.ResponseRecorder) {
@@ -146,7 +147,7 @@ func (c *fakeClock) advance(d time.Duration) {
 func TestAgentAuthWarningIsThrottled(t *testing.T) {
 	var logs bytes.Buffer
 	clock := &fakeClock{t: time.Date(2026, 10, 5, 12, 0, 0, 0, time.UTC)}
-	warner := newWarnThrottle(slog.New(slog.NewJSONHandler(&logs, nil)), authWarnInterval)
+	warner := newLogThrottle(slog.New(slog.NewJSONHandler(&logs, nil)), authWarnInterval)
 	warner.now = clock.now
 	// Ungedrosselt, damit alle 50 Fehlversuche die Token-Prüfung erreichen.
 	unlimited := agentLimits{auth: rate.NewLimiter(rate.Inf, 0), anon: rate.NewLimiter(rate.Inf, 0)}
@@ -189,8 +190,8 @@ func TestAgentAuthWarningIsThrottled(t *testing.T) {
 
 func TestAgentThrottledRequestsDoNotWarn(t *testing.T) {
 	var logs bytes.Buffer
-	limits := agentLimits{auth: newAgentLimiter(rate.Every(time.Hour), 1), anon: newAgentLimiter(rate.Every(time.Hour), 1)}
-	warner := newWarnThrottle(slog.New(slog.NewJSONHandler(&logs, nil)), authWarnInterval)
+	limits := agentLimits{auth: rate.NewLimiter(rate.Every(time.Hour), 1), anon: rate.NewLimiter(rate.Every(time.Hour), 1)}
+	warner := newLogThrottle(slog.New(slog.NewJSONHandler(&logs, nil)), authWarnInterval)
 	h := requireAgentToken(testToken, limits, warner, okHandler())
 	agentReq(h, "/api/agent/cv", "Bearer falsch")
 	expectTooMany(t, agentReq(h, "/api/agent/cv", "Bearer falsch"))
@@ -198,25 +199,45 @@ func TestAgentThrottledRequestsDoNotWarn(t *testing.T) {
 	if n := len(logLines(t, &logs)); n != 1 {
 		t.Fatalf("%d Logzeilen, erwartet 1: %s", n, logs.String())
 	}
-	if warner.suppressed != 0 {
-		t.Errorf("suppressed = %d, gedrosselte Anfragen sollen nicht zählen", warner.suppressed)
+	if n := warner.pending(warnKey); n != 0 {
+		t.Errorf("unterdrückt = %d, gedrosselte Anfragen sollen nicht zählen", n)
 	}
+}
+
+// pending liest einen Zähler unter dem Mutex (nur für Tests).
+func (t *logThrottle) pending(key string) int {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	return t.counts[key]
+}
+
+func newTestLogRequests(logs *bytes.Buffer, clock *fakeClock, next http.Handler) http.Handler {
+	logger := slog.New(slog.NewJSONHandler(logs, nil))
+	rejects := newLogThrottle(logger, agentRejectInterval)
+	if clock != nil {
+		rejects.now = clock.now
+	}
+	return logRequests(logger, rejects, next)
 }
 
 func TestLogRequestsXForwardedFor(t *testing.T) {
 	var logs bytes.Buffer
-	h := logRequests(slog.New(slog.NewJSONHandler(&logs, nil)), okHandler())
+	h := newTestLogRequests(&logs, nil, okHandler())
 
 	h.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/api/v1/cv", nil))
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/cv", nil)
 	req.Header.Set("X-Forwarded-For", "203.0.113.7, 10.0.0.1")
 	h.ServeHTTP(httptest.NewRecorder(), req)
 	long := httptest.NewRequest(http.MethodGet, "/api/v1/cv", nil)
-	long.Header.Set("X-Forwarded-For", strings.Repeat("a", 500))
+	long.Header.Set("X-Forwarded-For", strings.Repeat("a", 500)+", 198.51.100.9")
 	h.ServeHTTP(httptest.NewRecorder(), long)
+	// Mehrbyte-Zeichen, damit der Schnitt mitten in einem Zeichen liegt.
+	multi := httptest.NewRequest(http.MethodGet, "/api/v1/cv", nil)
+	multi.Header.Set("X-Forwarded-For", strings.Repeat("ä", 150)+"x")
+	h.ServeHTTP(httptest.NewRecorder(), multi)
 
 	lines := logLines(t, &logs)
-	if len(lines) != 3 {
+	if len(lines) != 4 {
 		t.Fatalf("%d Logzeilen: %s", len(lines), logs.String())
 	}
 	if _, ok := lines[0]["xff_untrusted"]; ok {
@@ -225,7 +246,94 @@ func TestLogRequestsXForwardedFor(t *testing.T) {
 	if lines[1]["xff_untrusted"] != "203.0.113.7, 10.0.0.1" {
 		t.Errorf("xff_untrusted = %v", lines[1]["xff_untrusted"])
 	}
-	if got, _ := lines[2]["xff_untrusted"].(string); got != strings.Repeat("a", 200) {
-		t.Errorf("xff_untrusted nicht auf 200 Zeichen gekürzt: Länge %d", len(got))
+	got, _ := lines[2]["xff_untrusted"].(string)
+	if want := "…" + (strings.Repeat("a", 500) + ", 198.51.100.9")[514-200:]; got != want {
+		t.Errorf("xff_untrusted = %q, erwartet Ende mit Präfix …: %q", got, want)
+	}
+	got, _ = lines[3]["xff_untrusted"].(string)
+	if !strings.HasPrefix(got, "…") || !strings.HasSuffix(got, "äx") || len(got) > len("…")+200 {
+		t.Errorf("xff_untrusted = %q", got)
+	}
+	if !utf8.ValidString(got) || strings.ContainsRune(got, utf8.RuneError) {
+		t.Errorf("xff_untrusted kein gültiges UTF-8: %q", got)
+	}
+}
+
+func TestXFFTailIsValidUTF8(t *testing.T) {
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r.Header.Set("X-Forwarded-For", strings.Repeat("ä", 150)+"x")
+	v := xffArgs(r)[1].(string)
+	if !utf8.ValidString(v) || v != "…"+strings.Repeat("ä", 99)+"x" {
+		t.Errorf("xffArgs = %q", v)
+	}
+}
+
+func TestLogRequestsAggregatesAgentRejections(t *testing.T) {
+	var logs bytes.Buffer
+	clock := &fakeClock{t: time.Date(2026, 10, 5, 12, 0, 0, 0, time.UTC)}
+	status := http.StatusUnauthorized
+	h := newTestLogRequests(&logs, clock, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(status)
+	}))
+	send := func(path string) { h.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, path, nil)) }
+
+	for range 30 {
+		send("/api/agent/cv")
+	}
+	status = http.StatusTooManyRequests
+	for range 20 {
+		send("/api/agent/cv")
+	}
+	// Andere Pfade und Status bleiben einzeln geloggt.
+	send("/api/v1/cv")
+	status = http.StatusOK
+	send("/api/agent/cv")
+
+	lines := logLines(t, &logs)
+	if len(lines) != 3 {
+		t.Fatalf("%d Logzeilen, erwartet 3: %s", len(lines), logs.String())
+	}
+	if lines[0]["msg"] != "agent-api: abgewiesene Anfragen" || lines[0]["unauthorized"] != float64(1) || lines[0]["throttled"] != float64(0) {
+		t.Errorf("erste Zusammenfassung = %v", lines[0])
+	}
+	if lines[1]["msg"] != "request" || lines[1]["path"] != "/api/v1/cv" || lines[1]["status"] != float64(429) {
+		t.Errorf("Zeile 2 = %v", lines[1])
+	}
+	if lines[2]["msg"] != "request" || lines[2]["status"] != float64(200) {
+		t.Errorf("Zeile 3 = %v", lines[2])
+	}
+
+	clock.advance(agentRejectInterval)
+	status = http.StatusTooManyRequests
+	send("/api/agent/cv")
+	lines = logLines(t, &logs)
+	if len(lines) != 4 {
+		t.Fatalf("%d Logzeilen, erwartet 4: %s", len(lines), logs.String())
+	}
+	if lines[3]["unauthorized"] != float64(29) || lines[3]["throttled"] != float64(21) {
+		t.Errorf("zweite Zusammenfassung = %v", lines[3])
+	}
+}
+
+func TestAgentDisabledReturns404BeforeThrottling(t *testing.T) {
+	limits := agentLimits{auth: rate.NewLimiter(rate.Every(time.Hour), 1), anon: rate.NewLimiter(rate.Every(time.Hour), 1)}
+	h := requireAgentToken("", limits, newLogThrottle(slog.New(slog.DiscardHandler), authWarnInterval), okHandler())
+	for i := range 5 {
+		if rec := agentReq(h, "/api/agent/cv", "Bearer x"); rec.Code != http.StatusNotFound {
+			t.Fatalf("Anfrage %d: Status %d, erwartet 404", i+1, rec.Code)
+		}
+	}
+}
+
+func TestAgentWarningOmitsPresentedToken(t *testing.T) {
+	var logs bytes.Buffer
+	unlimited := agentLimits{auth: rate.NewLimiter(rate.Inf, 0), anon: rate.NewLimiter(rate.Inf, 0)}
+	h := requireAgentToken(testToken, unlimited, newLogThrottle(slog.New(slog.NewJSONHandler(&logs, nil)), authWarnInterval), okHandler())
+	agentReq(h, "/api/agent/cv", "Bearer geheimes-falsches-token")
+	if logs.Len() == 0 {
+		t.Fatal("keine Warnung geschrieben")
+	}
+	if strings.Contains(logs.String(), "geheimes-falsches-token") {
+		t.Errorf("Warnung enthält das Token: %s", logs.String())
 	}
 }

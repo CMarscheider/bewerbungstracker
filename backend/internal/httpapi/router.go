@@ -111,11 +111,12 @@ func NewRouter(svc *service.Service, logger *slog.Logger, opts ...RouterOption) 
 			Status: http.StatusNotFound, Detail: "Unbekannter Endpunkt"})
 	})
 	limits := agentLimits{
-		auth: newAgentLimiter(cfg.agentRate, cfg.agentBurst),
-		anon: newAgentLimiter(cfg.agentAnonRate, cfg.agentAnonBurst),
+		auth: rate.NewLimiter(cfg.agentRate, cfg.agentBurst),
+		anon: rate.NewLimiter(cfg.agentAnonRate, cfg.agentAnonBurst),
 	}
-	warner := newWarnThrottle(logger, authWarnInterval)
-	return logRequests(logger, recoverPanics(logger, limitBody(
+	warner := newLogThrottle(logger, authWarnInterval)
+	rejects := newLogThrottle(logger, agentRejectInterval)
+	return logRequests(logger, rejects, recoverPanics(logger, limitBody(
 		requireAgentToken(cfg.agentToken, limits, warner, mux)))), nil
 }
 

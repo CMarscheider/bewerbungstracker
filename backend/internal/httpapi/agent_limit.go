@@ -26,11 +26,6 @@ type agentLimits struct {
 	auth, anon *rate.Limiter
 }
 
-// newAgentLimiter erzeugt einen Token-Bucket für die Agent-API.
-func newAgentLimiter(r rate.Limit, burst int) *rate.Limiter {
-	return rate.NewLimiter(r, burst)
-}
-
 // writeTooManyRequests antwortet mit 429; bei den Raten oben ist nach spätestens einer Sekunde wieder Platz.
 func writeTooManyRequests(w http.ResponseWriter) {
 	w.Header().Set("Retry-After", "1")

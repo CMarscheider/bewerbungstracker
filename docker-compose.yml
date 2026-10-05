@@ -1,5 +1,12 @@
 name: bewerbungsmanager
 
+# Log-Rotation für alle Dienste: höchstens 3 Dateien à 10 MB je Container.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   db:
     image: postgres:17-alpine
@@ -16,6 +23,7 @@ services:
       timeout: 3s
       retries: 20
     restart: unless-stopped
+    logging: *logging
 
   gotenberg:
     image: gotenberg/gotenberg:8.37.0
@@ -27,6 +35,7 @@ services:
       timeout: 5s
       retries: 12
     restart: unless-stopped
+    logging: *logging
 
   backend:
     build: ./backend
@@ -40,6 +49,7 @@ services:
       gotenberg:
         condition: service_healthy
     restart: unless-stopped
+    logging: *logging
 
   frontend:
     build: ./frontend
@@ -48,6 +58,7 @@ services:
     depends_on:
       - backend
     restart: unless-stopped
+    logging: *logging
 
 volumes:
   pgdata:

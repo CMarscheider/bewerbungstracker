@@ -3,39 +3,37 @@ package httpapi
 import (
 	"crypto/sha256"
 	"crypto/subtle"
-	"log/slog"
 	"net/http"
 	"strings"
-	"sync"
 	"time"
 )
 
 // agentPrefix ist der Pfadpräfix der Agent-API.
 const agentPrefix = "/api/agent/"
 
-// requireAgentToken schützt und drosselt die Agent-API: Ohne konfiguriertes Token gibt es sie nicht (404),
+// requireAgentToken schützt und drosselt die Agent-API: Ohne konfiguriertes Token gibt es sie nicht (404, ungedrosselt),
 // sonst ist "Authorization: Bearer <token>" Pflicht (401, Warnung gedrosselt). Anfragen mit gültigem
 // Token zählen gegen limits.auth, alle anderen gegen limits.anon; über dem Limit gibt es 429 ohne
 // Warnung. Andere Pfade bleiben unberührt.
-func requireAgentToken(token string, limits agentLimits, warner *warnThrottle, next http.Handler) http.Handler {
+func requireAgentToken(token string, limits agentLimits, warner *logThrottle, next http.Handler) http.Handler {
 	want := sha256.Sum256([]byte(token))
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !strings.HasPrefix(r.URL.Path, agentPrefix) {
 			next.ServeHTTP(w, r)
 			return
 		}
-		valid := token != "" && validBearer(r.Header.Get("Authorization"), want)
+		if token == "" {
+			writeProblem(w, problem{Type: problemBase + "not-found", Title: "Nicht gefunden",
+				Status: http.StatusNotFound, Detail: "Die Agent-API ist nicht eingerichtet"})
+			return
+		}
+		valid := validBearer(r.Header.Get("Authorization"), want)
 		limiter := limits.anon
 		if valid {
 			limiter = limits.auth
 		}
 		if !limiter.Allow() {
 			writeTooManyRequests(w)
-			return
-		}
-		if token == "" {
-			writeProblem(w, problem{Type: problemBase + "not-found", Title: "Nicht gefunden",
-				Status: http.StatusNotFound, Detail: "Die Agent-API ist nicht eingerichtet"})
 			return
 		}
 		if !valid {
@@ -66,34 +64,17 @@ func validBearer(header string, want [sha256.Size]byte) bool {
 // authWarnInterval ist der Mindestabstand zwischen zwei Warnungen über ungültige Tokens.
 const authWarnInterval = time.Minute
 
-// warnThrottle schreibt höchstens eine Warnung je Intervall und zählt die unterdrückten mit,
-// damit Fehlversuche aus dem Internet das Log nicht fluten.
-type warnThrottle struct {
-	logger     *slog.Logger
-	interval   time.Duration
-	now        func() time.Time
-	mu         sync.Mutex
-	last       time.Time
-	suppressed int
-}
+// warnKey ist der Zählerschlüssel der Token-Warnung in logThrottle.
+const warnKey = "warn"
 
-func newWarnThrottle(logger *slog.Logger, interval time.Duration) *warnThrottle {
-	return &warnThrottle{logger: logger, interval: interval, now: time.Now}
-}
-
-func (t *warnThrottle) warn(msg string, args ...any) {
-	t.mu.Lock()
-	now := t.now()
-	if !t.last.IsZero() && now.Sub(t.last) < t.interval {
-		t.suppressed++
-		t.mu.Unlock()
+// warn schreibt höchstens eine Warnung je Intervall; die Zahl der unterdrückten steht in "suppressed".
+func (t *logThrottle) warn(msg string, args ...any) {
+	counts, ok := t.tick(warnKey)
+	if !ok {
 		return
 	}
-	suppressed := t.suppressed
-	t.last, t.suppressed = now, 0
-	t.mu.Unlock()
-	if suppressed > 0 {
-		args = append(args, "suppressed", suppressed)
+	if n := counts[warnKey] - 1; n > 0 {
+		args = append(args, "suppressed", n)
 	}
 	t.logger.Warn(msg, args...)
 }
