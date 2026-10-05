@@ -101,14 +101,22 @@ Optional: `GOTENBERG_URL` (z. B. `http://localhost:3000` für einen lokalen `got
 
 ### Agent-API
 
-Für Claude-Agenten gibt es unter `/api/agent/` eine eigene API, die einen Lebenslauf-Optimierungslauf
-abholt und den Vorschlag zurückliefert. Sie ist nur aktiv, wenn `AGENT_TOKEN` gesetzt ist (in `.env`,
-mind. 32 Zeichen, z. B. `openssl rand -hex 32`); ohne Token antwortet sie mit 404. Jeder Aufruf braucht
-`Authorization: Bearer <token>`.
+Für Claude-Agenten gibt es unter `/api/agent/` eine eigene API, die eine angeforderte
+Lebenslauf-Optimierung abholt und den Vorschlag zurückliefert. Sie ist nur aktiv, wenn `AGENT_TOKEN`
+gesetzt ist (in `.env`, mind. 32 Zeichen, z. B. `openssl rand -hex 32`); ohne Token antwortet sie mit 404.
+Jeder Aufruf braucht `Authorization: Bearer <token>`, sonst 401.
 
-- `GET /api/agent/cv` – gespeicherter Lebenslauf
-- `GET /api/agent/cv-reviews?state=angefordert` – angeforderte Optimierungen
-- `PUT /api/agent/cv-reviews/{id}` – Vorschlag (`proposal`) und Hinweise (`notes`) abliefern
+- `GET /api/agent/cv` – aktueller Lebenslauf
+- `GET /api/agent/cv-reviews?state=angefordert` – Optimierungen in einem Zustand (`state` ist Pflicht)
+- `PUT /api/agent/cv-reviews/{id}` – Vorschlag abliefern: `proposal` ist ein vollständiger Lebenslauf
+  (`updated_at` wird ignoriert), dazu `notes` (Hinweise). 409, wenn der Lauf nicht mehr `angefordert` ist
+  (in der Oberfläche abgeschlossen oder schon abgeliefert); nach einer verlorenen Antwort vor einem
+  erneuten Versuch die Liste neu lesen.
+
+> **Achtung:** `/api/v1` hat keine Anmeldung. Bei einer Freigabe nach außen (z. B. Tailscale Funnel)
+> nur den Pfad `/api/agent/` weiterleiten (Ziel `http://127.0.0.1:4200/api/agent/`), nie `/`, `/api/v1`,
+> `/api/docs` oder `/api/openapi.json`. Rate-Limit und Logging der echten Client-IP sind Voraussetzung,
+> siehe „Offene Punkte“ in der [Design-Spec](docs/superpowers/specs/2026-10-03-agenten-automatisierung-design.md).
 
 ## Projektstruktur
 
