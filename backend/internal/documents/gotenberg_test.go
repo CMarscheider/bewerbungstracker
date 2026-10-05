@@ -13,6 +13,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/testcontainers/testcontainers-go"
@@ -123,9 +125,9 @@ func TestGotenbergRejectsOversizedPDF(t *testing.T) {
 // gotenbergImage ist die festgelegte Gotenberg-Version (auch in docker-compose.yml).
 const gotenbergImage = "gotenberg/gotenberg:8.37.0"
 
-// TestGotenbergRendersCV erzeugt mit einem echten Gotenberg-Container ein PDF.
-// Mit CV_PDF_OUT=<pfad> wird das Ergebnis zum Ansehen gespeichert.
-func TestGotenbergRendersCV(t *testing.T) {
+// startGotenberg startet einen echten Gotenberg-Container und liefert dessen URL.
+func startGotenberg(t *testing.T) string {
+	t.Helper()
 	if testing.Short() {
 		t.Skip("braucht Docker")
 	}
@@ -145,23 +147,74 @@ func TestGotenbergRendersCV(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	return url
+}
 
+// TestGotenbergRendersCV erzeugt mit einem echten Gotenberg-Container ein PDF.
+// Mit CV_PDF_OUT=<pfad> wird das Ergebnis zum Ansehen gespeichert.
+func TestGotenbergRendersCV(t *testing.T) {
+	url := startGotenberg(t)
 	html, err := documents.RenderCV(sample(t), samplePhoto(t))
 	if err != nil {
 		t.Fatal(err)
 	}
-	pdf, err := documents.NewGotenberg(url).Convert(ctx, html, documents.Fonts())
+	pdf := convert(t, url, html)
+	if out := os.Getenv("CV_PDF_OUT"); out != "" {
+		if err := os.WriteFile(out, pdf, 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+// TestGotenbergRendersApplication prüft, dass das Anschreiben genau eine Seite bleibt – auch mit
+// zu langem Text – und der Lebenslauf danach folgt. Mit APPLICATION_PDF_OUT=<pfad> wird das
+// Ergebnis mit normalem Anschreiben zum Ansehen gespeichert.
+func TestGotenbergRendersApplication(t *testing.T) {
+	url := startGotenberg(t)
+	letter := sampleLetter()
+	letter.CoverLetter = "Sehr geehrte Damen und Herren,\n\n" +
+		strings.Repeat("mit großem Interesse habe ich Ihre Stellenanzeige gelesen und bewerbe mich hiermit. ", 4) +
+		"\n\n" + strings.Repeat("In meinen Projekten habe ich Angular, TypeScript und Firebase eingesetzt. ", 5) +
+		"\n\nÜber eine Einladung zu einem Gespräch freue ich mich."
+	tooLong := sampleLetter()
+	tooLong.CoverLetter = strings.Repeat(strings.Repeat("Viel zu langer Text. ", 30)+"\n\n", 8)
+
+	for name, l := range map[string]documents.Letter{"normal": letter, "zu lang": tooLong} {
+		t.Run(name, func(t *testing.T) {
+			html, err := documents.RenderApplication(sample(t), samplePhoto(t), l)
+			if err != nil {
+				t.Fatal(err)
+			}
+			pdf := convert(t, url, html)
+			if n := pageCount(pdf); n != 2 {
+				t.Errorf("Seiten = %d, erwartet 2 (Anschreiben + Lebenslauf)", n)
+			}
+			if out := os.Getenv("APPLICATION_PDF_OUT"); out != "" && name == "normal" {
+				if err := os.WriteFile(out, pdf, 0o600); err != nil {
+					t.Fatal(err)
+				}
+			}
+		})
+	}
+}
+
+func convert(t *testing.T, url string, html []byte) []byte {
+	t.Helper()
+	pdf, err := documents.NewGotenberg(url).Convert(context.Background(), html, documents.Fonts())
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !bytes.HasPrefix(pdf, []byte("%PDF-")) || len(pdf) < 10_000 {
 		t.Fatalf("kein plausibles PDF (%d Bytes)", len(pdf))
 	}
-	if out := os.Getenv("CV_PDF_OUT"); out != "" {
-		if err := os.WriteFile(out, pdf, 0o600); err != nil {
-			t.Fatal(err)
-		}
-	}
+	return pdf
+}
+
+var pageObject = regexp.MustCompile(`/Type\s*/Page\b`)
+
+// pageCount zählt die Seitenobjekte (/Type /Page, nicht /Pages).
+func pageCount(pdf []byte) int {
+	return len(pageObject.FindAll(pdf, -1))
 }
 
 func samplePhoto(t *testing.T) []byte {

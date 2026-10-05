@@ -15,25 +15,50 @@ var templateFS embed.FS
 //go:embed fonts/*.ttf
 var fontFS embed.FS
 
-var cvTemplate = template.Must(template.New("cv.html.tmpl").Funcs(template.FuncMap{
+// templates enthält alle Vorlagen; cv.html.tmpl definiert die gemeinsamen Blöcke
+// "styles", "aside" und "cv-main", die application.html.tmpl wiederverwendet.
+var templates = template.Must(template.New("").Funcs(template.FuncMap{
 	"period":   period,
 	"safeURL":  safeURL,
 	"linkText": linkText,
-}).ParseFS(templateFS, "templates/cv.html.tmpl"))
+}).ParseFS(templateFS, "templates/*.tmpl"))
+
+// Labels sind die festen Texte der Vorlagen je Sprache.
+type Labels struct {
+	Contact, Skills, Languages, Profile, Projects, Experience, Education, Present, Live string
+	Closing, SubjectPrefix                                                              string
+	Months                                                                              [12]string
+}
+
+var labels = map[string]Labels{
+	"de": {Contact: "Kontakt", Skills: "Kenntnisse", Languages: "Sprachen", Profile: "Profil", Projects: "Projekte",
+		Experience: "Berufserfahrung", Education: "Ausbildung", Present: "heute", Live: "Live ansehen",
+		Closing: "Mit freundlichen Grüßen", SubjectPrefix: "Bewerbung als",
+		Months: [12]string{"Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"}},
+	"en": {Contact: "Contact", Skills: "Skills", Languages: "Languages", Profile: "Profile", Projects: "Projects",
+		Experience: "Experience", Education: "Education", Present: "present", Live: "View live",
+		Closing: "Kind regards", SubjectPrefix: "Application for",
+		Months: [12]string{"January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"}},
+}
 
 type cvView struct {
 	CV
 	Photo template.URL
+	L     Labels
+}
+
+func newCVView(cv CV, photo []byte, l Labels) cvView {
+	view := cvView{CV: cv, L: l}
+	if len(photo) > 0 {
+		view.Photo = template.URL("data:image/jpeg;base64," + base64.StdEncoding.EncodeToString(photo))
+	}
+	return view
 }
 
 // RenderCV erzeugt die HTML-Seite des Lebenslaufs; photo ist ein JPEG oder nil.
 func RenderCV(cv CV, photo []byte) ([]byte, error) {
-	view := cvView{CV: cv}
-	if len(photo) > 0 {
-		view.Photo = template.URL("data:image/jpeg;base64," + base64.StdEncoding.EncodeToString(photo))
-	}
 	var buf bytes.Buffer
-	if err := cvTemplate.Execute(&buf, view); err != nil {
+	if err := templates.ExecuteTemplate(&buf, "cv.html.tmpl", newCVView(cv, photo, labels["de"])); err != nil {
 		return nil, fmt.Errorf("lebenslauf-vorlage: %w", err)
 	}
 	return buf.Bytes(), nil
@@ -56,15 +81,15 @@ func Fonts() map[string][]byte {
 	return out
 }
 
-// period formatiert "2020-09" → "09/2020", "2024" → "2024"; leeres Ende → "heute".
-func period(start, end string) string {
-	return formatMonth(start) + " – " + formatMonth(end)
+// period formatiert "2020-09" → "09/2020", "2024" → "2024"; leeres Ende → present (z. B. "heute").
+func period(start, end, present string) string {
+	return formatMonth(start, present) + " – " + formatMonth(end, present)
 }
 
-func formatMonth(p string) string {
+func formatMonth(p, present string) string {
 	switch {
 	case p == "":
-		return "heute"
+		return present
 	case len(p) == 7 && p[4] == '-':
 		return p[5:] + "/" + p[:4]
 	default:
