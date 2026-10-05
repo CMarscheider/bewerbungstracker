@@ -27,6 +27,16 @@ export type { UndoLastEvent$Params as UndoLastEvent$Params } from './fn/applicat
 export { undoLastEvent as undoLastEvent } from './fn/applications/undo-last-event';
 export type { ListAllowedEvents$Params as ListAllowedEvents$Params } from './fn/applications/list-allowed-events';
 export { listAllowedEvents as listAllowedEvents } from './fn/applications/list-allowed-events';
+export type { RequestDocuments$Params as RequestDocuments$Params } from './fn/documents/request-documents';
+export { requestDocuments as requestDocuments } from './fn/documents/request-documents';
+export type { GetDocuments$Params as GetDocuments$Params } from './fn/documents/get-documents';
+export { getDocuments as getDocuments } from './fn/documents/get-documents';
+export type { UpdateDocuments$Params as UpdateDocuments$Params } from './fn/documents/update-documents';
+export { updateDocuments as updateDocuments } from './fn/documents/update-documents';
+export type { GetDocumentsPdf$Params as GetDocumentsPdf$Params } from './fn/documents/get-documents-pdf';
+export { getDocumentsPdf as getDocumentsPdf } from './fn/documents/get-documents-pdf';
+export type { CreateDraft$Params as CreateDraft$Params } from './fn/documents/create-draft';
+export { createDraft as createDraft } from './fn/documents/create-draft';
 export type { ListDeadlines$Params as ListDeadlines$Params } from './fn/dashboard/list-deadlines';
 export { listDeadlines as listDeadlines } from './fn/dashboard/list-deadlines';
 export type { ListAppointments$Params as ListAppointments$Params } from './fn/dashboard/list-appointments';
@@ -59,5 +69,9 @@ export type { AgentListCvReviews$Params as AgentListCvReviews$Params } from './f
 export { agentListCvReviews as agentListCvReviews } from './fn/agent/agent-list-cv-reviews';
 export type { AgentCompleteCvReview$Params as AgentCompleteCvReview$Params } from './fn/agent/agent-complete-cv-review';
 export { agentCompleteCvReview as agentCompleteCvReview } from './fn/agent/agent-complete-cv-review';
+export type { AgentListApplications$Params as AgentListApplications$Params } from './fn/agent/agent-list-applications';
+export { agentListApplications as agentListApplications } from './fn/agent/agent-list-applications';
 export type { AgentCreateApplication$Params as AgentCreateApplication$Params } from './fn/agent/agent-create-application';
 export { agentCreateApplication as agentCreateApplication } from './fn/agent/agent-create-application';
+export type { AgentPutDocuments$Params as AgentPutDocuments$Params } from './fn/agent/agent-put-documents';
+export { agentPutDocuments as agentPutDocuments } from './fn/agent/agent-put-documents';

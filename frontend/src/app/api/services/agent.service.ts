@@ -10,17 +10,23 @@ import { BaseService } from '../base-service';
 import { ApiConfiguration } from '../api-configuration';
 import { StrictHttpResponse } from '../strict-http-response';
 
+import { AgentApplication } from '../models/agent-application';
 import { agentCompleteCvReview } from '../fn/agent/agent-complete-cv-review';
 import { AgentCompleteCvReview$Params } from '../fn/agent/agent-complete-cv-review';
 import { agentCreateApplication } from '../fn/agent/agent-create-application';
 import { AgentCreateApplication$Params } from '../fn/agent/agent-create-application';
 import { agentGetCv } from '../fn/agent/agent-get-cv';
 import { AgentGetCv$Params } from '../fn/agent/agent-get-cv';
+import { agentListApplications } from '../fn/agent/agent-list-applications';
+import { AgentListApplications$Params } from '../fn/agent/agent-list-applications';
 import { agentListCvReviews } from '../fn/agent/agent-list-cv-reviews';
 import { AgentListCvReviews$Params } from '../fn/agent/agent-list-cv-reviews';
+import { agentPutDocuments } from '../fn/agent/agent-put-documents';
+import { AgentPutDocuments$Params } from '../fn/agent/agent-put-documents';
 import { Application } from '../models/application';
 import { Cv } from '../models/cv';
 import { CvReview } from '../models/cv-review';
+import { Documents } from '../models/documents';
 
 
 /**
@@ -137,6 +143,41 @@ export class AgentService extends BaseService {
     );
   }
 
+  /** Path part for operation `agentListApplications()` */
+  static readonly AgentListApplicationsPath = '/api/agent/applications';
+
+  /**
+   * Stellen in einem Unterlagen-Zustand (für den Agenten meist „angefordert“), älteste zuerst.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `agentListApplications()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  agentListApplications$Response(params: AgentListApplications$Params, context?: HttpContext): Observable<StrictHttpResponse<Array<AgentApplication>>> {
+    const obs = agentListApplications(this.http, this.rootUrl, params, context);
+    return obs;
+  }
+
+  /**
+   * Stellen in einem Unterlagen-Zustand (für den Agenten meist „angefordert“), älteste zuerst.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `agentListApplications$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  agentListApplications(params: AgentListApplications$Params, context?: HttpContext): Observable<Array<AgentApplication>> {
+    const resp = this.agentListApplications$Response(params, context);
+    return resp.pipe(
+      map((r: StrictHttpResponse<Array<AgentApplication>>): Array<AgentApplication> => r.body)
+    );
+  }
+
   /** Path part for operation `agentCreateApplication()` */
   static readonly AgentCreateApplicationPath = '/api/agent/applications';
 
@@ -169,6 +210,41 @@ export class AgentService extends BaseService {
     const resp = this.agentCreateApplication$Response(params, context);
     return resp.pipe(
       map((r: StrictHttpResponse<Application>): Application => r.body)
+    );
+  }
+
+  /** Path part for operation `agentPutDocuments()` */
+  static readonly AgentPutDocumentsPath = '/api/agent/applications/{id}/documents';
+
+  /**
+   * Unterlagen abliefern; der Server rendert das PDF und legt ggf. den Gmail-Entwurf an.
+   *
+   * `version` = `documents_version` + 1. Eine erneute, gleiche Lieferung derselben Version ist ein No-op (200). 409, wenn keine Unterlagen angefordert sind, kein Lebenslauf gespeichert ist oder die Version veraltet ist; 503, wenn der PDF-Dienst nicht erreichbar ist (später erneut liefern).
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `agentPutDocuments()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  agentPutDocuments$Response(params: AgentPutDocuments$Params, context?: HttpContext): Observable<StrictHttpResponse<Documents>> {
+    const obs = agentPutDocuments(this.http, this.rootUrl, params, context);
+    return obs;
+  }
+
+  /**
+   * Unterlagen abliefern; der Server rendert das PDF und legt ggf. den Gmail-Entwurf an.
+   *
+   * `version` = `documents_version` + 1. Eine erneute, gleiche Lieferung derselben Version ist ein No-op (200). 409, wenn keine Unterlagen angefordert sind, kein Lebenslauf gespeichert ist oder die Version veraltet ist; 503, wenn der PDF-Dienst nicht erreichbar ist (später erneut liefern).
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `agentPutDocuments$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  agentPutDocuments(params: AgentPutDocuments$Params, context?: HttpContext): Observable<Documents> {
+    const resp = this.agentPutDocuments$Response(params, context);
+    return resp.pipe(
+      map((r: StrictHttpResponse<Documents>): Documents => r.body)
     );
   }
 

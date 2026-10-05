@@ -15,6 +15,8 @@ tags:
     description: "Übersicht: Fristen, Termine, Statistik"
   - name: Cv
     description: Lebenslauf
+  - name: Documents
+    description: "Bewerbungsunterlagen: Anschreiben + Lebenslauf als PDF, Gmail-Entwurf"
   - name: Agent
     description: "Für Claude-Agenten; verlangt Authorization: Bearer <AGENT_TOKEN>"
 paths:
@@ -216,6 +218,86 @@ paths:
               schema:
                 type: array
                 items: { $ref: "#/components/schemas/EventType" }
+        default: { $ref: "#/components/responses/Problem" }
+  /api/v1/applications/{id}/documents/request:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    post:
+      operationId: requestDocuments
+      tags: [Documents]
+      summary: Unterlagen beim Agenten anfordern (auch erneut, z. B. nach einem Fehler)
+      responses:
+        "200":
+          description: Angefordert
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Application" }
+        default: { $ref: "#/components/responses/Problem" }
+  /api/v1/applications/{id}/documents:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    get:
+      operationId: getDocuments
+      tags: [Documents]
+      summary: Aktuelle Fassung der Unterlagen (404, solange keine erstellt sind)
+      responses:
+        "200":
+          description: Unterlagen
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Documents" }
+        default: { $ref: "#/components/responses/Problem" }
+    put:
+      operationId: updateDocuments
+      tags: [Documents]
+      summary: Unterlagen bearbeiten (neue Version, neu gerendert; legt keinen Entwurf an)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DocumentsInput" }
+      responses:
+        "200":
+          description: Gespeichert
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Documents" }
+        default: { $ref: "#/components/responses/Problem" }
+  /api/v1/applications/{id}/documents/pdf:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    get:
+      operationId: getDocumentsPdf
+      tags: [Documents]
+      summary: Anschreiben + Lebenslauf als ein PDF (404 ohne Unterlagen)
+      responses:
+        "200":
+          description: PDF
+          headers:
+            Cache-Control:
+              schema: { type: string }
+            Content-Disposition:
+              schema: { type: string }
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+        default: { $ref: "#/components/responses/Problem" }
+  /api/v1/applications/{id}/documents/draft:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    post:
+      operationId: createDraft
+      tags: [Documents]
+      summary: Gmail-Entwurf (neu) anlegen
+      description: >
+        400 ohne Bewerbungsadresse, 503 wenn Gmail nicht eingerichtet oder nicht erreichbar ist,
+        409 bei abgelehnter Anmeldung (App-Passwort prüfen).
+      responses:
+        "200":
+          description: Entwurf angelegt
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Application" }
         default: { $ref: "#/components/responses/Problem" }
   /api/v1/deadlines:
     get:
@@ -443,6 +525,25 @@ paths:
               schema: { $ref: "#/components/schemas/CvReview" }
         default: { $ref: "#/components/responses/Problem" }
   /api/agent/applications:
+    get:
+      operationId: agentListApplications
+      tags: [Agent]
+      summary: Stellen in einem Unterlagen-Zustand (für den Agenten meist „angefordert“), älteste zuerst
+      security: [{ agentToken: [] }]
+      parameters:
+        - name: documents_state
+          in: query
+          required: true
+          schema: { $ref: "#/components/schemas/DocumentsState" }
+      responses:
+        "200":
+          description: Stellen
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/AgentApplication" }
+        default: { $ref: "#/components/responses/Problem" }
     post:
       operationId: agentCreateApplication
       tags: [Agent]
@@ -460,6 +561,30 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Application" }
+        default: { $ref: "#/components/responses/Problem" }
+  /api/agent/applications/{id}/documents:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    put:
+      operationId: agentPutDocuments
+      tags: [Agent]
+      summary: Unterlagen abliefern; der Server rendert das PDF und legt ggf. den Gmail-Entwurf an
+      description: >
+        `version` = `documents_version` + 1. Eine erneute, gleiche Lieferung derselben Version ist ein No-op (200).
+        409, wenn keine Unterlagen angefordert sind, kein Lebenslauf gespeichert ist oder die Version veraltet ist;
+        503, wenn der PDF-Dienst nicht erreichbar ist (später erneut liefern).
+      security: [{ agentToken: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AgentDocumentsInput" }
+      responses:
+        "200":
+          description: Gespeichert
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Documents" }
         default: { $ref: "#/components/responses/Problem" }
 components:
   securitySchemes:
@@ -584,7 +709,7 @@ components:
         created_by_agent: { type: boolean }
     Application:
       type: object
-      required: [id, company_id, company_name, position_title, status, phase, created_at, updated_at, events, created_by_agent]
+      required: [id, company_id, company_name, position_title, status, phase, documents_state, created_at, updated_at, events, created_by_agent]
       properties:
         id: { type: string, format: uuid }
         company_id: { type: string, format: uuid }
@@ -601,6 +726,9 @@ components:
         created_by_agent: { type: boolean }
         status: { $ref: "#/components/schemas/EventType" }
         phase: { $ref: "#/components/schemas/Phase" }
+        documents_state: { $ref: "#/components/schemas/DocumentsState" }
+        documents_error: { type: string }
+        gmail_draft_at: { type: string, format: date-time }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
         events:
@@ -620,6 +748,58 @@ components:
         posting_text: { type: string, maxLength: 30000 }
         fit_score: { type: integer, minimum: 0, maximum: 100 }
         fit_reason: { type: string, minLength: 1, maxLength: 1000, pattern: '\S' }
+    DocumentsState:
+      type: string
+      enum: [keine, angefordert, erstellt, entwurf_angelegt, portal, fehler]
+    DocumentsInput:
+      type: object
+      required: [language, cover_letter, mail_subject, mail_body]
+      properties:
+        language: { type: string, enum: [de, en] }
+        cover_letter: { type: string, minLength: 1, maxLength: 3000, pattern: '\S' }
+        profile_line: { type: string, maxLength: 400 }
+        highlights:
+          type: array
+          maxItems: 8
+          items: { type: string, minLength: 1, maxLength: 60, pattern: '\S' }
+        mail_subject: { type: string, minLength: 1, maxLength: 200, pattern: '^[^\r\n]*\S[^\r\n]*$' }
+        mail_body: { type: string, minLength: 1, maxLength: 3000, pattern: '\S' }
+    AgentDocumentsInput:
+      allOf:
+        - $ref: "#/components/schemas/DocumentsInput"
+        - type: object
+          required: [version]
+          properties:
+            version: { type: integer, minimum: 1 }
+    Documents:
+      type: object
+      required: [version, language, cover_letter, highlights, mail_subject, mail_body, updated_at]
+      properties:
+        version: { type: integer }
+        language: { type: string, enum: [de, en] }
+        cover_letter: { type: string }
+        profile_line: { type: string }
+        highlights: { type: array, items: { type: string } }
+        mail_subject: { type: string }
+        mail_body: { type: string }
+        file_name: { type: string }
+        rendered_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    AgentApplication:
+      type: object
+      required: [id, company_name, position_title, documents_state, documents_version]
+      properties:
+        id: { type: string, format: uuid }
+        company_name: { type: string }
+        company_website: { type: string }
+        position_title: { type: string }
+        job_url: { type: string }
+        location: { type: string }
+        contact_email: { type: string }
+        posting_text: { type: string }
+        fit_reason: { type: string }
+        documents_state: { $ref: "#/components/schemas/DocumentsState" }
+        documents_version: { type: integer, description: "0 = noch keine Unterlagen; zu liefern ist documents_version + 1" }
     Deadline:
       type: object
       required: [application_id, company_name, position_title, event_type, due_on, overdue]

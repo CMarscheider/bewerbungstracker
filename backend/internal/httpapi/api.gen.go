@@ -25,6 +25,24 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+// Defines values for AgentDocumentsInputLanguage.
+const (
+	AgentDocumentsInputLanguageDe AgentDocumentsInputLanguage = "de"
+	AgentDocumentsInputLanguageEn AgentDocumentsInputLanguage = "en"
+)
+
+// Valid indicates whether the value is a known member of the AgentDocumentsInputLanguage enum.
+func (e AgentDocumentsInputLanguage) Valid() bool {
+	switch e {
+	case AgentDocumentsInputLanguageDe:
+		return true
+	case AgentDocumentsInputLanguageEn:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CvReviewState.
 const (
 	CvReviewStateAbgeschlossen CvReviewState = "abgeschlossen"
@@ -40,6 +58,72 @@ func (e CvReviewState) Valid() bool {
 	case CvReviewStateAngefordert:
 		return true
 	case CvReviewStateFertig:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DocumentsLanguage.
+const (
+	DocumentsLanguageDe DocumentsLanguage = "de"
+	DocumentsLanguageEn DocumentsLanguage = "en"
+)
+
+// Valid indicates whether the value is a known member of the DocumentsLanguage enum.
+func (e DocumentsLanguage) Valid() bool {
+	switch e {
+	case DocumentsLanguageDe:
+		return true
+	case DocumentsLanguageEn:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DocumentsInputLanguage.
+const (
+	DocumentsInputLanguageDe DocumentsInputLanguage = "de"
+	DocumentsInputLanguageEn DocumentsInputLanguage = "en"
+)
+
+// Valid indicates whether the value is a known member of the DocumentsInputLanguage enum.
+func (e DocumentsInputLanguage) Valid() bool {
+	switch e {
+	case DocumentsInputLanguageDe:
+		return true
+	case DocumentsInputLanguageEn:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DocumentsState.
+const (
+	DocumentsStateAngefordert     DocumentsState = "angefordert"
+	DocumentsStateEntwurfAngelegt DocumentsState = "entwurf_angelegt"
+	DocumentsStateErstellt        DocumentsState = "erstellt"
+	DocumentsStateFehler          DocumentsState = "fehler"
+	DocumentsStateKeine           DocumentsState = "keine"
+	DocumentsStatePortal          DocumentsState = "portal"
+)
+
+// Valid indicates whether the value is a known member of the DocumentsState enum.
+func (e DocumentsState) Valid() bool {
+	switch e {
+	case DocumentsStateAngefordert:
+		return true
+	case DocumentsStateEntwurfAngelegt:
+		return true
+	case DocumentsStateErstellt:
+		return true
+	case DocumentsStateFehler:
+		return true
+	case DocumentsStateKeine:
+		return true
+	case DocumentsStatePortal:
 		return true
 	default:
 		return false
@@ -136,6 +220,37 @@ func (e ListApplicationsParamsSort) Valid() bool {
 	}
 }
 
+// AgentApplication defines model for AgentApplication.
+type AgentApplication struct {
+	CompanyName    string         `json:"company_name"`
+	CompanyWebsite *string        `json:"company_website,omitempty"`
+	ContactEmail   *string        `json:"contact_email,omitempty"`
+	DocumentsState DocumentsState `json:"documents_state"`
+
+	// DocumentsVersion 0 = noch keine Unterlagen; zu liefern ist documents_version + 1
+	DocumentsVersion int                `json:"documents_version"`
+	FitReason        *string            `json:"fit_reason,omitempty"`
+	Id               openapi_types.UUID `json:"id"`
+	JobUrl           *string            `json:"job_url,omitempty"`
+	Location         *string            `json:"location,omitempty"`
+	PositionTitle    string             `json:"position_title"`
+	PostingText      *string            `json:"posting_text,omitempty"`
+}
+
+// AgentDocumentsInput defines model for AgentDocumentsInput.
+type AgentDocumentsInput struct {
+	CoverLetter string                      `json:"cover_letter"`
+	Highlights  *[]string                   `json:"highlights,omitempty"`
+	Language    AgentDocumentsInputLanguage `json:"language"`
+	MailBody    string                      `json:"mail_body"`
+	MailSubject string                      `json:"mail_subject"`
+	ProfileLine *string                     `json:"profile_line,omitempty"`
+	Version     int                         `json:"version"`
+}
+
+// AgentDocumentsInputLanguage defines model for AgentDocumentsInput.Language.
+type AgentDocumentsInputLanguage string
+
 // AgentJob defines model for AgentJob.
 type AgentJob struct {
 	CompanyName    string  `json:"company_name"`
@@ -157,9 +272,12 @@ type Application struct {
 	ContactEmail   *string            `json:"contact_email,omitempty"`
 	CreatedAt      time.Time          `json:"created_at"`
 	CreatedByAgent bool               `json:"created_by_agent"`
+	DocumentsError *string            `json:"documents_error,omitempty"`
+	DocumentsState DocumentsState     `json:"documents_state"`
 	Events         []Event            `json:"events"`
 	FitReason      *string            `json:"fit_reason,omitempty"`
 	FitScore       *int               `json:"fit_score,omitempty"`
+	GmailDraftAt   *time.Time         `json:"gmail_draft_at,omitempty"`
 	Id             openapi_types.UUID `json:"id"`
 	JobUrl         *string            `json:"job_url,omitempty"`
 	Location       *string            `json:"location,omitempty"`
@@ -356,6 +474,39 @@ type Deadline struct {
 	PositionTitle string             `json:"position_title"`
 }
 
+// Documents defines model for Documents.
+type Documents struct {
+	CoverLetter string            `json:"cover_letter"`
+	FileName    *string           `json:"file_name,omitempty"`
+	Highlights  []string          `json:"highlights"`
+	Language    DocumentsLanguage `json:"language"`
+	MailBody    string            `json:"mail_body"`
+	MailSubject string            `json:"mail_subject"`
+	ProfileLine *string           `json:"profile_line,omitempty"`
+	RenderedAt  *time.Time        `json:"rendered_at,omitempty"`
+	UpdatedAt   time.Time         `json:"updated_at"`
+	Version     int               `json:"version"`
+}
+
+// DocumentsLanguage defines model for Documents.Language.
+type DocumentsLanguage string
+
+// DocumentsInput defines model for DocumentsInput.
+type DocumentsInput struct {
+	CoverLetter string                 `json:"cover_letter"`
+	Highlights  *[]string              `json:"highlights,omitempty"`
+	Language    DocumentsInputLanguage `json:"language"`
+	MailBody    string                 `json:"mail_body"`
+	MailSubject string                 `json:"mail_subject"`
+	ProfileLine *string                `json:"profile_line,omitempty"`
+}
+
+// DocumentsInputLanguage defines model for DocumentsInput.Language.
+type DocumentsInputLanguage string
+
+// DocumentsState defines model for DocumentsState.
+type DocumentsState string
+
 // Event defines model for Event.
 type Event struct {
 	CreatedAt      time.Time           `json:"created_at"`
@@ -430,6 +581,11 @@ type Summary struct {
 // Id defines model for Id.
 type Id = openapi_types.UUID
 
+// AgentListApplicationsParams defines parameters for AgentListApplications.
+type AgentListApplicationsParams struct {
+	DocumentsState DocumentsState `form:"documents_state" json:"documents_state"`
+}
+
 // AgentListCvReviewsParams defines parameters for AgentListCvReviews.
 type AgentListCvReviewsParams struct {
 	State CvReviewState `form:"state" json:"state"`
@@ -468,6 +624,9 @@ type ListDeadlinesParams struct {
 // AgentCreateApplicationJSONRequestBody defines body for AgentCreateApplication for application/json ContentType.
 type AgentCreateApplicationJSONRequestBody = AgentJob
 
+// AgentPutDocumentsJSONRequestBody defines body for AgentPutDocuments for application/json ContentType.
+type AgentPutDocumentsJSONRequestBody = AgentDocumentsInput
+
 // AgentCompleteCvReviewJSONRequestBody defines body for AgentCompleteCvReview for application/json ContentType.
 type AgentCompleteCvReviewJSONRequestBody = CvReviewResult
 
@@ -476,6 +635,9 @@ type CreateApplicationJSONRequestBody = ApplicationInput
 
 // UpdateApplicationJSONRequestBody defines body for UpdateApplication for application/json ContentType.
 type UpdateApplicationJSONRequestBody = ApplicationPatch
+
+// UpdateDocumentsJSONRequestBody defines body for UpdateDocuments for application/json ContentType.
+type UpdateDocumentsJSONRequestBody = DocumentsInput
 
 // AddEventJSONRequestBody defines body for AddEvent for application/json ContentType.
 type AddEventJSONRequestBody = NewEvent
@@ -658,9 +820,15 @@ func (a Problem) MarshalJSON() ([]byte, error) {
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// AgentListApplications Stellen in einem Unterlagen-Zustand (für den Agenten meist „angefordert“), älteste zuerst
+	// (GET /api/agent/applications)
+	AgentListApplications(w http.ResponseWriter, r *http.Request, params AgentListApplicationsParams)
 	// AgentCreateApplication Gefundene Stelle als Vorgemerkt anlegen
 	// (POST /api/agent/applications)
 	AgentCreateApplication(w http.ResponseWriter, r *http.Request)
+	// AgentPutDocuments Unterlagen abliefern; der Server rendert das PDF und legt ggf. den Gmail-Entwurf an
+	// (PUT /api/agent/applications/{id}/documents)
+	AgentPutDocuments(w http.ResponseWriter, r *http.Request, id Id)
 	// AgentGetCv Gespeicherter Lebenslauf (404, solange keiner gespeichert ist)
 	// (GET /api/agent/cv)
 	AgentGetCv(w http.ResponseWriter, r *http.Request)
@@ -688,6 +856,21 @@ type ServerInterface interface {
 
 	// (GET /api/v1/applications/{id}/allowed-events)
 	ListAllowedEvents(w http.ResponseWriter, r *http.Request, id Id)
+	// GetDocuments Aktuelle Fassung der Unterlagen (404, solange keine erstellt sind)
+	// (GET /api/v1/applications/{id}/documents)
+	GetDocuments(w http.ResponseWriter, r *http.Request, id Id)
+	// UpdateDocuments Unterlagen bearbeiten (neue Version, neu gerendert; legt keinen Entwurf an)
+	// (PUT /api/v1/applications/{id}/documents)
+	UpdateDocuments(w http.ResponseWriter, r *http.Request, id Id)
+	// CreateDraft Gmail-Entwurf (neu) anlegen
+	// (POST /api/v1/applications/{id}/documents/draft)
+	CreateDraft(w http.ResponseWriter, r *http.Request, id Id)
+	// GetDocumentsPdf Anschreiben + Lebenslauf als ein PDF (404 ohne Unterlagen)
+	// (GET /api/v1/applications/{id}/documents/pdf)
+	GetDocumentsPdf(w http.ResponseWriter, r *http.Request, id Id)
+	// RequestDocuments Unterlagen beim Agenten anfordern (auch erneut, z. B. nach einem Fehler)
+	// (POST /api/v1/applications/{id}/documents/request)
+	RequestDocuments(w http.ResponseWriter, r *http.Request, id Id)
 	// AddEvent Statuswechsel als Ereignis erfassen (422 bei unerlaubtem Übergang)
 	// (POST /api/v1/applications/{id}/events)
 	AddEvent(w http.ResponseWriter, r *http.Request, id Id)
@@ -759,11 +942,70 @@ type ServerInterfaceWrapper struct {
 
 type MiddlewareFunc func(http.Handler) http.Handler
 
+// AgentListApplications operation middleware
+func (siw *ServerInterfaceWrapper) AgentListApplications(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params AgentListApplicationsParams
+
+	// ------------- Required query parameter "documents_state" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "documents_state", r.URL.Query(), &params.DocumentsState, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "documents_state"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "documents_state", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AgentListApplications(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // AgentCreateApplication operation middleware
 func (siw *ServerInterfaceWrapper) AgentCreateApplication(w http.ResponseWriter, r *http.Request) {
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.AgentCreateApplication(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AgentPutDocuments operation middleware
+func (siw *ServerInterfaceWrapper) AgentPutDocuments(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AgentPutDocuments(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1040,6 +1282,136 @@ func (siw *ServerInterfaceWrapper) ListAllowedEvents(w http.ResponseWriter, r *h
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListAllowedEvents(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetDocuments operation middleware
+func (siw *ServerInterfaceWrapper) GetDocuments(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetDocuments(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateDocuments operation middleware
+func (siw *ServerInterfaceWrapper) UpdateDocuments(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateDocuments(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateDraft operation middleware
+func (siw *ServerInterfaceWrapper) CreateDraft(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateDraft(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetDocumentsPdf operation middleware
+func (siw *ServerInterfaceWrapper) GetDocumentsPdf(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetDocumentsPdf(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RequestDocuments operation middleware
+func (siw *ServerInterfaceWrapper) RequestDocuments(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RequestDocuments(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1560,6 +1932,11 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/applications/{id}/events", wrapper.AddEvent)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/applications/{id}/events/latest", wrapper.UndoLastEvent)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/applications/{id}/allowed-events", wrapper.ListAllowedEvents)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/applications/{id}/documents/request", wrapper.RequestDocuments)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/applications/{id}/documents", wrapper.GetDocuments)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/applications/{id}/documents", wrapper.UpdateDocuments)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/applications/{id}/documents/pdf", wrapper.GetDocumentsPdf)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/applications/{id}/documents/draft", wrapper.CreateDraft)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/deadlines", wrapper.ListDeadlines)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/appointments", wrapper.ListAppointments)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/stats/funnel", wrapper.GetFunnel)
@@ -1576,12 +1953,53 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/agent/cv", wrapper.AgentGetCv)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/agent/cv-reviews", wrapper.AgentListCvReviews)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/agent/cv-reviews/{id}", wrapper.AgentCompleteCvReview)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/agent/applications", wrapper.AgentListApplications)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/agent/applications", wrapper.AgentCreateApplication)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/agent/applications/{id}/documents", wrapper.AgentPutDocuments)
 
 	return m
 }
 
 type ProblemApplicationProblemPlusJSONResponse Problem
+
+type AgentListApplicationsRequestObject struct {
+	Params AgentListApplicationsParams
+}
+
+type AgentListApplicationsResponseObject interface {
+	VisitAgentListApplicationsResponse(w http.ResponseWriter) error
+}
+
+type AgentListApplications200JSONResponse []AgentApplication
+
+func (response AgentListApplications200JSONResponse) VisitAgentListApplicationsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AgentListApplicationsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response AgentListApplicationsdefaultApplicationProblemPlusJSONResponse) VisitAgentListApplicationsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
 
 type AgentCreateApplicationRequestObject struct {
 	Body *AgentCreateApplicationJSONRequestBody
@@ -1611,6 +2029,46 @@ type AgentCreateApplicationdefaultApplicationProblemPlusJSONResponse struct {
 }
 
 func (response AgentCreateApplicationdefaultApplicationProblemPlusJSONResponse) VisitAgentCreateApplicationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AgentPutDocumentsRequestObject struct {
+	Id   Id `json:"id"`
+	Body *AgentPutDocumentsJSONRequestBody
+}
+
+type AgentPutDocumentsResponseObject interface {
+	VisitAgentPutDocumentsResponse(w http.ResponseWriter) error
+}
+
+type AgentPutDocuments200JSONResponse Documents
+
+func (response AgentPutDocuments200JSONResponse) VisitAgentPutDocumentsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AgentPutDocumentsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response AgentPutDocumentsdefaultApplicationProblemPlusJSONResponse) VisitAgentPutDocumentsResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -1957,6 +2415,220 @@ type ListAllowedEventsdefaultApplicationProblemPlusJSONResponse struct {
 }
 
 func (response ListAllowedEventsdefaultApplicationProblemPlusJSONResponse) VisitListAllowedEventsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetDocumentsRequestObject struct {
+	Id Id `json:"id"`
+}
+
+type GetDocumentsResponseObject interface {
+	VisitGetDocumentsResponse(w http.ResponseWriter) error
+}
+
+type GetDocuments200JSONResponse Documents
+
+func (response GetDocuments200JSONResponse) VisitGetDocumentsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetDocumentsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetDocumentsdefaultApplicationProblemPlusJSONResponse) VisitGetDocumentsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateDocumentsRequestObject struct {
+	Id   Id `json:"id"`
+	Body *UpdateDocumentsJSONRequestBody
+}
+
+type UpdateDocumentsResponseObject interface {
+	VisitUpdateDocumentsResponse(w http.ResponseWriter) error
+}
+
+type UpdateDocuments200JSONResponse Documents
+
+func (response UpdateDocuments200JSONResponse) VisitUpdateDocumentsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateDocumentsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response UpdateDocumentsdefaultApplicationProblemPlusJSONResponse) VisitUpdateDocumentsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateDraftRequestObject struct {
+	Id Id `json:"id"`
+}
+
+type CreateDraftResponseObject interface {
+	VisitCreateDraftResponse(w http.ResponseWriter) error
+}
+
+type CreateDraft200JSONResponse Application
+
+func (response CreateDraft200JSONResponse) VisitCreateDraftResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateDraftdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response CreateDraftdefaultApplicationProblemPlusJSONResponse) VisitCreateDraftResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetDocumentsPdfRequestObject struct {
+	Id Id `json:"id"`
+}
+
+type GetDocumentsPdfResponseObject interface {
+	VisitGetDocumentsPdfResponse(w http.ResponseWriter) error
+}
+
+type GetDocumentsPdf200ResponseHeaders struct {
+	CacheControl       *string
+	ContentDisposition *string
+}
+
+type GetDocumentsPdf200ApplicationpdfResponse struct {
+	Body          io.Reader
+	Headers       GetDocumentsPdf200ResponseHeaders
+	ContentLength int64
+}
+
+func (response GetDocumentsPdf200ApplicationpdfResponse) VisitGetDocumentsPdfResponse(w http.ResponseWriter) error {
+
+	w.Header().Set("Content-Type", "application/pdf")
+	if response.ContentLength != 0 {
+		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
+	}
+	if response.Headers.CacheControl != nil {
+		w.Header().Set("Cache-Control", fmt.Sprint(*response.Headers.CacheControl))
+	}
+	if response.Headers.ContentDisposition != nil {
+		w.Header().Set("Content-Disposition", fmt.Sprint(*response.Headers.ContentDisposition))
+	}
+	w.WriteHeader(200)
+
+	if closer, ok := response.Body.(io.ReadCloser); ok {
+		defer closer.Close()
+	}
+	_, err := io.Copy(w, response.Body)
+	return err
+}
+
+type GetDocumentsPdfdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetDocumentsPdfdefaultApplicationProblemPlusJSONResponse) VisitGetDocumentsPdfResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RequestDocumentsRequestObject struct {
+	Id Id `json:"id"`
+}
+
+type RequestDocumentsResponseObject interface {
+	VisitRequestDocumentsResponse(w http.ResponseWriter) error
+}
+
+type RequestDocuments200JSONResponse Application
+
+func (response RequestDocuments200JSONResponse) VisitRequestDocumentsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RequestDocumentsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response RequestDocumentsdefaultApplicationProblemPlusJSONResponse) VisitRequestDocumentsResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -2750,9 +3422,15 @@ func (response GetSummarydefaultApplicationProblemPlusJSONResponse) VisitGetSumm
 
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
+	// AgentListApplications Stellen in einem Unterlagen-Zustand (für den Agenten meist „angefordert“), älteste zuerst
+	// (GET /api/agent/applications)
+	AgentListApplications(ctx context.Context, request AgentListApplicationsRequestObject) (AgentListApplicationsResponseObject, error)
 	// AgentCreateApplication Gefundene Stelle als Vorgemerkt anlegen
 	// (POST /api/agent/applications)
 	AgentCreateApplication(ctx context.Context, request AgentCreateApplicationRequestObject) (AgentCreateApplicationResponseObject, error)
+	// AgentPutDocuments Unterlagen abliefern; der Server rendert das PDF und legt ggf. den Gmail-Entwurf an
+	// (PUT /api/agent/applications/{id}/documents)
+	AgentPutDocuments(ctx context.Context, request AgentPutDocumentsRequestObject) (AgentPutDocumentsResponseObject, error)
 	// AgentGetCv Gespeicherter Lebenslauf (404, solange keiner gespeichert ist)
 	// (GET /api/agent/cv)
 	AgentGetCv(ctx context.Context, request AgentGetCvRequestObject) (AgentGetCvResponseObject, error)
@@ -2780,6 +3458,21 @@ type StrictServerInterface interface {
 
 	// (GET /api/v1/applications/{id}/allowed-events)
 	ListAllowedEvents(ctx context.Context, request ListAllowedEventsRequestObject) (ListAllowedEventsResponseObject, error)
+	// GetDocuments Aktuelle Fassung der Unterlagen (404, solange keine erstellt sind)
+	// (GET /api/v1/applications/{id}/documents)
+	GetDocuments(ctx context.Context, request GetDocumentsRequestObject) (GetDocumentsResponseObject, error)
+	// UpdateDocuments Unterlagen bearbeiten (neue Version, neu gerendert; legt keinen Entwurf an)
+	// (PUT /api/v1/applications/{id}/documents)
+	UpdateDocuments(ctx context.Context, request UpdateDocumentsRequestObject) (UpdateDocumentsResponseObject, error)
+	// CreateDraft Gmail-Entwurf (neu) anlegen
+	// (POST /api/v1/applications/{id}/documents/draft)
+	CreateDraft(ctx context.Context, request CreateDraftRequestObject) (CreateDraftResponseObject, error)
+	// GetDocumentsPdf Anschreiben + Lebenslauf als ein PDF (404 ohne Unterlagen)
+	// (GET /api/v1/applications/{id}/documents/pdf)
+	GetDocumentsPdf(ctx context.Context, request GetDocumentsPdfRequestObject) (GetDocumentsPdfResponseObject, error)
+	// RequestDocuments Unterlagen beim Agenten anfordern (auch erneut, z. B. nach einem Fehler)
+	// (POST /api/v1/applications/{id}/documents/request)
+	RequestDocuments(ctx context.Context, request RequestDocumentsRequestObject) (RequestDocumentsResponseObject, error)
 	// AddEvent Statuswechsel als Ereignis erfassen (422 bei unerlaubtem Übergang)
 	// (POST /api/v1/applications/{id}/events)
 	AddEvent(ctx context.Context, request AddEventRequestObject) (AddEventResponseObject, error)
@@ -2881,6 +3574,32 @@ type strictHandler struct {
 	options     StrictHTTPServerOptions
 }
 
+// AgentListApplications operation middleware
+func (sh *strictHandler) AgentListApplications(w http.ResponseWriter, r *http.Request, params AgentListApplicationsParams) {
+	var request AgentListApplicationsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.AgentListApplications(ctx, request.(AgentListApplicationsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AgentListApplications")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(AgentListApplicationsResponseObject); ok {
+		if err := validResponse.VisitAgentListApplicationsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // AgentCreateApplication operation middleware
 func (sh *strictHandler) AgentCreateApplication(w http.ResponseWriter, r *http.Request) {
 	var request AgentCreateApplicationRequestObject
@@ -2905,6 +3624,39 @@ func (sh *strictHandler) AgentCreateApplication(w http.ResponseWriter, r *http.R
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(AgentCreateApplicationResponseObject); ok {
 		if err := validResponse.VisitAgentCreateApplicationResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AgentPutDocuments operation middleware
+func (sh *strictHandler) AgentPutDocuments(w http.ResponseWriter, r *http.Request, id Id) {
+	var request AgentPutDocumentsRequestObject
+
+	request.Id = id
+
+	var body AgentPutDocumentsJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.AgentPutDocuments(ctx, request.(AgentPutDocumentsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AgentPutDocuments")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(AgentPutDocumentsResponseObject); ok {
+		if err := validResponse.VisitAgentPutDocumentsResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -3156,6 +3908,143 @@ func (sh *strictHandler) ListAllowedEvents(w http.ResponseWriter, r *http.Reques
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(ListAllowedEventsResponseObject); ok {
 		if err := validResponse.VisitListAllowedEventsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetDocuments operation middleware
+func (sh *strictHandler) GetDocuments(w http.ResponseWriter, r *http.Request, id Id) {
+	var request GetDocumentsRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetDocuments(ctx, request.(GetDocumentsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetDocuments")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetDocumentsResponseObject); ok {
+		if err := validResponse.VisitGetDocumentsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateDocuments operation middleware
+func (sh *strictHandler) UpdateDocuments(w http.ResponseWriter, r *http.Request, id Id) {
+	var request UpdateDocumentsRequestObject
+
+	request.Id = id
+
+	var body UpdateDocumentsJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateDocuments(ctx, request.(UpdateDocumentsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateDocuments")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateDocumentsResponseObject); ok {
+		if err := validResponse.VisitUpdateDocumentsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateDraft operation middleware
+func (sh *strictHandler) CreateDraft(w http.ResponseWriter, r *http.Request, id Id) {
+	var request CreateDraftRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateDraft(ctx, request.(CreateDraftRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateDraft")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateDraftResponseObject); ok {
+		if err := validResponse.VisitCreateDraftResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetDocumentsPdf operation middleware
+func (sh *strictHandler) GetDocumentsPdf(w http.ResponseWriter, r *http.Request, id Id) {
+	var request GetDocumentsPdfRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetDocumentsPdf(ctx, request.(GetDocumentsPdfRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetDocumentsPdf")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetDocumentsPdfResponseObject); ok {
+		if err := validResponse.VisitGetDocumentsPdfResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RequestDocuments operation middleware
+func (sh *strictHandler) RequestDocuments(w http.ResponseWriter, r *http.Request, id Id) {
+	var request RequestDocumentsRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RequestDocuments(ctx, request.(RequestDocumentsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RequestDocuments")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RequestDocumentsResponseObject); ok {
+		if err := validResponse.VisitRequestDocumentsResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -3692,78 +4581,93 @@ func (sh *strictHandler) GetSummary(w http.ResponseWriter, r *http.Request) {
 // const string: with thousands of chunks the chained `+` fold is several
 // times slower for the Go compiler than parsing a slice literal.
 var swaggerSpec = []string{
-	"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",
-	"md+H3T85enc+Ov/m66N3+gv7pJFuAlze/f8A",
+	"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",
+	"vj17pX+wmRrq/Ybr6f8OAA==",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,

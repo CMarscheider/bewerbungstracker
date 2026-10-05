@@ -116,6 +116,16 @@ Jeder Aufruf braucht `Authorization: Bearer <token>`, sonst 401.
 - `POST /api/agent/applications` – gefundene Stelle als *Vorgemerkt* anlegen (Firma wird bei Bedarf
   angelegt; `fit_score` 0–100 und `fit_reason` sind Pflicht). Dublette (gleiche Anzeigen-URL oder
   gleiche Firma + Titel) → 409 mit `existing_id`.
+- `GET /api/agent/applications?documents_state=angefordert` – Stellen, für die in der Oberfläche
+  Unterlagen angefordert wurden (`documents_state` ist Pflicht), älteste zuerst; mit Anzeigentext und
+  `documents_version` (0 = noch keine Unterlagen).
+- `PUT /api/agent/applications/{id}/documents` – Unterlagen abliefern: `version` (= `documents_version` + 1),
+  `language` (`de`/`en`), `cover_letter`, optional `profile_line` und `highlights` (höchstens 8, nur
+  vorhandene Kenntnisse), `mail_subject`, `mail_body`. Der Server rendert Anschreiben + Lebenslauf als ein
+  PDF und legt mit Bewerbungsadresse einen Gmail-Entwurf an. Idempotent: dieselbe Version mit gleichem
+  Inhalt erneut → 200 ohne Wirkung. 409, wenn keine Unterlagen angefordert sind, kein Lebenslauf
+  gespeichert ist oder die Version veraltet ist; 503, wenn der PDF-Dienst nicht erreichbar ist (später
+  erneut liefern, nichts wurde gespeichert).
 
 Die Agent-API ist gedrosselt: mit gültigem Token 2 Anfragen/s (Burst 20), ohne gültiges Token 1/s
 (Burst 10), darüber 429 mit `Retry-After`. Abgewiesene Anfragen landen höchstens einmal pro Minute
@@ -124,6 +134,14 @@ zusammengefasst im Log; die Container-Logs rotieren (3 × 10 MB).
 > **Achtung:** `/api/v1` hat keine Anmeldung. Bei einer Freigabe nach außen (z. B. Tailscale Funnel)
 > nur den Pfad `/api/agent/` weiterleiten (Ziel `http://127.0.0.1:4200/api/agent/`), nie `/`, `/api/v1`,
 > `/api/docs` oder `/api/openapi.json`.
+
+### Gmail-Entwürfe
+
+Mit `GMAIL_ADDRESS` und `GMAIL_APP_PASSWORD` in `.env` (App-Passwort unter
+myaccount.google.com/apppasswords, erfordert die Bestätigung in zwei Schritten) legt der Pi für fertige
+Unterlagen per IMAP einen Gmail-Entwurf mit dem PDF als Anhang an – an die Bewerbungsadresse der Stelle.
+Gesendet wird nie; das Abschicken bleibt Handarbeit in Gmail. Ohne die beiden Variablen werden nur die
+Unterlagen erstellt; ohne Bewerbungsadresse (Bewerbung über ein Portal) gibt es keinen Entwurf.
 
 ## Projektstruktur
 

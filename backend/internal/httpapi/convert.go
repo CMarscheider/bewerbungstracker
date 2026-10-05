@@ -51,6 +51,7 @@ func applicationDTO(a service.Application) Application {
 		JobUrl: a.JobURL, Location: a.Location, Source: a.Source, Notes: a.Notes,
 		ContactEmail: a.ContactEmail, PostingText: a.PostingText, FitScore: a.FitScore, FitReason: a.FitReason,
 		Status: EventType(a.Status), Phase: Phase(a.Phase), CreatedByAgent: a.CreatedByAgent,
+		DocumentsState: DocumentsState(a.DocumentsState), DocumentsError: a.DocumentsError, GmailDraftAt: a.GmailDraftAt,
 		CreatedAt: a.CreatedAt, UpdatedAt: a.UpdatedAt, Events: events,
 	}
 }
@@ -69,4 +70,31 @@ func newEventFromDTO(n NewEvent) domain.NewEvent {
 		Type: domain.EventType(n.Type), OccurredOn: n.OccurredOn.Time,
 		DueOn: fromDatePtr(n.DueOn), Note: n.Note,
 	}
+}
+
+func documentsDTO(d service.Documents) Documents {
+	highlights := d.Highlights
+	if highlights == nil {
+		highlights = []string{}
+	}
+	return Documents{
+		Version: d.Version, Language: DocumentsLanguage(d.Language), CoverLetter: d.CoverLetter,
+		ProfileLine: d.ProfileLine, Highlights: highlights, MailSubject: d.MailSubject, MailBody: d.MailBody,
+		FileName: d.FileName, RenderedAt: d.RenderedAt, UpdatedAt: d.UpdatedAt,
+	}
+}
+
+func agentApplicationDTO(a service.AgentApplication) AgentApplication {
+	return AgentApplication{
+		Id: a.ID, CompanyName: a.CompanyName, CompanyWebsite: a.CompanyWebsite, PositionTitle: a.PositionTitle,
+		JobUrl: a.JobURL, Location: a.Location, ContactEmail: a.ContactEmail, PostingText: a.PostingText,
+		FitReason: a.FitReason, DocumentsState: DocumentsState(a.DocumentsState), DocumentsVersion: a.DocumentsVersion,
+	}
+}
+
+func derefStrings(p *[]string) []string {
+	if p == nil {
+		return nil
+	}
+	return *p
 }
