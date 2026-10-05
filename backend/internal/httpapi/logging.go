@@ -3,6 +3,7 @@ package httpapi
 import (
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -24,6 +25,23 @@ func logRequests(logger *slog.Logger, next http.Handler) http.Handler {
 		start := time.Now()
 		rec := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
 		next.ServeHTTP(rec, r)
-		logger.Info("request", "method", r.Method, "path", r.URL.Path, "status", rec.status, "duration", time.Since(start))
+		args := []any{"method", r.Method, "path", r.URL.Path, "status", rec.status, "duration", time.Since(start)}
+		logger.Info("request", append(args, xffArgs(r)...)...)
 	})
+}
+
+// maxXFFLen begrenzt den mitgeloggten X-Forwarded-For-Wert.
+const maxXFFLen = 200
+
+// xffArgs liefert "xff_untrusted" mit dem X-Forwarded-For-Header, falls vorhanden. Der Wert ist
+// vom Client fälschbar und dient nur der Einordnung (hinter Funnel/nginx ist RemoteAddr immer nginx).
+func xffArgs(r *http.Request) []any {
+	v := strings.Join(r.Header.Values("X-Forwarded-For"), ", ")
+	if v == "" {
+		return nil
+	}
+	if len(v) > maxXFFLen {
+		v = strings.ToValidUTF8(v[:maxXFFLen], "")
+	}
+	return []any{"xff_untrusted", v}
 }

@@ -1,8 +1,18 @@
 package httpapi_test
 
 import (
+	"io"
+	"log/slog"
 	"net/http"
+	"net/http/httptest"
 	"testing"
+	"time"
+
+	"golang.org/x/time/rate"
+
+	"bewerbungsmanager/internal/httpapi"
+	"bewerbungsmanager/internal/service"
+	"bewerbungsmanager/internal/testdb"
 )
 
 func TestAgentAPIDisabledWithoutToken(t *testing.T) {
@@ -97,5 +107,29 @@ func TestAgentAuthPathVariants(t *testing.T) {
 	}
 	if status, _ := rawGet(t, srv.URL+"/api/agent/../v1/cv", ""); status != http.StatusUnauthorized {
 		t.Errorf("/api/agent/../v1/cv ohne Token: Status %d, erwartet 401", status)
+	}
+}
+
+func TestAgentRateLimitBeforeTokenCheck(t *testing.T) {
+	testdb.Reset(t, testPool)
+	h, err := httpapi.NewRouter(service.New(testPool, time.Now), slog.New(slog.NewTextHandler(io.Discard, nil)),
+		httpapi.WithAgentToken(agentToken), httpapi.WithAgentRateLimit(rate.Every(time.Hour), 2))
+	if err != nil {
+		t.Fatal(err)
+	}
+	srv := httptest.NewServer(h)
+	t.Cleanup(srv.Close)
+
+	// Auch Anfragen ohne Token verbrauchen das Kontingent.
+	expectProblem(t, callWith(t, srv, http.MethodGet, "/api/agent/cv", "", nil), http.StatusUnauthorized, "/problems/unauthorized")
+	expectProblem(t, callWith(t, srv, http.MethodGet, "/api/agent/cv", "", nil), http.StatusUnauthorized, "/problems/unauthorized")
+	r := callWith(t, srv, http.MethodGet, "/api/agent/cv", agentToken, nil)
+	expectProblem(t, r, http.StatusTooManyRequests, "/problems/too-many-requests")
+	if r.Header.Get("Retry-After") != "1" {
+		t.Errorf("Retry-After = %q", r.Header.Get("Retry-After"))
+	}
+	// Die UI-API bleibt ungedrosselt.
+	for range 5 {
+		expectStatus(t, call(t, srv, http.MethodGet, "/api/v1/cv", nil), http.StatusOK)
 	}
 }

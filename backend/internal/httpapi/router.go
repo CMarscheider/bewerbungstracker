@@ -9,6 +9,7 @@ import (
 
 	"github.com/getkin/kin-openapi/openapi3filter"
 	nethttpmiddleware "github.com/oapi-codegen/nethttp-middleware"
+	"golang.org/x/time/rate"
 
 	"bewerbungsmanager/internal/service"
 )
@@ -32,6 +33,8 @@ type RouterOption func(*routerConfig)
 
 type routerConfig struct {
 	agentToken string
+	agentRate  rate.Limit
+	agentBurst int
 }
 
 // WithAgentToken aktiviert die Agent-API (/api/agent/*) mit diesem Bearer-Token.
@@ -39,9 +42,14 @@ func WithAgentToken(token string) RouterOption {
 	return func(c *routerConfig) { c.agentToken = token }
 }
 
+// WithAgentRateLimit überschreibt die Drossel der Agent-API (für Tests).
+func WithAgentRateLimit(r rate.Limit, burst int) RouterOption {
+	return func(c *routerConfig) { c.agentRate, c.agentBurst = r, burst }
+}
+
 // NewRouter baut den kompletten HTTP-Handler: API, Validierung, Doku, Logging.
 func NewRouter(svc *service.Service, logger *slog.Logger, opts ...RouterOption) (http.Handler, error) {
-	var cfg routerConfig
+	cfg := routerConfig{agentRate: agentRate, agentBurst: agentBurst}
 	for _, o := range opts {
 		o(&cfg)
 	}
@@ -95,7 +103,10 @@ func NewRouter(svc *service.Service, logger *slog.Logger, opts ...RouterOption) 
 		writeProblem(w, problem{Type: problemBase + "not-found", Title: "Nicht gefunden",
 			Status: http.StatusNotFound, Detail: "Unbekannter Endpunkt"})
 	})
-	return logRequests(logger, recoverPanics(logger, limitBody(requireAgentToken(cfg.agentToken, logger, mux)))), nil
+	limiter := newAgentLimiter(cfg.agentRate, cfg.agentBurst)
+	warner := newWarnThrottle(logger, authWarnInterval)
+	return logRequests(logger, recoverPanics(logger, limitBody(
+		limitAgent(limiter, requireAgentToken(cfg.agentToken, warner, mux))))), nil
 }
 
 // maxBodyBytes begrenzt die Größe von Request-Bodys.
