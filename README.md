@@ -103,7 +103,7 @@ Optional: `GOTENBERG_URL` (z. B. `http://localhost:3000` für einen lokalen `got
 ### Agent-API
 
 Für Claude-Agenten gibt es unter `/api/agent/` eine eigene API, die eine angeforderte
-Lebenslauf-Optimierung abholt, den Vorschlag zurückliefert und gefundene Stellen anlegt. Sie ist nur aktiv, wenn `AGENT_TOKEN`
+Lebenslauf-Optimierung abholt, den Vorschlag zurückliefert, gefundene Stellen anlegt und das Postfach auswertet. Sie ist nur aktiv, wenn `AGENT_TOKEN`
 gesetzt ist (in `.env`, mind. 32 Zeichen, z. B. `openssl rand -hex 32`); ohne Token antwortet sie mit 404.
 Jeder Aufruf braucht `Authorization: Bearer <token>`, sonst 401.
 
@@ -131,6 +131,22 @@ Jeder Aufruf braucht `Authorization: Bearer <token>`, sonst 401.
     bleibt `angefordert`.
   - 500 – Renderfehler: der Zustand wird `fehler`; nicht erneut liefern, bis die Unterlagen in der
     Oberfläche wieder angefordert werden.
+- `GET /api/agent/applications/open` – laufende Bewerbungen (inkl. *Keine Rückmeldung*, für späte
+  Antworten) mit Kontaktadresse, `gmail_thread_id`, Betreff der Bewerbungsmail und `allowed_events`.
+  Ereignisse nur aus `allowed_events` wählen, nicht raten.
+- `POST /api/agent/applications/{id}/events` – Ereignis wie in der Oberfläche erfassen (`type`,
+  `occurred_on`, optional `due_on`, `note` ≤ 1000 Zeichen); die Notiz bekommt das Präfix `Agent: `.
+  Unerlaubter Übergang → 422.
+- `PUT /api/agent/applications/{id}/gmail-thread` – Thread der gesendeten Bewerbung merken
+  (`gmail_thread_id`, nur `A–Z a–z 0–9 _ -`) → 204; dieselbe ID erneut ist ein No-op, 409, wenn der
+  Thread schon zu einer anderen Bewerbung gehört.
+- `POST /api/agent/suggestions` – unklare Antwort als Vorschlag für das Dashboard ablegen
+  (`suggested_type`, `occurred_on`, `reason`; optional `application_id`, `due_on`, `mail_subject`,
+  `mail_from`, `mail_url` nur `https://mail.google.com/…`). Ohne `application_id` ordnet der User zu.
+- `GET /api/agent/processed-mails/{messageId}` – 200, wenn die Mail schon ausgewertet ist, sonst 404.
+- `POST /api/agent/processed-mails` – Mail als ausgewertet merken (`gmail_message_id`, `outcome`,
+  optional `application_id`). Idempotent: 201 beim ersten Mal, danach 200 mit dem unveränderten
+  vorhandenen Eintrag. Erst nach erfolgreicher Verbuchung aufrufen.
 
 Die Agent-API ist gedrosselt: mit gültigem Token 2 Anfragen/s (Burst 20), ohne gültiges Token 1/s
 (Burst 10), darüber 429 mit `Retry-After`. Abgewiesene Anfragen landen höchstens einmal pro Minute

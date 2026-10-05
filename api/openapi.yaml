@@ -17,6 +17,8 @@ tags:
     description: Lebenslauf
   - name: Documents
     description: "Bewerbungsunterlagen: Anschreiben + Lebenslauf als PDF, Gmail-Entwurf"
+  - name: Suggestions
+    description: "Vorschläge des Agenten aus der Postfach-Auswertung"
   - name: Agent
     description: "Für Claude-Agenten; verlangt Authorization: Bearer <AGENT_TOKEN>"
 paths:
@@ -471,6 +473,53 @@ paths:
         "204":
           description: Abgeschlossen
         default: { $ref: "#/components/responses/Problem" }
+  /api/v1/suggestions:
+    get:
+      operationId: listSuggestions
+      tags: [Suggestions]
+      summary: Offene Vorschläge des Agenten, älteste zuerst
+      responses:
+        "200":
+          description: Offene Vorschläge
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Suggestion" }
+        default: { $ref: "#/components/responses/Problem" }
+  /api/v1/suggestions/{id}/accept:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    post:
+      operationId: acceptSuggestion
+      tags: [Suggestions]
+      summary: Vorschlag übernehmen (legt das Ereignis an)
+      description: >
+        Bei nicht zugeordneten Vorschlägen ist `application_id` Pflicht (sonst 400).
+        422 bei unerlaubtem Übergang, 409, wenn der Vorschlag schon entschieden ist.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SuggestionAccept" }
+      responses:
+        "200":
+          description: Bewerbung nach der Übernahme
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Application" }
+        default: { $ref: "#/components/responses/Problem" }
+  /api/v1/suggestions/{id}/dismiss:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    post:
+      operationId: dismissSuggestion
+      tags: [Suggestions]
+      summary: Vorschlag verwerfen (409, wenn schon entschieden)
+      responses:
+        "204":
+          description: Verworfen
+        default: { $ref: "#/components/responses/Problem" }
   /api/agent/cv:
     get:
       operationId: agentGetCv
@@ -585,6 +634,117 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Documents" }
+        default: { $ref: "#/components/responses/Problem" }
+  /api/agent/applications/open:
+    get:
+      operationId: agentListOpenApplications
+      tags: [Agent]
+      summary: Laufende Bewerbungen (inkl. Keine Rückmeldung) mit erlaubten nächsten Ereignissen, nach Firma
+      security: [{ agentToken: [] }]
+      responses:
+        "200":
+          description: Offene Bewerbungen
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/OpenApplication" }
+        default: { $ref: "#/components/responses/Problem" }
+  /api/agent/applications/{id}/events:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    post:
+      operationId: agentAddEvent
+      tags: [Agent]
+      summary: "Ereignis erfassen; die Notiz bekommt das Präfix „Agent: “ (422 bei unerlaubtem Übergang)"
+      security: [{ agentToken: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AgentEventInput" }
+      responses:
+        "201":
+          description: Erfasst
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Event" }
+        default: { $ref: "#/components/responses/Problem" }
+  /api/agent/applications/{id}/gmail-thread:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    put:
+      operationId: agentSetGmailThread
+      tags: [Agent]
+      summary: Gmail-Thread der gesendeten Bewerbung merken (idempotent; 409, wenn er zu einer anderen Bewerbung gehört)
+      security: [{ agentToken: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/GmailThreadInput" }
+      responses:
+        "204":
+          description: Gespeichert
+        default: { $ref: "#/components/responses/Problem" }
+  /api/agent/suggestions:
+    post:
+      operationId: agentCreateSuggestion
+      tags: [Agent]
+      summary: Unklare Antwort als Vorschlag ablegen (ohne `application_id` = nicht zugeordnet)
+      security: [{ agentToken: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SuggestionInput" }
+      responses:
+        "201":
+          description: Angelegt
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Suggestion" }
+        default: { $ref: "#/components/responses/Problem" }
+  /api/agent/processed-mails:
+    post:
+      operationId: agentMarkMailProcessed
+      tags: [Agent]
+      summary: Mail als ausgewertet merken (201 neu, 200 schon vorhanden – der vorhandene Eintrag bleibt)
+      security: [{ agentToken: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProcessedMailInput" }
+      responses:
+        "201":
+          description: Gemerkt
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ProcessedMail" }
+        "200":
+          description: Schon vorhanden
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ProcessedMail" }
+        default: { $ref: "#/components/responses/Problem" }
+  /api/agent/processed-mails/{messageId}:
+    parameters:
+      - name: messageId
+        in: path
+        required: true
+        schema: { $ref: "#/components/schemas/GmailMessageId" }
+    get:
+      operationId: agentGetProcessedMail
+      tags: [Agent]
+      summary: Bereits ausgewertete Mail (404, wenn noch nicht ausgewertet)
+      security: [{ agentToken: [] }]
+      responses:
+        "200":
+          description: Ausgewertet
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ProcessedMail" }
         default: { $ref: "#/components/responses/Problem" }
 components:
   securitySchemes:
@@ -729,6 +889,7 @@ components:
         documents_state: { $ref: "#/components/schemas/DocumentsState" }
         documents_error: { type: string }
         gmail_draft_at: { type: string, format: date-time }
+        gmail_thread_id: { type: string }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
         events:
@@ -800,6 +961,101 @@ components:
         fit_reason: { type: string }
         documents_state: { $ref: "#/components/schemas/DocumentsState" }
         documents_version: { type: integer, description: "0 = noch keine Unterlagen; zu liefern ist documents_version + 1" }
+    AgentEventInput:
+      type: object
+      required: [type, occurred_on]
+      properties:
+        type: { $ref: "#/components/schemas/EventType" }
+        occurred_on: { type: string, format: date }
+        due_on:
+          type: string
+          format: date
+          description: Nur bei Vorgemerkt, ChallengeErhalten und AngebotErhalten erlaubt
+        note: { type: string, maxLength: 1000 }
+    OpenApplication:
+      type: object
+      required: [id, company_name, position_title, status, documents_state, allowed_events]
+      properties:
+        id: { type: string, format: uuid }
+        company_name: { type: string }
+        company_website: { type: string }
+        position_title: { type: string }
+        status: { $ref: "#/components/schemas/EventType" }
+        contact_email: { type: string }
+        gmail_thread_id: { type: string }
+        documents_state: { $ref: "#/components/schemas/DocumentsState" }
+        gmail_draft_at: { type: string, format: date-time }
+        mail_subject:
+          type: string
+          description: Betreff der Bewerbungsmail aus den Unterlagen, falls vorhanden
+        allowed_events:
+          type: array
+          items: { $ref: "#/components/schemas/EventType" }
+    GmailThreadInput:
+      type: object
+      required: [gmail_thread_id]
+      properties:
+        gmail_thread_id: { type: string, minLength: 1, maxLength: 100, pattern: '^[A-Za-z0-9_-]+$' }
+    GmailMessageId:
+      type: string
+      minLength: 1
+      maxLength: 200
+      pattern: '^[A-Za-z0-9_-]+$'
+    SuggestionState:
+      type: string
+      enum: [offen, angenommen, verworfen]
+    SuggestionInput:
+      type: object
+      required: [suggested_type, occurred_on, reason]
+      properties:
+        application_id: { type: string, format: uuid }
+        suggested_type: { $ref: "#/components/schemas/EventType" }
+        occurred_on: { type: string, format: date }
+        due_on: { type: string, format: date }
+        reason: { type: string, minLength: 1, maxLength: 1000, pattern: '\S' }
+        mail_subject: { type: string, maxLength: 300, pattern: '^[^\r\n]*$' }
+        mail_from: { type: string, maxLength: 300, pattern: '^[^\r\n]*$' }
+        mail_url: { type: string, maxLength: 500, pattern: '^https://mail\.google\.com/\S*$' }
+    Suggestion:
+      type: object
+      required: [id, suggested_type, occurred_on, reason, state, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        application_id: { type: string, format: uuid }
+        company_name: { type: string }
+        position_title: { type: string }
+        suggested_type: { $ref: "#/components/schemas/EventType" }
+        occurred_on: { type: string, format: date }
+        due_on: { type: string, format: date }
+        reason: { type: string }
+        mail_subject: { type: string }
+        mail_from: { type: string }
+        mail_url: { type: string }
+        state: { $ref: "#/components/schemas/SuggestionState" }
+        created_at: { type: string, format: date-time }
+        decided_at: { type: string, format: date-time }
+    SuggestionAccept:
+      type: object
+      properties:
+        application_id:
+          type: string
+          format: uuid
+          description: Pflicht bei nicht zugeordneten Vorschlägen; sonst Vorrang vor der Zuordnung
+    ProcessedMailInput:
+      type: object
+      required: [gmail_message_id, outcome]
+      properties:
+        gmail_message_id: { $ref: "#/components/schemas/GmailMessageId" }
+        application_id: { type: string, format: uuid }
+        outcome: { type: string, minLength: 1, maxLength: 200, pattern: '\S' }
+    ProcessedMail:
+      type: object
+      required: [gmail_message_id, outcome, processed_at]
+      properties:
+        gmail_message_id: { type: string }
+        application_id: { type: string, format: uuid }
+        outcome: { type: string }
+        processed_at: { type: string, format: date-time }
     Deadline:
       type: object
       required: [application_id, company_name, position_title, event_type, due_on, overdue]

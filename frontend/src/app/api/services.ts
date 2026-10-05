@@ -6,4 +6,5 @@ export { ApplicationsService } from './services/applications.service';
 export { DocumentsService } from './services/documents.service';
 export { DashboardService } from './services/dashboard.service';
 export { CvService } from './services/cv.service';
+export { SuggestionsService } from './services/suggestions.service';
 export { AgentService } from './services/agent.service';

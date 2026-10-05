@@ -63,6 +63,12 @@ export type { RequestCvReview$Params as RequestCvReview$Params } from './fn/cv/r
 export { requestCvReview as requestCvReview } from './fn/cv/request-cv-review';
 export type { CloseCvReview$Params as CloseCvReview$Params } from './fn/cv/close-cv-review';
 export { closeCvReview as closeCvReview } from './fn/cv/close-cv-review';
+export type { ListSuggestions$Params as ListSuggestions$Params } from './fn/suggestions/list-suggestions';
+export { listSuggestions as listSuggestions } from './fn/suggestions/list-suggestions';
+export type { AcceptSuggestion$Params as AcceptSuggestion$Params } from './fn/suggestions/accept-suggestion';
+export { acceptSuggestion as acceptSuggestion } from './fn/suggestions/accept-suggestion';
+export type { DismissSuggestion$Params as DismissSuggestion$Params } from './fn/suggestions/dismiss-suggestion';
+export { dismissSuggestion as dismissSuggestion } from './fn/suggestions/dismiss-suggestion';
 export type { AgentGetCv$Params as AgentGetCv$Params } from './fn/agent/agent-get-cv';
 export { agentGetCv as agentGetCv } from './fn/agent/agent-get-cv';
 export type { AgentListCvReviews$Params as AgentListCvReviews$Params } from './fn/agent/agent-list-cv-reviews';
@@ -75,3 +81,15 @@ export type { AgentCreateApplication$Params as AgentCreateApplication$Params } f
 export { agentCreateApplication as agentCreateApplication } from './fn/agent/agent-create-application';
 export type { AgentPutDocuments$Params as AgentPutDocuments$Params } from './fn/agent/agent-put-documents';
 export { agentPutDocuments as agentPutDocuments } from './fn/agent/agent-put-documents';
+export type { AgentListOpenApplications$Params as AgentListOpenApplications$Params } from './fn/agent/agent-list-open-applications';
+export { agentListOpenApplications as agentListOpenApplications } from './fn/agent/agent-list-open-applications';
+export type { AgentAddEvent$Params as AgentAddEvent$Params } from './fn/agent/agent-add-event';
+export { agentAddEvent as agentAddEvent } from './fn/agent/agent-add-event';
+export type { AgentSetGmailThread$Params as AgentSetGmailThread$Params } from './fn/agent/agent-set-gmail-thread';
+export { agentSetGmailThread as agentSetGmailThread } from './fn/agent/agent-set-gmail-thread';
+export type { AgentCreateSuggestion$Params as AgentCreateSuggestion$Params } from './fn/agent/agent-create-suggestion';
+export { agentCreateSuggestion as agentCreateSuggestion } from './fn/agent/agent-create-suggestion';
+export type { AgentMarkMailProcessed$Params as AgentMarkMailProcessed$Params } from './fn/agent/agent-mark-mail-processed';
+export { agentMarkMailProcessed as agentMarkMailProcessed } from './fn/agent/agent-mark-mail-processed';
+export type { AgentGetProcessedMail$Params as AgentGetProcessedMail$Params } from './fn/agent/agent-get-processed-mail';
+export { agentGetProcessedMail as agentGetProcessedMail } from './fn/agent/agent-get-processed-mail';

@@ -10,23 +10,39 @@ import { BaseService } from '../base-service';
 import { ApiConfiguration } from '../api-configuration';
 import { StrictHttpResponse } from '../strict-http-response';
 
+import { agentAddEvent } from '../fn/agent/agent-add-event';
+import { AgentAddEvent$Params } from '../fn/agent/agent-add-event';
 import { AgentApplication } from '../models/agent-application';
 import { agentCompleteCvReview } from '../fn/agent/agent-complete-cv-review';
 import { AgentCompleteCvReview$Params } from '../fn/agent/agent-complete-cv-review';
 import { agentCreateApplication } from '../fn/agent/agent-create-application';
 import { AgentCreateApplication$Params } from '../fn/agent/agent-create-application';
+import { agentCreateSuggestion } from '../fn/agent/agent-create-suggestion';
+import { AgentCreateSuggestion$Params } from '../fn/agent/agent-create-suggestion';
 import { agentGetCv } from '../fn/agent/agent-get-cv';
 import { AgentGetCv$Params } from '../fn/agent/agent-get-cv';
+import { agentGetProcessedMail } from '../fn/agent/agent-get-processed-mail';
+import { AgentGetProcessedMail$Params } from '../fn/agent/agent-get-processed-mail';
 import { agentListApplications } from '../fn/agent/agent-list-applications';
 import { AgentListApplications$Params } from '../fn/agent/agent-list-applications';
 import { agentListCvReviews } from '../fn/agent/agent-list-cv-reviews';
 import { AgentListCvReviews$Params } from '../fn/agent/agent-list-cv-reviews';
+import { agentListOpenApplications } from '../fn/agent/agent-list-open-applications';
+import { AgentListOpenApplications$Params } from '../fn/agent/agent-list-open-applications';
+import { agentMarkMailProcessed } from '../fn/agent/agent-mark-mail-processed';
+import { AgentMarkMailProcessed$Params } from '../fn/agent/agent-mark-mail-processed';
 import { agentPutDocuments } from '../fn/agent/agent-put-documents';
 import { AgentPutDocuments$Params } from '../fn/agent/agent-put-documents';
+import { agentSetGmailThread } from '../fn/agent/agent-set-gmail-thread';
+import { AgentSetGmailThread$Params } from '../fn/agent/agent-set-gmail-thread';
 import { Application } from '../models/application';
 import { Cv } from '../models/cv';
 import { CvReview } from '../models/cv-review';
 import { Documents } from '../models/documents';
+import { Event } from '../models/event';
+import { OpenApplication } from '../models/open-application';
+import { ProcessedMail } from '../models/processed-mail';
+import { Suggestion } from '../models/suggestion';
 
 
 /**
@@ -245,6 +261,216 @@ export class AgentService extends BaseService {
     const resp = this.agentPutDocuments$Response(params, context);
     return resp.pipe(
       map((r: StrictHttpResponse<Documents>): Documents => r.body)
+    );
+  }
+
+  /** Path part for operation `agentListOpenApplications()` */
+  static readonly AgentListOpenApplicationsPath = '/api/agent/applications/open';
+
+  /**
+   * Laufende Bewerbungen (inkl. Keine Rückmeldung) mit erlaubten nächsten Ereignissen, nach Firma.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `agentListOpenApplications()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  agentListOpenApplications$Response(params?: AgentListOpenApplications$Params, context?: HttpContext): Observable<StrictHttpResponse<Array<OpenApplication>>> {
+    const obs = agentListOpenApplications(this.http, this.rootUrl, params, context);
+    return obs;
+  }
+
+  /**
+   * Laufende Bewerbungen (inkl. Keine Rückmeldung) mit erlaubten nächsten Ereignissen, nach Firma.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `agentListOpenApplications$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  agentListOpenApplications(params?: AgentListOpenApplications$Params, context?: HttpContext): Observable<Array<OpenApplication>> {
+    const resp = this.agentListOpenApplications$Response(params, context);
+    return resp.pipe(
+      map((r: StrictHttpResponse<Array<OpenApplication>>): Array<OpenApplication> => r.body)
+    );
+  }
+
+  /** Path part for operation `agentAddEvent()` */
+  static readonly AgentAddEventPath = '/api/agent/applications/{id}/events';
+
+  /**
+   * Ereignis erfassen; die Notiz bekommt das Präfix „Agent: “ (422 bei unerlaubtem Übergang).
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `agentAddEvent()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  agentAddEvent$Response(params: AgentAddEvent$Params, context?: HttpContext): Observable<StrictHttpResponse<Event>> {
+    const obs = agentAddEvent(this.http, this.rootUrl, params, context);
+    return obs;
+  }
+
+  /**
+   * Ereignis erfassen; die Notiz bekommt das Präfix „Agent: “ (422 bei unerlaubtem Übergang).
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `agentAddEvent$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  agentAddEvent(params: AgentAddEvent$Params, context?: HttpContext): Observable<Event> {
+    const resp = this.agentAddEvent$Response(params, context);
+    return resp.pipe(
+      map((r: StrictHttpResponse<Event>): Event => r.body)
+    );
+  }
+
+  /** Path part for operation `agentSetGmailThread()` */
+  static readonly AgentSetGmailThreadPath = '/api/agent/applications/{id}/gmail-thread';
+
+  /**
+   * Gmail-Thread der gesendeten Bewerbung merken (idempotent; 409, wenn er zu einer anderen Bewerbung gehört).
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `agentSetGmailThread()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  agentSetGmailThread$Response(params: AgentSetGmailThread$Params, context?: HttpContext): Observable<StrictHttpResponse<void>> {
+    const obs = agentSetGmailThread(this.http, this.rootUrl, params, context);
+    return obs;
+  }
+
+  /**
+   * Gmail-Thread der gesendeten Bewerbung merken (idempotent; 409, wenn er zu einer anderen Bewerbung gehört).
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `agentSetGmailThread$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  agentSetGmailThread(params: AgentSetGmailThread$Params, context?: HttpContext): Observable<void> {
+    const resp = this.agentSetGmailThread$Response(params, context);
+    return resp.pipe(
+      map((r: StrictHttpResponse<void>): void => r.body)
+    );
+  }
+
+  /** Path part for operation `agentCreateSuggestion()` */
+  static readonly AgentCreateSuggestionPath = '/api/agent/suggestions';
+
+  /**
+   * Unklare Antwort als Vorschlag ablegen (ohne `application_id` = nicht zugeordnet).
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `agentCreateSuggestion()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  agentCreateSuggestion$Response(params: AgentCreateSuggestion$Params, context?: HttpContext): Observable<StrictHttpResponse<Suggestion>> {
+    const obs = agentCreateSuggestion(this.http, this.rootUrl, params, context);
+    return obs;
+  }
+
+  /**
+   * Unklare Antwort als Vorschlag ablegen (ohne `application_id` = nicht zugeordnet).
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `agentCreateSuggestion$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  agentCreateSuggestion(params: AgentCreateSuggestion$Params, context?: HttpContext): Observable<Suggestion> {
+    const resp = this.agentCreateSuggestion$Response(params, context);
+    return resp.pipe(
+      map((r: StrictHttpResponse<Suggestion>): Suggestion => r.body)
+    );
+  }
+
+  /** Path part for operation `agentMarkMailProcessed()` */
+  static readonly AgentMarkMailProcessedPath = '/api/agent/processed-mails';
+
+  /**
+   * Mail als ausgewertet merken (201 neu, 200 schon vorhanden – der vorhandene Eintrag bleibt).
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `agentMarkMailProcessed()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  agentMarkMailProcessed$Response(params: AgentMarkMailProcessed$Params, context?: HttpContext): Observable<StrictHttpResponse<ProcessedMail>> {
+    const obs = agentMarkMailProcessed(this.http, this.rootUrl, params, context);
+    return obs;
+  }
+
+  /**
+   * Mail als ausgewertet merken (201 neu, 200 schon vorhanden – der vorhandene Eintrag bleibt).
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `agentMarkMailProcessed$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  agentMarkMailProcessed(params: AgentMarkMailProcessed$Params, context?: HttpContext): Observable<ProcessedMail> {
+    const resp = this.agentMarkMailProcessed$Response(params, context);
+    return resp.pipe(
+      map((r: StrictHttpResponse<ProcessedMail>): ProcessedMail => r.body)
+    );
+  }
+
+  /** Path part for operation `agentGetProcessedMail()` */
+  static readonly AgentGetProcessedMailPath = '/api/agent/processed-mails/{messageId}';
+
+  /**
+   * Bereits ausgewertete Mail (404, wenn noch nicht ausgewertet).
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `agentGetProcessedMail()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  agentGetProcessedMail$Response(params: AgentGetProcessedMail$Params, context?: HttpContext): Observable<StrictHttpResponse<ProcessedMail>> {
+    const obs = agentGetProcessedMail(this.http, this.rootUrl, params, context);
+    return obs;
+  }
+
+  /**
+   * Bereits ausgewertete Mail (404, wenn noch nicht ausgewertet).
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `agentGetProcessedMail$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  agentGetProcessedMail(params: AgentGetProcessedMail$Params, context?: HttpContext): Observable<ProcessedMail> {
+    const resp = this.agentGetProcessedMail$Response(params, context);
+    return resp.pipe(
+      map((r: StrictHttpResponse<ProcessedMail>): ProcessedMail => r.body)
     );
   }
 

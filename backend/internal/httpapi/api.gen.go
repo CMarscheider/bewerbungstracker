@@ -202,6 +202,27 @@ func (e Phase) Valid() bool {
 	}
 }
 
+// Defines values for SuggestionState.
+const (
+	Angenommen SuggestionState = "angenommen"
+	Offen      SuggestionState = "offen"
+	Verworfen  SuggestionState = "verworfen"
+)
+
+// Valid indicates whether the value is a known member of the SuggestionState enum.
+func (e SuggestionState) Valid() bool {
+	switch e {
+	case Angenommen:
+		return true
+	case Offen:
+		return true
+	case Verworfen:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListApplicationsParamsSort.
 const (
 	Score   ListApplicationsParamsSort = "score"
@@ -251,6 +272,15 @@ type AgentDocumentsInput struct {
 // AgentDocumentsInputLanguage defines model for AgentDocumentsInput.Language.
 type AgentDocumentsInputLanguage string
 
+// AgentEventInput defines model for AgentEventInput.
+type AgentEventInput struct {
+	// DueOn Nur bei Vorgemerkt, ChallengeErhalten und AngebotErhalten erlaubt
+	DueOn      *openapi_types.Date `json:"due_on,omitempty"`
+	Note       *string             `json:"note,omitempty"`
+	OccurredOn openapi_types.Date  `json:"occurred_on"`
+	Type       EventType           `json:"type"`
+}
+
 // AgentJob defines model for AgentJob.
 type AgentJob struct {
 	CompanyName    string  `json:"company_name"`
@@ -278,6 +308,7 @@ type Application struct {
 	FitReason      *string            `json:"fit_reason,omitempty"`
 	FitScore       *int               `json:"fit_score,omitempty"`
 	GmailDraftAt   *time.Time         `json:"gmail_draft_at,omitempty"`
+	GmailThreadId  *string            `json:"gmail_thread_id,omitempty"`
 	Id             openapi_types.UUID `json:"id"`
 	JobUrl         *string            `json:"job_url,omitempty"`
 	Location       *string            `json:"location,omitempty"`
@@ -528,6 +559,14 @@ type FunnelStep struct {
 	Stage   string  `json:"stage"`
 }
 
+// GmailMessageId defines model for GmailMessageId.
+type GmailMessageId = string
+
+// GmailThreadInput defines model for GmailThreadInput.
+type GmailThreadInput struct {
+	GmailThreadId string `json:"gmail_thread_id"`
+}
+
 // NewEvent defines model for NewEvent.
 type NewEvent struct {
 	// DueOn Nur bei Vorgemerkt, ChallengeErhalten und AngebotErhalten erlaubt
@@ -535,6 +574,23 @@ type NewEvent struct {
 	Note       *string             `json:"note,omitempty"`
 	OccurredOn openapi_types.Date  `json:"occurred_on"`
 	Type       EventType           `json:"type"`
+}
+
+// OpenApplication defines model for OpenApplication.
+type OpenApplication struct {
+	AllowedEvents  []EventType        `json:"allowed_events"`
+	CompanyName    string             `json:"company_name"`
+	CompanyWebsite *string            `json:"company_website,omitempty"`
+	ContactEmail   *string            `json:"contact_email,omitempty"`
+	DocumentsState DocumentsState     `json:"documents_state"`
+	GmailDraftAt   *time.Time         `json:"gmail_draft_at,omitempty"`
+	GmailThreadId  *string            `json:"gmail_thread_id,omitempty"`
+	Id             openapi_types.UUID `json:"id"`
+
+	// MailSubject Betreff der Bewerbungsmail aus den Unterlagen, falls vorhanden
+	MailSubject   *string   `json:"mail_subject,omitempty"`
+	PositionTitle string    `json:"position_title"`
+	Status        EventType `json:"status"`
 }
 
 // Phase defines model for Phase.
@@ -553,6 +609,21 @@ type Problem struct {
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
+// ProcessedMail defines model for ProcessedMail.
+type ProcessedMail struct {
+	ApplicationId  *openapi_types.UUID `json:"application_id,omitempty"`
+	GmailMessageId string              `json:"gmail_message_id"`
+	Outcome        string              `json:"outcome"`
+	ProcessedAt    time.Time           `json:"processed_at"`
+}
+
+// ProcessedMailInput defines model for ProcessedMailInput.
+type ProcessedMailInput struct {
+	ApplicationId  *openapi_types.UUID `json:"application_id,omitempty"`
+	GmailMessageId GmailMessageId      `json:"gmail_message_id"`
+	Outcome        string              `json:"outcome"`
+}
+
 // RejectionCount defines model for RejectionCount.
 type RejectionCount struct {
 	Count     int       `json:"count"`
@@ -566,6 +637,45 @@ type SourceStats struct {
 	ReachedOffer     int    `json:"reached_offer"`
 	Source           string `json:"source"`
 }
+
+// Suggestion defines model for Suggestion.
+type Suggestion struct {
+	ApplicationId *openapi_types.UUID `json:"application_id,omitempty"`
+	CompanyName   *string             `json:"company_name,omitempty"`
+	CreatedAt     time.Time           `json:"created_at"`
+	DecidedAt     *time.Time          `json:"decided_at,omitempty"`
+	DueOn         *openapi_types.Date `json:"due_on,omitempty"`
+	Id            openapi_types.UUID  `json:"id"`
+	MailFrom      *string             `json:"mail_from,omitempty"`
+	MailSubject   *string             `json:"mail_subject,omitempty"`
+	MailUrl       *string             `json:"mail_url,omitempty"`
+	OccurredOn    openapi_types.Date  `json:"occurred_on"`
+	PositionTitle *string             `json:"position_title,omitempty"`
+	Reason        string              `json:"reason"`
+	State         SuggestionState     `json:"state"`
+	SuggestedType EventType           `json:"suggested_type"`
+}
+
+// SuggestionAccept defines model for SuggestionAccept.
+type SuggestionAccept struct {
+	// ApplicationId Pflicht bei nicht zugeordneten Vorschlägen; sonst Vorrang vor der Zuordnung
+	ApplicationId *openapi_types.UUID `json:"application_id,omitempty"`
+}
+
+// SuggestionInput defines model for SuggestionInput.
+type SuggestionInput struct {
+	ApplicationId *openapi_types.UUID `json:"application_id,omitempty"`
+	DueOn         *openapi_types.Date `json:"due_on,omitempty"`
+	MailFrom      *string             `json:"mail_from,omitempty"`
+	MailSubject   *string             `json:"mail_subject,omitempty"`
+	MailUrl       *string             `json:"mail_url,omitempty"`
+	OccurredOn    openapi_types.Date  `json:"occurred_on"`
+	Reason        string              `json:"reason"`
+	SuggestedType EventType           `json:"suggested_type"`
+}
+
+// SuggestionState defines model for SuggestionState.
+type SuggestionState string
 
 // Summary defines model for Summary.
 type Summary struct {
@@ -627,8 +737,20 @@ type AgentCreateApplicationJSONRequestBody = AgentJob
 // AgentPutDocumentsJSONRequestBody defines body for AgentPutDocuments for application/json ContentType.
 type AgentPutDocumentsJSONRequestBody = AgentDocumentsInput
 
+// AgentAddEventJSONRequestBody defines body for AgentAddEvent for application/json ContentType.
+type AgentAddEventJSONRequestBody = AgentEventInput
+
+// AgentSetGmailThreadJSONRequestBody defines body for AgentSetGmailThread for application/json ContentType.
+type AgentSetGmailThreadJSONRequestBody = GmailThreadInput
+
 // AgentCompleteCvReviewJSONRequestBody defines body for AgentCompleteCvReview for application/json ContentType.
 type AgentCompleteCvReviewJSONRequestBody = CvReviewResult
+
+// AgentMarkMailProcessedJSONRequestBody defines body for AgentMarkMailProcessed for application/json ContentType.
+type AgentMarkMailProcessedJSONRequestBody = ProcessedMailInput
+
+// AgentCreateSuggestionJSONRequestBody defines body for AgentCreateSuggestion for application/json ContentType.
+type AgentCreateSuggestionJSONRequestBody = SuggestionInput
 
 // CreateApplicationJSONRequestBody defines body for CreateApplication for application/json ContentType.
 type CreateApplicationJSONRequestBody = ApplicationInput
@@ -650,6 +772,9 @@ type UpdateCompanyJSONRequestBody = CompanyPatch
 
 // SaveCvJSONRequestBody defines body for SaveCv for application/json ContentType.
 type SaveCvJSONRequestBody = Cv
+
+// AcceptSuggestionJSONRequestBody defines body for AcceptSuggestion for application/json ContentType.
+type AcceptSuggestionJSONRequestBody = SuggestionAccept
 
 // Getter for additional properties for Problem. Returns the specified
 // element and whether it was found
@@ -826,9 +951,18 @@ type ServerInterface interface {
 	// AgentCreateApplication Gefundene Stelle als Vorgemerkt anlegen
 	// (POST /api/agent/applications)
 	AgentCreateApplication(w http.ResponseWriter, r *http.Request)
+	// AgentListOpenApplications Laufende Bewerbungen (inkl. Keine Rückmeldung) mit erlaubten nächsten Ereignissen, nach Firma
+	// (GET /api/agent/applications/open)
+	AgentListOpenApplications(w http.ResponseWriter, r *http.Request)
 	// AgentPutDocuments Unterlagen abliefern; der Server rendert das PDF und legt ggf. den Gmail-Entwurf an
 	// (PUT /api/agent/applications/{id}/documents)
 	AgentPutDocuments(w http.ResponseWriter, r *http.Request, id Id)
+	// AgentAddEvent Ereignis erfassen; die Notiz bekommt das Präfix „Agent: “ (422 bei unerlaubtem Übergang)
+	// (POST /api/agent/applications/{id}/events)
+	AgentAddEvent(w http.ResponseWriter, r *http.Request, id Id)
+	// AgentSetGmailThread Gmail-Thread der gesendeten Bewerbung merken (idempotent; 409, wenn er zu einer anderen Bewerbung gehört)
+	// (PUT /api/agent/applications/{id}/gmail-thread)
+	AgentSetGmailThread(w http.ResponseWriter, r *http.Request, id Id)
 	// AgentGetCv Gespeicherter Lebenslauf (404, solange keiner gespeichert ist)
 	// (GET /api/agent/cv)
 	AgentGetCv(w http.ResponseWriter, r *http.Request)
@@ -838,6 +972,15 @@ type ServerInterface interface {
 	// AgentCompleteCvReview Vorschlag und Hinweise abliefern (409, wenn nicht angefordert)
 	// (PUT /api/agent/cv-reviews/{id})
 	AgentCompleteCvReview(w http.ResponseWriter, r *http.Request, id Id)
+	// AgentMarkMailProcessed Mail als ausgewertet merken (201 neu, 200 schon vorhanden – der vorhandene Eintrag bleibt)
+	// (POST /api/agent/processed-mails)
+	AgentMarkMailProcessed(w http.ResponseWriter, r *http.Request)
+	// AgentGetProcessedMail Bereits ausgewertete Mail (404, wenn noch nicht ausgewertet)
+	// (GET /api/agent/processed-mails/{messageId})
+	AgentGetProcessedMail(w http.ResponseWriter, r *http.Request, messageId GmailMessageId)
+	// AgentCreateSuggestion Unklare Antwort als Vorschlag ablegen (ohne `application_id` = nicht zugeordnet)
+	// (POST /api/agent/suggestions)
+	AgentCreateSuggestion(w http.ResponseWriter, r *http.Request)
 
 	// (GET /api/v1/applications)
 	ListApplications(w http.ResponseWriter, r *http.Request, params ListApplicationsParams)
@@ -931,6 +1074,15 @@ type ServerInterface interface {
 
 	// (GET /api/v1/stats/summary)
 	GetSummary(w http.ResponseWriter, r *http.Request)
+	// ListSuggestions Offene Vorschläge des Agenten, älteste zuerst
+	// (GET /api/v1/suggestions)
+	ListSuggestions(w http.ResponseWriter, r *http.Request)
+	// AcceptSuggestion Vorschlag übernehmen (legt das Ereignis an)
+	// (POST /api/v1/suggestions/{id}/accept)
+	AcceptSuggestion(w http.ResponseWriter, r *http.Request, id Id)
+	// DismissSuggestion Vorschlag verwerfen (409, wenn schon entschieden)
+	// (POST /api/v1/suggestions/{id}/dismiss)
+	DismissSuggestion(w http.ResponseWriter, r *http.Request, id Id)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -989,6 +1141,20 @@ func (siw *ServerInterfaceWrapper) AgentCreateApplication(w http.ResponseWriter,
 	handler.ServeHTTP(w, r)
 }
 
+// AgentListOpenApplications operation middleware
+func (siw *ServerInterfaceWrapper) AgentListOpenApplications(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AgentListOpenApplications(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // AgentPutDocuments operation middleware
 func (siw *ServerInterfaceWrapper) AgentPutDocuments(w http.ResponseWriter, r *http.Request) {
 
@@ -1006,6 +1172,58 @@ func (siw *ServerInterfaceWrapper) AgentPutDocuments(w http.ResponseWriter, r *h
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.AgentPutDocuments(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AgentAddEvent operation middleware
+func (siw *ServerInterfaceWrapper) AgentAddEvent(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AgentAddEvent(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AgentSetGmailThread operation middleware
+func (siw *ServerInterfaceWrapper) AgentSetGmailThread(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AgentSetGmailThread(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1079,6 +1297,60 @@ func (siw *ServerInterfaceWrapper) AgentCompleteCvReview(w http.ResponseWriter, 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.AgentCompleteCvReview(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AgentMarkMailProcessed operation middleware
+func (siw *ServerInterfaceWrapper) AgentMarkMailProcessed(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AgentMarkMailProcessed(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AgentGetProcessedMail operation middleware
+func (siw *ServerInterfaceWrapper) AgentGetProcessedMail(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "messageId" -------------
+	var messageId GmailMessageId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "messageId", r.PathValue("messageId"), &messageId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "messageId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AgentGetProcessedMail(w, r, messageId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AgentCreateSuggestion operation middleware
+func (siw *ServerInterfaceWrapper) AgentCreateSuggestion(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AgentCreateSuggestion(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1799,6 +2071,72 @@ func (siw *ServerInterfaceWrapper) GetSummary(w http.ResponseWriter, r *http.Req
 	handler.ServeHTTP(w, r)
 }
 
+// ListSuggestions operation middleware
+func (siw *ServerInterfaceWrapper) ListSuggestions(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListSuggestions(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AcceptSuggestion operation middleware
+func (siw *ServerInterfaceWrapper) AcceptSuggestion(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AcceptSuggestion(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DismissSuggestion operation middleware
+func (siw *ServerInterfaceWrapper) DismissSuggestion(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DismissSuggestion(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 type UnescapedCookieParamError struct {
 	ParamName string
 	Err       error
@@ -1950,12 +2288,21 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/cv/review", wrapper.CloseCvReview)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/cv/review", wrapper.GetCvReview)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/cv/review", wrapper.RequestCvReview)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/suggestions", wrapper.ListSuggestions)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/suggestions/{id}/accept", wrapper.AcceptSuggestion)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/suggestions/{id}/dismiss", wrapper.DismissSuggestion)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/agent/cv", wrapper.AgentGetCv)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/agent/cv-reviews", wrapper.AgentListCvReviews)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/agent/cv-reviews/{id}", wrapper.AgentCompleteCvReview)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/agent/applications", wrapper.AgentListApplications)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/agent/applications", wrapper.AgentCreateApplication)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/agent/applications/{id}/documents", wrapper.AgentPutDocuments)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/agent/applications/open", wrapper.AgentListOpenApplications)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/agent/applications/{id}/events", wrapper.AgentAddEvent)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/agent/applications/{id}/gmail-thread", wrapper.AgentSetGmailThread)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/agent/suggestions", wrapper.AgentCreateSuggestion)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/agent/processed-mails", wrapper.AgentMarkMailProcessed)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/agent/processed-mails/{messageId}", wrapper.AgentGetProcessedMail)
 
 	return m
 }
@@ -2040,6 +2387,44 @@ func (response AgentCreateApplicationdefaultApplicationProblemPlusJSONResponse) 
 	return err
 }
 
+type AgentListOpenApplicationsRequestObject struct {
+}
+
+type AgentListOpenApplicationsResponseObject interface {
+	VisitAgentListOpenApplicationsResponse(w http.ResponseWriter) error
+}
+
+type AgentListOpenApplications200JSONResponse []OpenApplication
+
+func (response AgentListOpenApplications200JSONResponse) VisitAgentListOpenApplicationsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AgentListOpenApplicationsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response AgentListOpenApplicationsdefaultApplicationProblemPlusJSONResponse) VisitAgentListOpenApplicationsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type AgentPutDocumentsRequestObject struct {
 	Id   Id `json:"id"`
 	Body *AgentPutDocumentsJSONRequestBody
@@ -2069,6 +2454,80 @@ type AgentPutDocumentsdefaultApplicationProblemPlusJSONResponse struct {
 }
 
 func (response AgentPutDocumentsdefaultApplicationProblemPlusJSONResponse) VisitAgentPutDocumentsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AgentAddEventRequestObject struct {
+	Id   Id `json:"id"`
+	Body *AgentAddEventJSONRequestBody
+}
+
+type AgentAddEventResponseObject interface {
+	VisitAgentAddEventResponse(w http.ResponseWriter) error
+}
+
+type AgentAddEvent201JSONResponse Event
+
+func (response AgentAddEvent201JSONResponse) VisitAgentAddEventResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AgentAddEventdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response AgentAddEventdefaultApplicationProblemPlusJSONResponse) VisitAgentAddEventResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AgentSetGmailThreadRequestObject struct {
+	Id   Id `json:"id"`
+	Body *AgentSetGmailThreadJSONRequestBody
+}
+
+type AgentSetGmailThreadResponseObject interface {
+	VisitAgentSetGmailThreadResponse(w http.ResponseWriter) error
+}
+
+type AgentSetGmailThread204Response struct {
+}
+
+func (response AgentSetGmailThread204Response) VisitAgentSetGmailThreadResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type AgentSetGmailThreaddefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response AgentSetGmailThreaddefaultApplicationProblemPlusJSONResponse) VisitAgentSetGmailThreadResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -2186,6 +2645,137 @@ type AgentCompleteCvReviewdefaultApplicationProblemPlusJSONResponse struct {
 }
 
 func (response AgentCompleteCvReviewdefaultApplicationProblemPlusJSONResponse) VisitAgentCompleteCvReviewResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AgentMarkMailProcessedRequestObject struct {
+	Body *AgentMarkMailProcessedJSONRequestBody
+}
+
+type AgentMarkMailProcessedResponseObject interface {
+	VisitAgentMarkMailProcessedResponse(w http.ResponseWriter) error
+}
+
+type AgentMarkMailProcessed200JSONResponse ProcessedMail
+
+func (response AgentMarkMailProcessed200JSONResponse) VisitAgentMarkMailProcessedResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AgentMarkMailProcessed201JSONResponse ProcessedMail
+
+func (response AgentMarkMailProcessed201JSONResponse) VisitAgentMarkMailProcessedResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AgentMarkMailProcesseddefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response AgentMarkMailProcesseddefaultApplicationProblemPlusJSONResponse) VisitAgentMarkMailProcessedResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AgentGetProcessedMailRequestObject struct {
+	MessageId GmailMessageId `json:"messageId"`
+}
+
+type AgentGetProcessedMailResponseObject interface {
+	VisitAgentGetProcessedMailResponse(w http.ResponseWriter) error
+}
+
+type AgentGetProcessedMail200JSONResponse ProcessedMail
+
+func (response AgentGetProcessedMail200JSONResponse) VisitAgentGetProcessedMailResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AgentGetProcessedMaildefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response AgentGetProcessedMaildefaultApplicationProblemPlusJSONResponse) VisitAgentGetProcessedMailResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AgentCreateSuggestionRequestObject struct {
+	Body *AgentCreateSuggestionJSONRequestBody
+}
+
+type AgentCreateSuggestionResponseObject interface {
+	VisitAgentCreateSuggestionResponse(w http.ResponseWriter) error
+}
+
+type AgentCreateSuggestion201JSONResponse Suggestion
+
+func (response AgentCreateSuggestion201JSONResponse) VisitAgentCreateSuggestionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AgentCreateSuggestiondefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response AgentCreateSuggestiondefaultApplicationProblemPlusJSONResponse) VisitAgentCreateSuggestionResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -3420,6 +4010,117 @@ func (response GetSummarydefaultApplicationProblemPlusJSONResponse) VisitGetSumm
 	return err
 }
 
+type ListSuggestionsRequestObject struct {
+}
+
+type ListSuggestionsResponseObject interface {
+	VisitListSuggestionsResponse(w http.ResponseWriter) error
+}
+
+type ListSuggestions200JSONResponse []Suggestion
+
+func (response ListSuggestions200JSONResponse) VisitListSuggestionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListSuggestionsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response ListSuggestionsdefaultApplicationProblemPlusJSONResponse) VisitListSuggestionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AcceptSuggestionRequestObject struct {
+	Id   Id `json:"id"`
+	Body *AcceptSuggestionJSONRequestBody
+}
+
+type AcceptSuggestionResponseObject interface {
+	VisitAcceptSuggestionResponse(w http.ResponseWriter) error
+}
+
+type AcceptSuggestion200JSONResponse Application
+
+func (response AcceptSuggestion200JSONResponse) VisitAcceptSuggestionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AcceptSuggestiondefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response AcceptSuggestiondefaultApplicationProblemPlusJSONResponse) VisitAcceptSuggestionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DismissSuggestionRequestObject struct {
+	Id Id `json:"id"`
+}
+
+type DismissSuggestionResponseObject interface {
+	VisitDismissSuggestionResponse(w http.ResponseWriter) error
+}
+
+type DismissSuggestion204Response struct {
+}
+
+func (response DismissSuggestion204Response) VisitDismissSuggestionResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DismissSuggestiondefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response DismissSuggestiondefaultApplicationProblemPlusJSONResponse) VisitDismissSuggestionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
 	// AgentListApplications Stellen in einem Unterlagen-Zustand (für den Agenten meist „angefordert“), älteste zuerst
@@ -3428,9 +4129,18 @@ type StrictServerInterface interface {
 	// AgentCreateApplication Gefundene Stelle als Vorgemerkt anlegen
 	// (POST /api/agent/applications)
 	AgentCreateApplication(ctx context.Context, request AgentCreateApplicationRequestObject) (AgentCreateApplicationResponseObject, error)
+	// AgentListOpenApplications Laufende Bewerbungen (inkl. Keine Rückmeldung) mit erlaubten nächsten Ereignissen, nach Firma
+	// (GET /api/agent/applications/open)
+	AgentListOpenApplications(ctx context.Context, request AgentListOpenApplicationsRequestObject) (AgentListOpenApplicationsResponseObject, error)
 	// AgentPutDocuments Unterlagen abliefern; der Server rendert das PDF und legt ggf. den Gmail-Entwurf an
 	// (PUT /api/agent/applications/{id}/documents)
 	AgentPutDocuments(ctx context.Context, request AgentPutDocumentsRequestObject) (AgentPutDocumentsResponseObject, error)
+	// AgentAddEvent Ereignis erfassen; die Notiz bekommt das Präfix „Agent: “ (422 bei unerlaubtem Übergang)
+	// (POST /api/agent/applications/{id}/events)
+	AgentAddEvent(ctx context.Context, request AgentAddEventRequestObject) (AgentAddEventResponseObject, error)
+	// AgentSetGmailThread Gmail-Thread der gesendeten Bewerbung merken (idempotent; 409, wenn er zu einer anderen Bewerbung gehört)
+	// (PUT /api/agent/applications/{id}/gmail-thread)
+	AgentSetGmailThread(ctx context.Context, request AgentSetGmailThreadRequestObject) (AgentSetGmailThreadResponseObject, error)
 	// AgentGetCv Gespeicherter Lebenslauf (404, solange keiner gespeichert ist)
 	// (GET /api/agent/cv)
 	AgentGetCv(ctx context.Context, request AgentGetCvRequestObject) (AgentGetCvResponseObject, error)
@@ -3440,6 +4150,15 @@ type StrictServerInterface interface {
 	// AgentCompleteCvReview Vorschlag und Hinweise abliefern (409, wenn nicht angefordert)
 	// (PUT /api/agent/cv-reviews/{id})
 	AgentCompleteCvReview(ctx context.Context, request AgentCompleteCvReviewRequestObject) (AgentCompleteCvReviewResponseObject, error)
+	// AgentMarkMailProcessed Mail als ausgewertet merken (201 neu, 200 schon vorhanden – der vorhandene Eintrag bleibt)
+	// (POST /api/agent/processed-mails)
+	AgentMarkMailProcessed(ctx context.Context, request AgentMarkMailProcessedRequestObject) (AgentMarkMailProcessedResponseObject, error)
+	// AgentGetProcessedMail Bereits ausgewertete Mail (404, wenn noch nicht ausgewertet)
+	// (GET /api/agent/processed-mails/{messageId})
+	AgentGetProcessedMail(ctx context.Context, request AgentGetProcessedMailRequestObject) (AgentGetProcessedMailResponseObject, error)
+	// AgentCreateSuggestion Unklare Antwort als Vorschlag ablegen (ohne `application_id` = nicht zugeordnet)
+	// (POST /api/agent/suggestions)
+	AgentCreateSuggestion(ctx context.Context, request AgentCreateSuggestionRequestObject) (AgentCreateSuggestionResponseObject, error)
 
 	// (GET /api/v1/applications)
 	ListApplications(ctx context.Context, request ListApplicationsRequestObject) (ListApplicationsResponseObject, error)
@@ -3533,6 +4252,15 @@ type StrictServerInterface interface {
 
 	// (GET /api/v1/stats/summary)
 	GetSummary(ctx context.Context, request GetSummaryRequestObject) (GetSummaryResponseObject, error)
+	// ListSuggestions Offene Vorschläge des Agenten, älteste zuerst
+	// (GET /api/v1/suggestions)
+	ListSuggestions(ctx context.Context, request ListSuggestionsRequestObject) (ListSuggestionsResponseObject, error)
+	// AcceptSuggestion Vorschlag übernehmen (legt das Ereignis an)
+	// (POST /api/v1/suggestions/{id}/accept)
+	AcceptSuggestion(ctx context.Context, request AcceptSuggestionRequestObject) (AcceptSuggestionResponseObject, error)
+	// DismissSuggestion Vorschlag verwerfen (409, wenn schon entschieden)
+	// (POST /api/v1/suggestions/{id}/dismiss)
+	DismissSuggestion(ctx context.Context, request DismissSuggestionRequestObject) (DismissSuggestionResponseObject, error)
 }
 
 type StrictHandlerFunc func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error)
@@ -3631,6 +4359,30 @@ func (sh *strictHandler) AgentCreateApplication(w http.ResponseWriter, r *http.R
 	}
 }
 
+// AgentListOpenApplications operation middleware
+func (sh *strictHandler) AgentListOpenApplications(w http.ResponseWriter, r *http.Request) {
+	var request AgentListOpenApplicationsRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.AgentListOpenApplications(ctx, request.(AgentListOpenApplicationsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AgentListOpenApplications")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(AgentListOpenApplicationsResponseObject); ok {
+		if err := validResponse.VisitAgentListOpenApplicationsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // AgentPutDocuments operation middleware
 func (sh *strictHandler) AgentPutDocuments(w http.ResponseWriter, r *http.Request, id Id) {
 	var request AgentPutDocumentsRequestObject
@@ -3657,6 +4409,72 @@ func (sh *strictHandler) AgentPutDocuments(w http.ResponseWriter, r *http.Reques
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(AgentPutDocumentsResponseObject); ok {
 		if err := validResponse.VisitAgentPutDocumentsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AgentAddEvent operation middleware
+func (sh *strictHandler) AgentAddEvent(w http.ResponseWriter, r *http.Request, id Id) {
+	var request AgentAddEventRequestObject
+
+	request.Id = id
+
+	var body AgentAddEventJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.AgentAddEvent(ctx, request.(AgentAddEventRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AgentAddEvent")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(AgentAddEventResponseObject); ok {
+		if err := validResponse.VisitAgentAddEventResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AgentSetGmailThread operation middleware
+func (sh *strictHandler) AgentSetGmailThread(w http.ResponseWriter, r *http.Request, id Id) {
+	var request AgentSetGmailThreadRequestObject
+
+	request.Id = id
+
+	var body AgentSetGmailThreadJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.AgentSetGmailThread(ctx, request.(AgentSetGmailThreadRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AgentSetGmailThread")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(AgentSetGmailThreadResponseObject); ok {
+		if err := validResponse.VisitAgentSetGmailThreadResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -3740,6 +4558,94 @@ func (sh *strictHandler) AgentCompleteCvReview(w http.ResponseWriter, r *http.Re
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(AgentCompleteCvReviewResponseObject); ok {
 		if err := validResponse.VisitAgentCompleteCvReviewResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AgentMarkMailProcessed operation middleware
+func (sh *strictHandler) AgentMarkMailProcessed(w http.ResponseWriter, r *http.Request) {
+	var request AgentMarkMailProcessedRequestObject
+
+	var body AgentMarkMailProcessedJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.AgentMarkMailProcessed(ctx, request.(AgentMarkMailProcessedRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AgentMarkMailProcessed")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(AgentMarkMailProcessedResponseObject); ok {
+		if err := validResponse.VisitAgentMarkMailProcessedResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AgentGetProcessedMail operation middleware
+func (sh *strictHandler) AgentGetProcessedMail(w http.ResponseWriter, r *http.Request, messageId GmailMessageId) {
+	var request AgentGetProcessedMailRequestObject
+
+	request.MessageId = messageId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.AgentGetProcessedMail(ctx, request.(AgentGetProcessedMailRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AgentGetProcessedMail")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(AgentGetProcessedMailResponseObject); ok {
+		if err := validResponse.VisitAgentGetProcessedMailResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AgentCreateSuggestion operation middleware
+func (sh *strictHandler) AgentCreateSuggestion(w http.ResponseWriter, r *http.Request) {
+	var request AgentCreateSuggestionRequestObject
+
+	var body AgentCreateSuggestionJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.AgentCreateSuggestion(ctx, request.(AgentCreateSuggestionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AgentCreateSuggestion")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(AgentCreateSuggestionResponseObject); ok {
+		if err := validResponse.VisitAgentCreateSuggestionResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -4576,98 +5482,199 @@ func (sh *strictHandler) GetSummary(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// ListSuggestions operation middleware
+func (sh *strictHandler) ListSuggestions(w http.ResponseWriter, r *http.Request) {
+	var request ListSuggestionsRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListSuggestions(ctx, request.(ListSuggestionsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListSuggestions")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListSuggestionsResponseObject); ok {
+		if err := validResponse.VisitListSuggestionsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AcceptSuggestion operation middleware
+func (sh *strictHandler) AcceptSuggestion(w http.ResponseWriter, r *http.Request, id Id) {
+	var request AcceptSuggestionRequestObject
+
+	request.Id = id
+
+	var body AcceptSuggestionJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.AcceptSuggestion(ctx, request.(AcceptSuggestionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AcceptSuggestion")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(AcceptSuggestionResponseObject); ok {
+		if err := validResponse.VisitAcceptSuggestionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DismissSuggestion operation middleware
+func (sh *strictHandler) DismissSuggestion(w http.ResponseWriter, r *http.Request, id Id) {
+	var request DismissSuggestionRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DismissSuggestion(ctx, request.(DismissSuggestionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DismissSuggestion")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DismissSuggestionResponseObject); ok {
+		if err := validResponse.VisitDismissSuggestionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // Base64 encoded, compressed with deflate, json marshaled OpenAPI spec.
 // Stored as a slice of fixed-width chunks rather than one concatenated
 // const string: with thousands of chunks the chained `+` fold is several
 // times slower for the Go compiler than parsing a slice literal.
 var swaggerSpec = []string{
-	"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",
-	"V296b7779uyV/sFmaqj3G66n/zsA",
+	"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",
+	"Jr58lUC+mf/vAA==",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,

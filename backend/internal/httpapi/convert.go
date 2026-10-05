@@ -52,7 +52,7 @@ func applicationDTO(a service.Application) Application {
 		ContactEmail: a.ContactEmail, PostingText: a.PostingText, FitScore: a.FitScore, FitReason: a.FitReason,
 		Status: EventType(a.Status), Phase: Phase(a.Phase), CreatedByAgent: a.CreatedByAgent,
 		DocumentsState: DocumentsState(a.DocumentsState), DocumentsError: a.DocumentsError, GmailDraftAt: a.GmailDraftAt,
-		CreatedAt: a.CreatedAt, UpdatedAt: a.UpdatedAt, Events: events,
+		GmailThreadId: a.GmailThreadID, CreatedAt: a.CreatedAt, UpdatedAt: a.UpdatedAt, Events: events,
 	}
 }
 
@@ -89,6 +89,38 @@ func agentApplicationDTO(a service.AgentApplication) AgentApplication {
 		Id: a.ID, CompanyName: a.CompanyName, CompanyWebsite: a.CompanyWebsite, PositionTitle: a.PositionTitle,
 		JobUrl: a.JobURL, Location: a.Location, ContactEmail: a.ContactEmail, PostingText: a.PostingText,
 		FitReason: a.FitReason, DocumentsState: DocumentsState(a.DocumentsState), DocumentsVersion: a.DocumentsVersion,
+	}
+}
+
+func eventTypesDTO(ts []domain.EventType) []EventType {
+	out := make([]EventType, 0, len(ts))
+	for _, t := range ts {
+		out = append(out, EventType(t))
+	}
+	return out
+}
+
+func openApplicationDTO(a service.OpenApplication) OpenApplication {
+	return OpenApplication{
+		Id: a.ID, CompanyName: a.CompanyName, CompanyWebsite: a.CompanyWebsite, PositionTitle: a.PositionTitle,
+		Status: EventType(a.Status), ContactEmail: a.ContactEmail, GmailThreadId: a.GmailThreadID,
+		DocumentsState: DocumentsState(a.DocumentsState), GmailDraftAt: a.GmailDraftAt, MailSubject: a.MailSubject,
+		AllowedEvents: eventTypesDTO(a.AllowedEvents),
+	}
+}
+
+func suggestionDTO(s service.Suggestion) Suggestion {
+	return Suggestion{
+		Id: s.ID, ApplicationId: s.ApplicationID, CompanyName: s.CompanyName, PositionTitle: s.PositionTitle,
+		SuggestedType: EventType(s.SuggestedType), OccurredOn: toDate(s.OccurredOn), DueOn: toDatePtr(s.DueOn),
+		Reason: s.Reason, MailSubject: s.MailSubject, MailFrom: s.MailFrom, MailUrl: s.MailURL,
+		State: SuggestionState(s.State), CreatedAt: s.CreatedAt, DecidedAt: s.DecidedAt,
+	}
+}
+
+func processedMailDTO(m service.ProcessedMail) ProcessedMail {
+	return ProcessedMail{
+		GmailMessageId: m.GmailMessageID, ApplicationId: m.ApplicationID, Outcome: m.Outcome, ProcessedAt: m.ProcessedAt,
 	}
 }
 

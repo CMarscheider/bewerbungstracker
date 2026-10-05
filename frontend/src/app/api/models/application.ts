@@ -17,6 +17,7 @@ export interface Application {
   fit_reason?: string;
   fit_score?: number;
   gmail_draft_at?: string;
+  gmail_thread_id?: string;
   id: string;
   job_url?: string;
   location?: string;

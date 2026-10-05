@@ -3,6 +3,7 @@
 
 export type { AgentApplication } from './models/agent-application';
 export type { AgentDocumentsInput } from './models/agent-documents-input';
+export type { AgentEventInput } from './models/agent-event-input';
 export type { AgentJob } from './models/agent-job';
 export type { Application } from './models/application';
 export type { ApplicationInput } from './models/application-input';
@@ -31,9 +32,18 @@ export type { DocumentsState } from './models/documents-state';
 export type { Event } from './models/event';
 export type { EventType } from './models/event-type';
 export type { FunnelStep } from './models/funnel-step';
+export type { GmailMessageId } from './models/gmail-message-id';
+export type { GmailThreadInput } from './models/gmail-thread-input';
 export type { NewEvent } from './models/new-event';
+export type { OpenApplication } from './models/open-application';
 export type { Phase } from './models/phase';
 export type { Problem } from './models/problem';
+export type { ProcessedMail } from './models/processed-mail';
+export type { ProcessedMailInput } from './models/processed-mail-input';
 export type { RejectionCount } from './models/rejection-count';
 export type { SourceStats } from './models/source-stats';
+export type { Suggestion } from './models/suggestion';
+export type { SuggestionAccept } from './models/suggestion-accept';
+export type { SuggestionInput } from './models/suggestion-input';
+export type { SuggestionState } from './models/suggestion-state';
 export type { Summary } from './models/summary';
