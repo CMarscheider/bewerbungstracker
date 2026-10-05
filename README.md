@@ -107,6 +107,13 @@ Lebenslauf-Optimierung abholt, den Vorschlag zurückliefert, gefundene Stellen a
 gesetzt ist (in `.env`, mind. 32 Zeichen, z. B. `openssl rand -hex 32`); ohne Token antwortet sie mit 404.
 Jeder Aufruf braucht `Authorization: Bearer <token>`, sonst 401.
 
+Für die Postfach-Auswertung (Routine R3), die fremde und damit möglicherweise manipulierte Mails liest,
+gibt es optional ein eingeschränktes zweites Token `AGENT_TOKEN_MAIL` (mind. 32 Zeichen, verschieden
+von `AGENT_TOKEN`, nur zusammen mit ihm). Es darf nur `GET /api/agent/cv`,
+`GET /api/agent/applications/open`, `POST /api/agent/applications/{id}/events`,
+`PUT /api/agent/applications/{id}/gmail-thread`, `POST /api/agent/suggestions` und
+`GET`/`POST /api/agent/processed-mails…` aufrufen; alles andere → 403. Beide Tokens teilen sich die Drossel.
+
 - `GET /api/agent/cv` – aktueller Lebenslauf
 - `GET /api/agent/cv-reviews?state=angefordert` – Optimierungen in einem Zustand (`state` ist Pflicht)
 - `PUT /api/agent/cv-reviews/{id}` – Vorschlag abliefern: `proposal` ist ein vollständiger Lebenslauf
@@ -136,7 +143,9 @@ Jeder Aufruf braucht `Authorization: Bearer <token>`, sonst 401.
   Ereignisse nur aus `allowed_events` wählen, nicht raten.
 - `POST /api/agent/applications/{id}/events` – Ereignis wie in der Oberfläche erfassen (`type`,
   `occurred_on`, optional `due_on`, `note` ≤ 1000 Zeichen); die Notiz bekommt das Präfix `Agent: `.
-  Unerlaubter Übergang → 422.
+  Direkt erlaubt sind nur *Beworben*, *ScreeningGespraech*, *ChallengeErhalten*, *Interview*,
+  *Kennenlerntag*, *AngebotErhalten* und *Absage*; andere Typen → 400 (Feld `type`), dafür einen
+  Vorschlag ablegen. Unerlaubter Übergang → 422.
 - `PUT /api/agent/applications/{id}/gmail-thread` – Thread der gesendeten Bewerbung merken
   (`gmail_thread_id`, nur `A–Z a–z 0–9 _ -`) → 204; dieselbe ID erneut ist ein No-op, 409, wenn der
   Thread schon zu einer anderen Bewerbung gehört.
@@ -146,7 +155,14 @@ Jeder Aufruf braucht `Authorization: Bearer <token>`, sonst 401.
 - `GET /api/agent/processed-mails/{messageId}` – 200, wenn die Mail schon ausgewertet ist, sonst 404.
 - `POST /api/agent/processed-mails` – Mail als ausgewertet merken (`gmail_message_id`, `outcome`,
   optional `application_id`). Idempotent: 201 beim ersten Mal, danach 200 mit dem unveränderten
-  vorhandenen Eintrag. Erst nach erfolgreicher Verbuchung aufrufen.
+  vorhandenen Eintrag. Erst nach erfolgreicher Verbuchung aufrufen. Höchstens 200 neu gemerkte Mails
+  je 24 Stunden, darüber 409 (Schutz gegen massenhaftes Verstecken).
+
+Texte aus Mails (`reason`, `mail_subject`, `mail_from`, `mail_url`, `note`, `outcome`) dürfen keine
+Steuer- oder unsichtbaren Formatzeichen enthalten (auch keine Tabs und Zeilenumbrüche) → 400.
+In der Oberfläche lassen sich eine falsche Thread-Zuordnung lösen
+(`DELETE /api/v1/applications/{id}/gmail-thread`) und fälschlich gemerkte Mails zur erneuten
+Auswertung freigeben (`GET /api/v1/processed-mails?limit=50`, `DELETE /api/v1/processed-mails/{messageId}`).
 
 Die Agent-API ist gedrosselt: mit gültigem Token 2 Anfragen/s (Burst 20), ohne gültiges Token 1/s
 (Burst 10), darüber 429 mit `Retry-After`. Abgewiesene Anfragen landen höchstens einmal pro Minute

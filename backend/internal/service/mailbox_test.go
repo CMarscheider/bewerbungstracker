@@ -103,7 +103,7 @@ func TestAgentAddEventPrefixesNote(t *testing.T) {
 func TestAgentAddEventRejectsInvalidTransition(t *testing.T) {
 	svc := newService(t)
 	app := agentApp(t, svc)
-	_, err := svc.AgentAddEvent(ctx, app.ID, domain.NewEvent{Type: domain.AngebotAngenommen, OccurredOn: day(0)})
+	_, err := svc.AgentAddEvent(ctx, app.ID, domain.NewEvent{Type: domain.Interview, OccurredOn: day(0)})
 	var te *domain.TransitionError
 	if !errors.As(err, &te) {
 		t.Fatalf("erwartet TransitionError, bekommen %v", err)
@@ -493,5 +493,143 @@ func TestListOpenAgentApplicationsMailSubjectAndOrder(t *testing.T) {
 	}
 	if list[1].MailSubject == nil || *list[1].MailSubject != "Bewerbung als Frontend-Entwickler" {
 		t.Errorf("MailSubject = %v", list[1].MailSubject)
+	}
+}
+
+func TestAgentAddEventWhitelist(t *testing.T) {
+	svc := newService(t)
+	app := agentApp(t, svc)
+	for _, typ := range []domain.EventType{domain.Zurueckgezogen, domain.Vorgemerkt, domain.KeineRueckmeldung,
+		domain.AngebotAngenommen, domain.AngebotAbgelehnt, domain.ChallengeAbgegeben} {
+		_, err := svc.AgentAddEvent(ctx, app.ID, domain.NewEvent{Type: typ, OccurredOn: day(0)})
+		var ve *domain.ValidationError
+		if !errors.As(err, &ve) || ve.Field != "type" || !strings.Contains(ve.Detail, "Vorschlag") {
+			t.Errorf("%s: erwartet ValidationError auf type mit Hinweis, bekommen %v", typ, err)
+		}
+	}
+	got, _ := svc.GetApplication(ctx, app.ID)
+	if got.Status != domain.Vorgemerkt || len(got.Events) != 1 {
+		t.Fatalf("Ereignis trotz Ablehnung angelegt: %+v", got.Events)
+	}
+	if _, err := svc.AgentAddEvent(ctx, app.ID, domain.NewEvent{Type: domain.Beworben, OccurredOn: day(0)}); err != nil {
+		t.Fatalf("Beworben muss erlaubt sein: %v", err)
+	}
+	// Vorschläge dürfen weiterhin jeden Typ tragen.
+	sg := sampleSuggestion(&app.ID)
+	sg.SuggestedType = domain.Zurueckgezogen
+	if _, err := svc.CreateSuggestion(ctx, sg); err != nil {
+		t.Fatalf("Vorschlag Zurueckgezogen: %v", err)
+	}
+}
+
+func TestClearGmailThread(t *testing.T) {
+	svc := newService(t)
+	app := agentApp(t, svc)
+	if err := svc.SetGmailThread(ctx, app.ID, "thread-a"); err != nil {
+		t.Fatal(err)
+	}
+	for range 2 { // idempotent
+		if err := svc.ClearGmailThread(ctx, app.ID); err != nil {
+			t.Fatal(err)
+		}
+	}
+	got, _ := svc.GetApplication(ctx, app.ID)
+	if got.GmailThreadID != nil {
+		t.Fatalf("GmailThreadID = %v", *got.GmailThreadID)
+	}
+	if err := svc.SetGmailThread(ctx, app.ID, "thread-b"); err != nil {
+		t.Fatalf("nach dem Lösen neu setzen: %v", err)
+	}
+	var nf *service.NotFoundError
+	if err := svc.ClearGmailThread(ctx, uuid.New()); !errors.As(err, &nf) {
+		t.Errorf("erwartet NotFoundError, bekommen %v", err)
+	}
+}
+
+func TestListAndDeleteProcessedMails(t *testing.T) {
+	svc := newService(t)
+	app := agentApp(t, svc)
+	for _, id := range []string{"m1", "m2", "m3"} {
+		var appID *uuid.UUID
+		if id == "m2" {
+			appID = &app.ID
+		}
+		if _, _, err := svc.MarkMailProcessed(ctx, id, appID, "erledigt "+id); err != nil {
+			t.Fatal(err)
+		}
+	}
+	list, err := svc.ListProcessedMails(ctx, 2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(list) != 2 || list[0].GmailMessageID != "m3" || list[1].GmailMessageID != "m2" {
+		t.Fatalf("Liste = %+v", list)
+	}
+	if list[1].CompanyName == nil || *list[1].CompanyName != "Acme GmbH" || list[1].PositionTitle == nil || list[0].CompanyName != nil {
+		t.Errorf("Zuordnung = %+v", list)
+	}
+	for range 2 { // idempotent
+		if err := svc.DeleteProcessedMail(ctx, "m2"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var nf *service.NotFoundError
+	if _, err := svc.GetProcessedMail(ctx, "m2"); !errors.As(err, &nf) {
+		t.Errorf("nach dem Löschen: %v", err)
+	}
+	if _, created, err := svc.MarkMailProcessed(ctx, "m2", nil, "neu bewertet"); err != nil || !created {
+		t.Errorf("erneut merken: created=%v, err=%v", created, err)
+	}
+}
+
+func TestMarkMailProcessedCap(t *testing.T) {
+	svc := newServiceWith(t, service.WithProcessedMailCap(2))
+	for _, id := range []string{"a", "b"} {
+		if _, _, err := svc.MarkMailProcessed(ctx, id, nil, "ok"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var ce *service.ConflictError
+	if _, _, err := svc.MarkMailProcessed(ctx, "c", nil, "ok"); !errors.As(err, &ce) {
+		t.Fatalf("erwartet ConflictError, bekommen %v", err)
+	}
+	if _, created, err := svc.MarkMailProcessed(ctx, "a", nil, "ok"); err != nil || created {
+		t.Errorf("vorhandene Mail trotz Obergrenze: created=%v, err=%v", created, err)
+	}
+	if service.DefaultProcessedMailCap != 200 {
+		t.Errorf("Obergrenze = %d", service.DefaultProcessedMailCap)
+	}
+}
+
+func TestMailboxRejectsInvisibleCharacters(t *testing.T) {
+	svc := newService(t)
+	app := agentApp(t, svc)
+	for _, bad := range []string{"a\u200bb", "a\u202eb", "a\u2028b", "a\u2029b", "a\x07b", "a\nb", "a\tb", "a\u00adb"} {
+		for field, mutate := range map[string]func(*service.NewSuggestion){
+			"reason":       func(s *service.NewSuggestion) { s.Reason = bad },
+			"mail_subject": func(s *service.NewSuggestion) { s.MailSubject = ptr(bad) },
+			"mail_from":    func(s *service.NewSuggestion) { s.MailFrom = ptr(bad) },
+			"mail_url":     func(s *service.NewSuggestion) { s.MailURL = ptr("https://mail.google.com/" + bad) },
+		} {
+			sg := sampleSuggestion(&app.ID)
+			mutate(&sg)
+			_, err := svc.CreateSuggestion(ctx, sg)
+			var ve *domain.ValidationError
+			if !errors.As(err, &ve) || ve.Field != field {
+				t.Errorf("%s %q: erwartet ValidationError, bekommen %v", field, bad, err)
+			}
+		}
+		_, err := svc.AgentAddEvent(ctx, app.ID, domain.NewEvent{Type: domain.Beworben, OccurredOn: day(0), Note: ptr(bad)})
+		var ve *domain.ValidationError
+		if !errors.As(err, &ve) || ve.Field != "note" {
+			t.Errorf("note %q: erwartet ValidationError, bekommen %v", bad, err)
+		}
+		_, _, err = svc.MarkMailProcessed(ctx, "m-1", nil, bad)
+		if !errors.As(err, &ve) || ve.Field != "outcome" {
+			t.Errorf("outcome %q: erwartet ValidationError, bekommen %v", bad, err)
+		}
+	}
+	if _, err := svc.AgentAddEvent(ctx, app.ID, domain.NewEvent{Type: domain.Beworben, OccurredOn: day(0), Note: ptr("Grüße – „ok“ 👍")}); err != nil {
+		t.Errorf("normale Unicode-Zeichen: %v", err)
 	}
 }

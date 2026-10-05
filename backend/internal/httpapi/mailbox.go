@@ -28,3 +28,36 @@ func (s *Server) DismissSuggestion(ctx context.Context, req DismissSuggestionReq
 	}
 	return DismissSuggestion204Response{}, nil
 }
+
+func (s *Server) ClearGmailThread(ctx context.Context, req ClearGmailThreadRequestObject) (ClearGmailThreadResponseObject, error) {
+	if err := s.svc.ClearGmailThread(ctx, req.Id); err != nil {
+		return nil, err
+	}
+	return ClearGmailThread204Response{}, nil
+}
+
+// defaultProcessedMailLimit entspricht dem Standardwert von limit in der Spec.
+const defaultProcessedMailLimit = 50
+
+func (s *Server) ListProcessedMails(ctx context.Context, req ListProcessedMailsRequestObject) (ListProcessedMailsResponseObject, error) {
+	limit := defaultProcessedMailLimit
+	if req.Params.Limit != nil {
+		limit = *req.Params.Limit
+	}
+	ms, err := s.svc.ListProcessedMails(ctx, limit)
+	if err != nil {
+		return nil, err
+	}
+	out := make(ListProcessedMails200JSONResponse, 0, len(ms))
+	for _, m := range ms {
+		out = append(out, processedMailDTO(m))
+	}
+	return out, nil
+}
+
+func (s *Server) DeleteProcessedMail(ctx context.Context, req DeleteProcessedMailRequestObject) (DeleteProcessedMailResponseObject, error) {
+	if err := s.svc.DeleteProcessedMail(ctx, req.MessageId); err != nil {
+		return nil, err
+	}
+	return DeleteProcessedMail204Response{}, nil
+}

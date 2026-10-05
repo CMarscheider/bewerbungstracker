@@ -34,7 +34,7 @@ func TestAgentMailboxFlow(t *testing.T) {
 		t.Fatalf("Notiz = %q", note)
 	}
 	bad := callWith(t, srv, http.MethodPost, "/api/agent/applications/"+id+"/events", agentToken,
-		map[string]any{"type": "AngebotAngenommen", "occurred_on": today()})
+		map[string]any{"type": "Beworben", "occurred_on": today()}) // schon beworben
 	expectProblem(t, bad, http.StatusUnprocessableEntity, "/problems/invalid-transition")
 
 	th := callWith(t, srv, http.MethodPut, "/api/agent/applications/"+id+"/gmail-thread", agentToken,

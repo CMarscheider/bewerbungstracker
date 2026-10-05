@@ -31,6 +31,7 @@ type Service struct {
 	pdf       PDFConverter
 	drafter   Drafter
 	draftFrom string // Absenderadresse der Entwürfe; den Namen liefert der Lebenslauf
+	mailCap   int    // höchstens so viele neu gemerkte Mails je 24 Stunden
 }
 
 // Option konfiguriert optionale Abhängigkeiten.
@@ -47,7 +48,7 @@ func WithDrafter(d Drafter, from string) Option {
 
 // New erzeugt einen Service; now ist in Produktion time.Now.
 func New(pool *pgxpool.Pool, now func() time.Time, opts ...Option) *Service {
-	s := &Service{pool: pool, now: now}
+	s := &Service{pool: pool, now: now, mailCap: defaultProcessedMailCap}
 	for _, o := range opts {
 		o(s)
 	}

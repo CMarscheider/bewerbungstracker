@@ -52,3 +52,21 @@ INSERT INTO processed_mails (gmail_message_id, application_id, outcome)
 VALUES ($1, $2, $3)
 ON CONFLICT (gmail_message_id) DO NOTHING
 RETURNING *;
+
+-- name: LockProcessedMails :exec
+-- Serialisiert das Merken neuer Mails, damit die Tages-Obergrenze auch bei parallelen Aufrufen hält.
+SELECT pg_advisory_xact_lock(7007);
+
+-- name: CountRecentProcessedMails :one
+SELECT count(*) FROM processed_mails WHERE processed_at > now() - interval '24 hours';
+
+-- name: ListProcessedMails :many
+SELECT m.gmail_message_id, m.application_id, c.name AS company_name, a.position_title, m.outcome, m.processed_at
+FROM processed_mails m
+LEFT JOIN applications a ON a.id = m.application_id
+LEFT JOIN companies c ON c.id = a.company_id
+ORDER BY m.processed_at DESC, m.gmail_message_id
+LIMIT $1;
+
+-- name: DeleteProcessedMail :exec
+DELETE FROM processed_mails WHERE gmail_message_id = $1;

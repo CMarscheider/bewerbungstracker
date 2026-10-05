@@ -62,7 +62,8 @@ func run(logger *slog.Logger) error {
 	if cfg.AgentToken == "" {
 		logger.Info("AGENT_TOKEN nicht gesetzt – Agent-API ist deaktiviert")
 	}
-	handler, err := httpapi.NewRouter(service.New(pool, time.Now, opts...), logger, httpapi.WithAgentToken(cfg.AgentToken))
+	handler, err := httpapi.NewRouter(service.New(pool, time.Now, opts...), logger,
+		httpapi.WithAgentToken(cfg.AgentToken), httpapi.WithAgentMailToken(cfg.AgentTokenMail))
 	if err != nil {
 		return err
 	}

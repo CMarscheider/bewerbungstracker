@@ -120,7 +120,8 @@ func suggestionDTO(s service.Suggestion) Suggestion {
 
 func processedMailDTO(m service.ProcessedMail) ProcessedMail {
 	return ProcessedMail{
-		GmailMessageId: m.GmailMessageID, ApplicationId: m.ApplicationID, Outcome: m.Outcome, ProcessedAt: m.ProcessedAt,
+		GmailMessageId: m.GmailMessageID, ApplicationId: m.ApplicationID, CompanyName: m.CompanyName,
+		PositionTitle: m.PositionTitle, Outcome: m.Outcome, ProcessedAt: m.ProcessedAt,
 	}
 }
 

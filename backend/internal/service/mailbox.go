@@ -4,8 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
+	"unicode"
 	"unicode/utf8"
 
 	"github.com/google/uuid"
@@ -30,6 +32,44 @@ const (
 	maxOutcomeLen = 200
 	maxThreadLen  = 100
 )
+
+// defaultProcessedMailCap begrenzt neu gemerkte Mails je 24 Stunden – Schutz davor, dass eine
+// manipulierte Mail den Agenten dazu bringt, massenhaft Mails als erledigt zu verstecken.
+const defaultProcessedMailCap = 200
+
+// withProcessedMailCap setzt die Obergrenze (nur für Tests, siehe export_test.go).
+func withProcessedMailCap(n int) Option { return func(s *Service) { s.mailCap = n } }
+
+// agentBookable sind die Ereignisse, die der Agent direkt anlegen darf. Alles andere (z. B. Zusagen,
+// Rückzug) entscheidet der Nutzer über einen Vorschlag.
+var agentBookable = []domain.EventType{
+	domain.Beworben, domain.ScreeningGespraech, domain.ChallengeErhalten, domain.Interview,
+	domain.Kennenlerntag, domain.AngebotErhalten, domain.Absage,
+}
+
+// Unicode-Zeilen- und Absatztrenner (Kategorie Zl/Zp, nicht Cc/Cf).
+const (
+	lineSeparator      = 0x2028
+	paragraphSeparator = 0x2029
+)
+
+// rejectInvisible lehnt Steuer- und Formatzeichen (Cc, Cf, U+2028/U+2029) ab; sie können in Mails
+// eingeschleuste Inhalte verbergen. Auch Tab und Zeilenumbruch sind nicht erlaubt.
+func rejectInvisible(field, value string) error {
+	for _, r := range value {
+		if unicode.Is(unicode.Cc, r) || unicode.Is(unicode.Cf, r) || r == lineSeparator || r == paragraphSeparator {
+			return &domain.ValidationError{Field: field, Detail: fmt.Sprintf("enthält unsichtbares Zeichen %U", r)}
+		}
+	}
+	return nil
+}
+
+func rejectInvisibleOptional(field string, value *string) error {
+	if value == nil {
+		return nil
+	}
+	return rejectInvisible(field, *value)
+}
 
 // OpenApplication ist eine laufende Bewerbung, wie sie die Postfach-Auswertung braucht.
 type OpenApplication struct {
@@ -81,6 +121,8 @@ type Suggestion struct {
 type ProcessedMail struct {
 	GmailMessageID string
 	ApplicationID  *uuid.UUID
+	CompanyName    *string // nur in ListProcessedMails
+	PositionTitle  *string // nur in ListProcessedMails
 	Outcome        string
 	ProcessedAt    time.Time
 }
@@ -138,6 +180,13 @@ func openAllowedEvents(ctx context.Context, q *store.Queries, appID uuid.UUID, s
 
 // AgentAddEvent legt ein Ereignis wie AddEvent an und kennzeichnet die Notiz mit "Agent: ".
 func (s *Service) AgentAddEvent(ctx context.Context, appID uuid.UUID, next domain.NewEvent) (Event, error) {
+	if !slices.Contains(agentBookable, next.Type) {
+		return Event{}, &domain.ValidationError{Field: "type",
+			Detail: fmt.Sprintf("%s darf der Agent nicht direkt anlegen – stattdessen einen Vorschlag ablegen", next.Type)}
+	}
+	if err := rejectInvisibleOptional("note", next.Note); err != nil {
+		return Event{}, err
+	}
 	next.Note = agentNote(next.Note)
 	return s.AddEvent(ctx, appID, next)
 }
@@ -189,6 +238,14 @@ func (s *Service) SetGmailThread(ctx context.Context, appID uuid.UUID, threadID 
 
 // CreateSuggestion legt einen offenen Vorschlag an.
 func (s *Service) CreateSuggestion(ctx context.Context, in NewSuggestion) (Suggestion, error) {
+	if err := rejectInvisible("reason", in.Reason); err != nil {
+		return Suggestion{}, err
+	}
+	for field, v := range map[string]*string{"mail_subject": in.MailSubject, "mail_from": in.MailFrom, "mail_url": in.MailURL} {
+		if err := rejectInvisibleOptional(field, v); err != nil {
+			return Suggestion{}, err
+		}
+	}
 	if !in.SuggestedType.Valid() {
 		return Suggestion{}, &domain.ValidationError{Field: "suggested_type", Detail: fmt.Sprintf("unbekannter Ereignistyp %q", in.SuggestedType)}
 	}
@@ -323,6 +380,9 @@ func (s *Service) MarkMailProcessed(ctx context.Context, messageID string, appID
 	if err != nil {
 		return ProcessedMail{}, false, err
 	}
+	if err := rejectInvisible("outcome", outcome); err != nil {
+		return ProcessedMail{}, false, err
+	}
 	if utf8.RuneCountInString(outcome) > maxOutcomeLen {
 		return ProcessedMail{}, false, &domain.ValidationError{Field: "outcome", Detail: fmt.Sprintf("höchstens %d Zeichen", maxOutcomeLen)}
 	}
@@ -331,7 +391,24 @@ func (s *Service) MarkMailProcessed(ctx context.Context, messageID string, appID
 		created bool
 	)
 	err = s.inTx(ctx, func(q *store.Queries) error {
-		var err error
+		if err := q.LockProcessedMails(ctx); err != nil {
+			return err
+		}
+		existing, err := q.GetProcessedMail(ctx, messageID)
+		switch {
+		case err == nil:
+			m = existing
+			return nil
+		case !errors.Is(err, pgx.ErrNoRows):
+			return err
+		}
+		n, err := q.CountRecentProcessedMails(ctx)
+		if err != nil {
+			return err
+		}
+		if n >= int64(s.mailCap) {
+			return &ConflictError{Detail: fmt.Sprintf("Obergrenze von %d neu ausgewerteten Mails in 24 Stunden erreicht – bitte in der Oberfläche prüfen", s.mailCap)}
+		}
 		m, err = q.InsertProcessedMail(ctx, store.InsertProcessedMailParams{
 			GmailMessageID: messageID, ApplicationID: appID, Outcome: outcome,
 		})
@@ -366,4 +443,43 @@ func toProcessedMail(m store.ProcessedMail) ProcessedMail {
 	return ProcessedMail{
 		GmailMessageID: m.GmailMessageID, ApplicationID: m.ApplicationID, Outcome: m.Outcome, ProcessedAt: m.ProcessedAt,
 	}
+}
+
+// ClearGmailThread löst eine falsche Thread-Zuordnung; ohne Zuordnung ist es ein No-op.
+func (s *Service) ClearGmailThread(ctx context.Context, appID uuid.UUID) error {
+	return s.inTx(ctx, func(q *store.Queries) error {
+		a, err := q.LockApplication(ctx, appID)
+		if err != nil {
+			return notFoundIfNoRows(err, "Bewerbung")
+		}
+		if a.GmailThreadID == nil {
+			return nil
+		}
+		return q.SetGmailThread(ctx, store.SetGmailThreadParams{ID: appID})
+	})
+}
+
+// maxProcessedMailList begrenzt ListProcessedMails.
+const maxProcessedMailList = 200
+
+// ListProcessedMails liefert die zuletzt ausgewerteten Mails, neueste zuerst, mit Firma und Stelle.
+func (s *Service) ListProcessedMails(ctx context.Context, limit int) ([]ProcessedMail, error) {
+	limit = min(max(limit, 1), maxProcessedMailList)
+	rows, err := s.queries().ListProcessedMails(ctx, int32(limit)) //nolint:gosec // auf 1–200 begrenzt
+	if err != nil {
+		return nil, err
+	}
+	out := make([]ProcessedMail, 0, len(rows))
+	for _, r := range rows {
+		out = append(out, ProcessedMail{
+			GmailMessageID: r.GmailMessageID, ApplicationID: r.ApplicationID, CompanyName: r.CompanyName,
+			PositionTitle: r.PositionTitle, Outcome: r.Outcome, ProcessedAt: r.ProcessedAt,
+		})
+	}
+	return out, nil
+}
+
+// DeleteProcessedMail vergisst eine ausgewertete Mail, damit der Agent sie erneut auswertet; idempotent.
+func (s *Service) DeleteProcessedMail(ctx context.Context, messageID string) error {
+	return s.queries().DeleteProcessedMail(ctx, messageID)
 }

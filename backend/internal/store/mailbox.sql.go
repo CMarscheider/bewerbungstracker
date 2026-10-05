@@ -12,6 +12,17 @@ import (
 	"github.com/google/uuid"
 )
 
+const countRecentProcessedMails = `-- name: CountRecentProcessedMails :one
+SELECT count(*) FROM processed_mails WHERE processed_at > now() - interval '24 hours'
+`
+
+func (q *Queries) CountRecentProcessedMails(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, countRecentProcessedMails)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const decideSuggestion = `-- name: DecideSuggestion :exec
 UPDATE status_suggestions
 SET state = $1, decided_at = now(),
@@ -28,6 +39,15 @@ type DecideSuggestionParams struct {
 // Setzt die Entscheidung; application_id bleibt unverändert, wenn keine übergeben wird.
 func (q *Queries) DecideSuggestion(ctx context.Context, arg DecideSuggestionParams) error {
 	_, err := q.db.Exec(ctx, decideSuggestion, arg.State, arg.ApplicationID, arg.ID)
+	return err
+}
+
+const deleteProcessedMail = `-- name: DeleteProcessedMail :exec
+DELETE FROM processed_mails WHERE gmail_message_id = $1
+`
+
+func (q *Queries) DeleteProcessedMail(ctx context.Context, gmailMessageID string) error {
+	_, err := q.db.Exec(ctx, deleteProcessedMail, gmailMessageID)
 	return err
 }
 
@@ -284,6 +304,61 @@ func (q *Queries) ListOpenSuggestions(ctx context.Context) ([]ListOpenSuggestion
 		return nil, err
 	}
 	return items, nil
+}
+
+const listProcessedMails = `-- name: ListProcessedMails :many
+SELECT m.gmail_message_id, m.application_id, c.name AS company_name, a.position_title, m.outcome, m.processed_at
+FROM processed_mails m
+LEFT JOIN applications a ON a.id = m.application_id
+LEFT JOIN companies c ON c.id = a.company_id
+ORDER BY m.processed_at DESC, m.gmail_message_id
+LIMIT $1
+`
+
+type ListProcessedMailsRow struct {
+	GmailMessageID string
+	ApplicationID  *uuid.UUID
+	CompanyName    *string
+	PositionTitle  *string
+	Outcome        string
+	ProcessedAt    time.Time
+}
+
+func (q *Queries) ListProcessedMails(ctx context.Context, limit int32) ([]ListProcessedMailsRow, error) {
+	rows, err := q.db.Query(ctx, listProcessedMails, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListProcessedMailsRow
+	for rows.Next() {
+		var i ListProcessedMailsRow
+		if err := rows.Scan(
+			&i.GmailMessageID,
+			&i.ApplicationID,
+			&i.CompanyName,
+			&i.PositionTitle,
+			&i.Outcome,
+			&i.ProcessedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const lockProcessedMails = `-- name: LockProcessedMails :exec
+SELECT pg_advisory_xact_lock(7007)
+`
+
+// Serialisiert das Merken neuer Mails, damit die Tages-Obergrenze auch bei parallelen Aufrufen hält.
+func (q *Queries) LockProcessedMails(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, lockProcessedMails)
+	return err
 }
 
 const lockSuggestion = `-- name: LockSuggestion :one

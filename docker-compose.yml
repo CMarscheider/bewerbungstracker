@@ -43,6 +43,7 @@ services:
       DATABASE_URL: postgres://bewerbungen:${POSTGRES_PASSWORD:-bewerbungen}@db:5432/bewerbungen?sslmode=disable
       GOTENBERG_URL: http://gotenberg:3000
       AGENT_TOKEN: ${AGENT_TOKEN:-}
+      AGENT_TOKEN_MAIL: ${AGENT_TOKEN_MAIL:-}
       GMAIL_ADDRESS: ${GMAIL_ADDRESS:-}
       GMAIL_APP_PASSWORD: ${GMAIL_APP_PASSWORD:-}
     depends_on:

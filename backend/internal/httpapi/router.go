@@ -33,6 +33,7 @@ type RouterOption func(*routerConfig)
 
 type routerConfig struct {
 	agentToken     string
+	agentMailToken string
 	agentRate      rate.Limit
 	agentBurst     int
 	agentAnonRate  rate.Limit
@@ -42,6 +43,12 @@ type routerConfig struct {
 // WithAgentToken aktiviert die Agent-API (/api/agent/*) mit diesem Bearer-Token.
 func WithAgentToken(token string) RouterOption {
 	return func(c *routerConfig) { c.agentToken = token }
+}
+
+// WithAgentMailToken erlaubt zusätzlich ein eingeschränktes Token für die Postfach-Auswertung
+// (nur zusammen mit WithAgentToken wirksam).
+func WithAgentMailToken(token string) RouterOption {
+	return func(c *routerConfig) { c.agentMailToken = token }
 }
 
 // WithAgentRateLimit überschreibt die Drossel der Agent-API für Anfragen mit gültigem Token (für Tests).
@@ -117,7 +124,7 @@ func NewRouter(svc *service.Service, logger *slog.Logger, opts ...RouterOption) 
 	warner := newLogThrottle(logger, authWarnInterval)
 	rejects := newLogThrottle(logger, agentRejectInterval)
 	return logRequests(logger, rejects, recoverPanics(logger, limitBody(
-		requireAgentToken(cfg.agentToken, limits, warner, extendWriteDeadline(slowWriteTimeout, mux))))), nil
+		requireAgentTokens(cfg.agentToken, cfg.agentMailToken, limits, warner, extendWriteDeadline(slowWriteTimeout, mux))))), nil
 }
 
 // maxBodyBytes begrenzt die Größe von Request-Bodys.

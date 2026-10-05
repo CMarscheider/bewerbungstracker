@@ -18,7 +18,7 @@ tags:
   - name: Documents
     description: "Bewerbungsunterlagen: Anschreiben + Lebenslauf als PDF, Gmail-Entwurf"
   - name: Suggestions
-    description: "Vorschläge des Agenten aus der Postfach-Auswertung"
+    description: "Postfach-Auswertung: Vorschläge des Agenten und ausgewertete Mails"
   - name: Agent
     description: "Für Claude-Agenten; verlangt Authorization: Bearer <AGENT_TOKEN>"
 paths:
@@ -220,6 +220,17 @@ paths:
               schema:
                 type: array
                 items: { $ref: "#/components/schemas/EventType" }
+        default: { $ref: "#/components/responses/Problem" }
+  /api/v1/applications/{id}/gmail-thread:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    delete:
+      operationId: clearGmailThread
+      tags: [Applications]
+      summary: Falsche Gmail-Thread-Zuordnung lösen (idempotent)
+      responses:
+        "204":
+          description: Gelöst
         default: { $ref: "#/components/responses/Problem" }
   /api/v1/applications/{id}/documents/request:
     parameters:
@@ -520,6 +531,39 @@ paths:
         "204":
           description: Verworfen
         default: { $ref: "#/components/responses/Problem" }
+  /api/v1/processed-mails:
+    get:
+      operationId: listProcessedMails
+      tags: [Suggestions]
+      summary: Zuletzt ausgewertete Mails, neueste zuerst
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+      responses:
+        "200":
+          description: Ausgewertete Mails
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/ProcessedMail" }
+        default: { $ref: "#/components/responses/Problem" }
+  /api/v1/processed-mails/{messageId}:
+    parameters:
+      - name: messageId
+        in: path
+        required: true
+        schema: { $ref: "#/components/schemas/GmailMessageId" }
+    delete:
+      operationId: deleteProcessedMail
+      tags: [Suggestions]
+      summary: Mail vergessen, damit der Agent sie erneut auswertet (idempotent)
+      responses:
+        "204":
+          description: Vergessen
+        default: { $ref: "#/components/responses/Problem" }
   /api/agent/cv:
     get:
       operationId: agentGetCv
@@ -657,6 +701,9 @@ paths:
       operationId: agentAddEvent
       tags: [Agent]
       summary: "Ereignis erfassen; die Notiz bekommt das Präfix „Agent: “ (422 bei unerlaubtem Übergang)"
+      description: >
+        Direkt erlaubt sind nur Beworben, ScreeningGespraech, ChallengeErhalten, Interview, Kennenlerntag,
+        AngebotErhalten und Absage; andere Typen → 400 (Feld `type`), dafür einen Vorschlag ablegen.
       security: [{ agentToken: [] }]
       requestBody:
         required: true
@@ -710,6 +757,7 @@ paths:
       operationId: agentMarkMailProcessed
       tags: [Agent]
       summary: Mail als ausgewertet merken (201 neu, 200 schon vorhanden – der vorhandene Eintrag bleibt)
+      description: Höchstens 200 neu gemerkte Mails je 24 Stunden, darüber 409.
       security: [{ agentToken: [] }]
       requestBody:
         required: true
@@ -1054,6 +1102,12 @@ components:
       properties:
         gmail_message_id: { type: string }
         application_id: { type: string, format: uuid }
+        company_name:
+          type: string
+          description: Nur in der Liste der Oberfläche
+        position_title:
+          type: string
+          description: Nur in der Liste der Oberfläche
         outcome: { type: string }
         processed_at: { type: string, format: date-time }
     Deadline:

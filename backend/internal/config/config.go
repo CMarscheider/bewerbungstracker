@@ -18,6 +18,8 @@ type Config struct {
 	Port         string
 	GotenbergURL string // optional; leer = keine PDF-Erzeugung
 	AgentToken   string // optional; leer = keine Agent-API
+	// AgentTokenMail: optional, eingeschränktes Token für die Postfach-Auswertung (nur mit AgentToken).
+	AgentTokenMail string
 
 	// GmailAddress und GmailAppPassword: optional, nur gemeinsam; leer = keine Mail-Entwürfe.
 	GmailAddress     string
@@ -25,7 +27,7 @@ type Config struct {
 }
 
 // Load liest DATABASE_URL (Pflicht), PORT (Standard 8080) und GOTENBERG_URL (optional)
-// sowie AGENT_TOKEN (optional, mind. 32 Zeichen) und GMAIL_ADDRESS/GMAIL_APP_PASSWORD (optional, nur gemeinsam).
+// sowie AGENT_TOKEN und AGENT_TOKEN_MAIL (optional, mind. 32 Zeichen, verschieden) und GMAIL_ADDRESS/GMAIL_APP_PASSWORD (optional, nur gemeinsam).
 func Load(getenv func(string) string) (Config, error) {
 	c := Config{DatabaseURL: getenv("DATABASE_URL"), Port: getenv("PORT"), GotenbergURL: getenv("GOTENBERG_URL"), AgentToken: getenv("AGENT_TOKEN")}
 	if c.DatabaseURL == "" {
@@ -34,11 +36,20 @@ func Load(getenv func(string) string) (Config, error) {
 	if c.Port == "" {
 		c.Port = "8080"
 	}
-	if c.AgentToken != "" && len(c.AgentToken) < minAgentTokenLen {
-		return Config{}, fmt.Errorf("AGENT_TOKEN muss mindestens %d Zeichen haben", minAgentTokenLen)
+	c.AgentTokenMail = getenv("AGENT_TOKEN_MAIL")
+	if err := checkToken("AGENT_TOKEN", c.AgentToken); err != nil {
+		return Config{}, err
 	}
-	if strings.ContainsFunc(c.AgentToken, unicode.IsSpace) {
-		return Config{}, errors.New("AGENT_TOKEN darf keine Leerzeichen oder Zeilenumbrüche enthalten")
+	if err := checkToken("AGENT_TOKEN_MAIL", c.AgentTokenMail); err != nil {
+		return Config{}, err
+	}
+	if c.AgentTokenMail != "" {
+		if c.AgentToken == "" {
+			return Config{}, errors.New("AGENT_TOKEN_MAIL braucht ein gesetztes AGENT_TOKEN")
+		}
+		if c.AgentTokenMail == c.AgentToken {
+			return Config{}, errors.New("AGENT_TOKEN_MAIL muss sich von AGENT_TOKEN unterscheiden")
+		}
 	}
 	c.GmailAddress = strings.TrimSpace(getenv("GMAIL_ADDRESS"))
 	c.GmailAppPassword = strings.Join(strings.Fields(getenv("GMAIL_APP_PASSWORD")), "")
@@ -51,4 +62,15 @@ func Load(getenv func(string) string) (Config, error) {
 		}
 	}
 	return c, nil
+}
+
+// checkToken prüft ein optionales Agent-Token: mind. minAgentTokenLen Zeichen, kein Whitespace.
+func checkToken(name, token string) error {
+	if token != "" && len(token) < minAgentTokenLen {
+		return fmt.Errorf("%s muss mindestens %d Zeichen haben", name, minAgentTokenLen)
+	}
+	if strings.ContainsFunc(token, unicode.IsSpace) {
+		return fmt.Errorf("%s darf keine Leerzeichen oder Zeilenumbrüche enthalten", name)
+	}
+	return nil
 }

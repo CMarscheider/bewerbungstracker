@@ -89,3 +89,23 @@ func TestLoadRejectsWhitespaceInAgentToken(t *testing.T) {
 		}
 	}
 }
+
+func TestLoadAgentMailToken(t *testing.T) {
+	a, b := strings.Repeat("a", 32), strings.Repeat("b", 32)
+	c, err := Load(env(map[string]string{"DATABASE_URL": "postgres://x", "AGENT_TOKEN": a, "AGENT_TOKEN_MAIL": b}))
+	if err != nil || c.AgentTokenMail != b {
+		t.Fatalf("AgentTokenMail = %q, err %v", c.AgentTokenMail, err)
+	}
+	for name, m := range map[string]map[string]string{
+		"zu kurz":         {"AGENT_TOKEN": a, "AGENT_TOKEN_MAIL": "zu-kurz"},
+		"Leerzeichen":     {"AGENT_TOKEN": a, "AGENT_TOKEN_MAIL": b + " x"},
+		"Zeilenumbruch":   {"AGENT_TOKEN": a, "AGENT_TOKEN_MAIL": b + "\n"},
+		"gleich":          {"AGENT_TOKEN": a, "AGENT_TOKEN_MAIL": a},
+		"ohne Haupttoken": {"AGENT_TOKEN_MAIL": b},
+	} {
+		m["DATABASE_URL"] = "postgres://x"
+		if _, err := Load(env(m)); err == nil {
+			t.Errorf("%s: erwartet Fehler", name)
+		}
+	}
+}
